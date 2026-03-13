@@ -156,14 +156,15 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
     // Auto-mark as played when any score is non-zero
     const played = form.played || homeScore > 0 || awayScore > 0
 
+    // Use empty string (not null) for text columns — avoids 400 on NOT NULL columns
     const data = {
-      round: form.round || null,
+      round: form.round || '',
       home_id: form.home_id,
       away_id: form.away_id,
       home_score: homeScore,
       away_score: awayScore,
       played,
-      scheduled_time: form.scheduled_time || null,
+      scheduled_time: form.scheduled_time || '',
     }
 
     if (editId) {
