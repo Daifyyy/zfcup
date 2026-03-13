@@ -7,4 +7,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Chybí VITE_SUPABASE_URL nebo VITE_SUPABASE_ANON_KEY v .env.local')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    headers: {
+      // Explicitly force apikey header — workaround for supabase-js v2.99+ behavior
+      'apikey': supabaseAnonKey,
+    },
+  },
+})
