@@ -414,9 +414,10 @@ interface Props {
   bracketRounds: BracketRound[]; bracketSlots: BracketSlot[]
   announcements: Announcement[]
   onExit: () => void
+  onScoreboard: () => void
 }
 
-export default function KioskMode({ tournament, teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, onExit }: Props) {
+export default function KioskMode({ tournament, teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, onExit, onScoreboard }: Props) {
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
   const [barKey, setBarKey] = useState(0)
@@ -506,6 +507,17 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
           {paused && (
             <span style={{ fontSize: TV.small, color: 'rgba(255,255,255,.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>⏸ Pauza</span>
           )}
+          <button onClick={e => { e.stopPropagation(); onScoreboard() }} style={{
+            background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)',
+            borderRadius: 10, color: 'rgba(255,255,255,.7)',
+            fontSize: TV.small, fontWeight: 700, padding: '.5vw 1.2vw',
+            cursor: 'pointer', transition: 'all .15s',
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(96,165,250,.3)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.1)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.7)' }}
+          >
+            📋 Tabule
+          </button>
           <button onClick={e => { e.stopPropagation(); onExit() }} style={{
             background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)',
             borderRadius: 10, color: 'rgba(255,255,255,.7)',

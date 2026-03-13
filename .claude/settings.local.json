@@ -4,7 +4,8 @@
       "Bash(node --version && npm --version)",
       "Bash(npm install:*)",
       "Bash(npm run:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

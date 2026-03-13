@@ -76,11 +76,25 @@ export default function App() {
 
   if (kiosk) {
     return (
-      <KioskMode
-        {...shared}
-        tournament={tournament}
-        onExit={() => setKiosk(false)}
-      />
+      <>
+        <KioskMode
+          {...shared}
+          tournament={tournament}
+          onExit={() => setKiosk(false)}
+          onScoreboard={() => setScoreboard(true)}
+        />
+        {scoreboard && (
+          <Scoreboard
+            tournament={tournament}
+            teams={teams}
+            groups={groups}
+            matches={matches}
+            bracketRounds={bracketRounds}
+            bracketSlots={bracketSlots}
+            onExit={() => setScoreboard(false)}
+          />
+        )}
+      </>
     )
   }
 

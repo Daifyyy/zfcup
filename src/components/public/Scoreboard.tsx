@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { calcGroupStandings } from '../../lib/standings'
+import QRCode from '../ui/QRCode'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Team } from '../../hooks/useTeams'
 import type { Group } from '../../hooks/useGroups'
@@ -408,6 +409,14 @@ export default function Scoreboard({ tournament, teams, groups, matches, bracket
         }}>
           {clock}
         </span>
+
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: S.label, color: 'rgba(255,255,255,.9)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Sdílet</div>
+            <div style={{ fontSize: S.label, color: 'rgba(255,255,255,.5)' }}>naskenuj QR</div>
+          </div>
+          <QRCode size={48} />
+        </div>
 
         <button
           onClick={onExit}
