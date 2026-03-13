@@ -106,12 +106,11 @@ export default function GroupsTab({ teams, groups, matches, showToast }: Props) 
   }
 
   const removeGroup = async (g: Group) => {
-    const del = confirm(`Smazat skupinu "${g.name}"?\n\nOK = smazat i vygenerované zápasy\nCancel = ponechat zápasy`)
+    if (!confirm(`Smazat skupinu "${g.name}" a všechny její zápasy?`)) return
+    // Delete matches FIRST — otherwise DB cascade sets group_id=null and we lose the filter
+    await supabase.from('matches').delete().eq('group_id', g.id)
     const { error } = await supabase.from('groups').delete().eq('id', g.id)
     if (error) { showToast('Chyba: ' + error.message); return }
-    if (del) {
-      await supabase.from('matches').delete().eq('group_id', g.id)
-    }
     showToast('Skupina smazána')
   }
 

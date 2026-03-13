@@ -28,18 +28,23 @@ export default function Results({ matches, teams }: Props) {
 
       {Object.entries(rounds).map(([round, ms]) => (
         <div key={round}>
+          {/* Group header — prominent separator */}
           <div style={{
             fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: 'var(--fs-label)',
+            fontSize: '1.1rem',
             letterSpacing: '.15em',
-            color: 'var(--muted)',
+            color: 'var(--text)',
             textTransform: 'uppercase',
-            margin: '1.6rem 0 .7rem',
-            paddingBottom: '.5rem',
-            borderBottom: '2px solid var(--border)',
+            fontWeight: 700,
+            margin: '1.6rem 0 .75rem',
+            padding: '.5rem 1rem',
+            borderLeft: '5px solid var(--accent)',
+            background: 'rgba(37,99,235,.04)',
+            borderRadius: '0 8px 8px 0',
           }}>
             {round}
           </div>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.55rem', marginBottom: '.5rem' }}>
             {ms.map(m => {
               const hw = m.played && m.home_score > m.away_score
@@ -57,7 +62,10 @@ export default function Results({ matches, teams }: Props) {
                     <span style={{
                       fontWeight: hw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
-                      color: hw ? 'var(--text)' : 'var(--muted)',
+                      color: hw ? 'var(--accent)' : aw ? 'var(--muted)' : 'var(--text)',
+                      background: hw ? 'var(--accent-dim)' : 'transparent',
+                      padding: hw ? '2px 8px' : '2px 0',
+                      borderRadius: hw ? 5 : 0,
                     }}>{tn(m.home_id)}</span>
                     <span className="team-dot" style={{ background: tc(m.home_id), width: 12, height: 12 }} />
                   </div>
@@ -99,7 +107,10 @@ export default function Results({ matches, teams }: Props) {
                     <span style={{
                       fontWeight: aw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
-                      color: aw ? 'var(--text)' : 'var(--muted)',
+                      color: aw ? 'var(--accent)' : hw ? 'var(--muted)' : 'var(--text)',
+                      background: aw ? 'var(--accent-dim)' : 'transparent',
+                      padding: aw ? '2px 8px' : '2px 0',
+                      borderRadius: aw ? 5 : 0,
                     }}>{tn(m.away_id)}</span>
                   </div>
                 </div>

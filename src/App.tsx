@@ -140,7 +140,7 @@ export default function App() {
         isAdmin={!!session}
       />
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-        {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} announcements={announcements} onTab={navigateTab} />}
+        {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} goals={goals} announcements={announcements} onTab={navigateTab} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} />}

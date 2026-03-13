@@ -2,6 +2,7 @@ import type { Tournament } from '../../hooks/useTournament'
 import type { Team } from '../../hooks/useTeams'
 import type { Match } from '../../hooks/useMatches'
 import type { Group } from '../../hooks/useGroups'
+import type { Goal } from '../../hooks/useGoals'
 import type { Announcement } from '../../hooks/useAnnouncements'
 import type { Tab } from '../../App'
 import QRCode from '../ui/QRCode'
@@ -11,6 +12,7 @@ interface Props {
   teams: Team[]
   matches: Match[]
   groups: Group[]
+  goals: Goal[]
   announcements: Announcement[]
   onTab?: (t: Tab) => void
 }
@@ -18,6 +20,7 @@ interface Props {
 function StatCard({ label, value, accent, icon, onClick }: {
   label: string; value: number | string; accent?: boolean; icon?: string; onClick?: () => void
 }) {
+  const hasValue = value !== '' && value !== null && value !== undefined
   return (
     <div
       className="card"
@@ -37,15 +40,17 @@ function StatCard({ label, value, accent, icon, onClick }: {
       } : undefined}
     >
       {icon && <div style={{ fontSize: '1.5rem', marginBottom: '.4rem', opacity: .7 }}>{icon}</div>}
-      <div style={{
-        fontFamily: "'Bebas Neue', sans-serif",
-        fontSize: 'var(--fs-stat)',
-        color: accent ? 'var(--accent)' : 'var(--text)',
-        lineHeight: 1,
-        marginBottom: '.3rem',
-      }}>
-        {value}
-      </div>
+      {hasValue && (
+        <div style={{
+          fontFamily: "'Bebas Neue', sans-serif",
+          fontSize: 'var(--fs-stat)',
+          color: accent ? 'var(--accent)' : 'var(--text)',
+          lineHeight: 1,
+          marginBottom: '.3rem',
+        }}>
+          {value}
+        </div>
+      )}
       <div style={{
         fontSize: 'var(--fs-label)',
         textTransform: 'uppercase',
@@ -59,8 +64,8 @@ function StatCard({ label, value, accent, icon, onClick }: {
   )
 }
 
-export default function Overview({ tournament, teams, matches, groups, announcements, onTab }: Props) {
-  const played = matches.filter(m => m.played).length
+export default function Overview({ tournament, teams, matches, groups, goals, announcements, onTab }: Props) {
+  const scorerCount = new Set(goals.filter(g => g.count > 0).map(g => g.player_id)).size
 
   return (
     <div>
@@ -91,12 +96,12 @@ export default function Overview({ tournament, teams, matches, groups, announcem
         gap: '.9rem',
         marginBottom: '1.4rem',
       }}>
-        <StatCard icon="ℹ️"  label="Informace" value="→"                     onClick={onTab ? () => onTab('info')      : undefined} />
+        <StatCard icon="ℹ️"  label="Informace" value={announcements.length} onClick={onTab ? () => onTab('info')      : undefined} />
         <StatCard icon="👥" label="Týmy"     value={teams.length}   accent onClick={onTab ? () => onTab('teams')     : undefined} />
         <StatCard icon="📋" label="Zápasy"   value={matches.length}        onClick={onTab ? () => onTab('results')   : undefined} />
         <StatCard icon="📊" label="Tabulka"  value={groups.length}  accent onClick={onTab ? () => onTab('standings') : undefined} />
-        <StatCard icon="⚽" label="Střelci"  value={played}                onClick={onTab ? () => onTab('scorers')   : undefined} />
-        <StatCard icon="🏆" label="Play-off" value="→"                     onClick={onTab ? () => onTab('bracket')   : undefined} />
+        <StatCard icon="⚽" label="Střelci"  value={scorerCount}           onClick={onTab ? () => onTab('scorers')   : undefined} />
+        <StatCard icon="🏆" label="Play-off" value=""                      onClick={onTab ? () => onTab('bracket')   : undefined} />
       </div>
 
       {/* Description */}

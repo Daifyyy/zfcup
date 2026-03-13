@@ -5,7 +5,12 @@
       "Bash(npm install:*)",
       "Bash(npm run:*)",
       "Bash(git init:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(node -e \"\nconst fs = require\\('fs'\\);\n// useBracket has two channels \\(subR, subS\\)\nlet c = fs.readFileSync\\('src/hooks/useBracket.ts', 'utf8'\\);\nc = c.replace\\(\n  'return \\(\\) => {\\\\n      supabase.removeChannel\\(subR\\)\\\\n      supabase.removeChannel\\(subS\\)\\\\n    }',\n  'const poll = setInterval\\(fetch, 10_000\\)\\\\n    return \\(\\) => {\\\\n      supabase.removeChannel\\(subR\\)\\\\n      supabase.removeChannel\\(subS\\)\\\\n      clearInterval\\(poll\\)\\\\n    }'\n\\);\nfs.writeFileSync\\('src/hooks/useBracket.ts', c\\);\nconsole.log\\('useBracket done'\\);\n\")",
+      "Bash(git add:*)",
+      "Bash(npx vercel:*)",
+      "Bash(git push:*)",
+      "Bash(find /c/Users/denis/Documents/zf-cup/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) 2>/dev/null | sort)"
     ]
   }
 }

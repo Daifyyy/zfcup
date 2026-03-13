@@ -150,8 +150,9 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
     }
     if (editId) {
       const id = editId
-      const { error } = await supabase.from('matches').update(data).eq('id', id).select('id')
+      const { data: updated, error } = await supabase.from('matches').update(data).eq('id', id).select('id')
       if (error) { showToast('Chyba: ' + error.message); return }
+      if (!updated || updated.length === 0) { showToast('Nelze uložit — zkontroluj přihlášení admina'); return }
     } else {
       const { error } = await supabase.from('matches').insert(data)
       if (error) { showToast('Chyba: ' + error.message); return }

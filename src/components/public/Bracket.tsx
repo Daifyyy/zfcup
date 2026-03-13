@@ -14,113 +14,131 @@ export default function Bracket({ rounds, slots, teams }: Props) {
   if (!rounds.length) return <Empty icon="🏆" text="Pavouk není nastaven." />
 
   const sorted = [...rounds].sort((a, b) => a.position - b.position)
+  const maxPos = Math.max(...sorted.map(r => r.position))
 
   return (
     <div>
       <div className="sec-head">
-        <span className="sec-title">Pavouk</span>
+        <span className="sec-title">Play-off</span>
       </div>
 
-      <div style={{ overflowX: 'auto', paddingBottom: '.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'stretch', minWidth: 'max-content' }}>
-          {sorted.map((round, ri) => {
-            const roundSlots = [...slots]
-              .filter(s => s.round_id === round.id)
-              .sort((a, b) => a.position - b.position)
-            const UNIT = 90
-            const slotH = UNIT * Math.pow(2, ri)
-            const isFinal = ri === sorted.length - 1
+      {sorted.map(round => {
+        const roundSlots = [...slots]
+          .filter(s => s.round_id === round.id)
+          .sort((a, b) => a.position - b.position)
 
-            return (
-              <div key={round.id} style={{ display: 'flex' }}>
-                {/* Round column */}
-                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 172 }}>
-                  <div style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: '.77rem', letterSpacing: '.13em',
-                    color: 'var(--muted)', textAlign: 'center',
-                    padding: '0 6px .65rem',
-                    borderBottom: '1px solid var(--border)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {round.name}
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    {roundSlots.map(slot => {
-                      const hT = gt(slot.home_id), aT = gt(slot.away_id)
-                      const hw = slot.played && slot.home_score > slot.away_score
-                      const aw = slot.played && slot.away_score > slot.home_score
-                      return (
-                        <div key={slot.id} style={{
-                          display: 'flex', alignItems: 'center',
-                          padding: '5px 6px', height: slotH,
-                        }}>
-                          <div style={{
-                            background: 'var(--card)',
-                            border: `1px solid ${isFinal ? 'rgba(217,119,6,.3)' : 'var(--border)'}`,
-                            borderRadius: 9, overflow: 'hidden', width: 160,
-                            boxShadow: 'var(--shadow-card)',
-                          }}>
-                            {/* Home row */}
-                            <div style={{
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              padding: '.4rem .68rem', fontSize: '.77rem', fontWeight: 500,
-                              borderBottom: '1px solid var(--border)',
-                              background: hw ? (isFinal ? 'rgba(217,119,6,.08)' : 'var(--accent-dim)') : 'transparent',
-                              color: hw ? (isFinal ? 'var(--gold)' : 'var(--accent)') : hT ? 'var(--text)' : 'var(--muted)',
-                            }}>
-                              <span style={{ fontStyle: hT ? 'normal' : 'italic' }}>
-                                {hT ? hT.name : 'TBD'}
-                              </span>
-                              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.9rem', color: 'var(--muted)', marginLeft: 4 }}>
-                                {slot.played ? slot.home_score : ''}
-                              </span>
-                            </div>
-                            {/* Away row */}
-                            <div style={{
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              padding: '.4rem .68rem', fontSize: '.77rem', fontWeight: 500,
-                              background: aw ? (isFinal ? 'rgba(217,119,6,.08)' : 'var(--accent-dim)') : 'transparent',
-                              color: aw ? (isFinal ? 'var(--gold)' : 'var(--accent)') : aT ? 'var(--text)' : 'var(--muted)',
-                            }}>
-                              <span style={{ fontStyle: aT ? 'normal' : 'italic' }}>
-                                {aT ? aT.name : 'TBD'}
-                              </span>
-                              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.9rem', color: 'var(--muted)', marginLeft: 4 }}>
-                                {slot.played ? slot.away_score : ''}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+        const isFinal = round.position === maxPos
 
-                {/* Connector lines */}
-                {ri < sorted.length - 1 && (
-                  <div style={{
-                    display: 'flex', flexDirection: 'column',
-                    width: 24, flexShrink: 0,
-                    minHeight: slotH * roundSlots.length,
-                    paddingTop: 'calc(.65rem + 1px)',
-                  }}>
-                    {Array.from({ length: Math.ceil(roundSlots.length / 2) }, (_, p) => (
-                      <div key={p} style={{ height: slotH * 2, flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                        <div style={{ position: 'absolute', right: 0, top: '25%', height: '50%', width: 1, background: 'var(--border)' }} />
-                        <div style={{ flex: 1, position: 'relative' }}>
-                          <div style={{ position: 'absolute', right: 0, top: '50%', width: '100%', height: 1, background: 'var(--border)' }} />
-                        </div>
-                        <div style={{ flex: 1, position: 'relative' }} />
+        return (
+          <div key={round.id} style={{ marginBottom: '2rem' }}>
+            {/* Round header */}
+            <div style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: '1.25rem',
+              letterSpacing: '.12em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+              color: isFinal ? 'var(--gold)' : 'var(--text)',
+              padding: '.55rem 1rem',
+              borderLeft: `5px solid ${isFinal ? 'var(--gold)' : 'var(--accent)'}`,
+              background: isFinal ? 'rgba(217,119,6,.06)' : 'rgba(37,99,235,.04)',
+              borderRadius: '0 8px 8px 0',
+              marginBottom: '.9rem',
+            }}>
+              {round.name}
+            </div>
+
+            {/* Match cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+              {roundSlots.map(slot => {
+                const hT = gt(slot.home_id)
+                const aT = gt(slot.away_id)
+                const hw = slot.played && slot.home_score > slot.away_score
+                const aw = slot.played && slot.away_score > slot.home_score
+
+                const winnerColor = isFinal ? 'var(--gold)' : 'var(--accent)'
+                const winnerBg = isFinal ? 'rgba(217,119,6,.1)' : 'var(--accent-dim)'
+
+                return (
+                  <div
+                    key={slot.id}
+                    className="card"
+                    style={{
+                      padding: 'var(--pad-match)',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr auto 1fr',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      border: isFinal ? '1.5px solid rgba(217,119,6,.3)' : undefined,
+                    }}
+                  >
+                    {/* Home team */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.55rem' }}>
+                      <span style={{
+                        fontWeight: hw ? 700 : 500,
+                        fontSize: 'var(--fs-body)',
+                        color: hw ? winnerColor : hT ? 'var(--text)' : 'var(--muted)',
+                        fontStyle: hT ? 'normal' : 'italic',
+                        background: hw ? winnerBg : 'transparent',
+                        padding: hw ? '2px 8px' : '2px 0',
+                        borderRadius: hw ? 5 : 0,
+                        transition: 'background .15s',
+                      }}>
+                        {hT ? hT.name : 'TBD'}
+                      </span>
+                      {hT && <span className="team-dot" style={{ background: hT.color, width: 12, height: 12, flexShrink: 0 }} />}
+                    </div>
+
+                    {/* Score */}
+                    <div style={{ textAlign: 'center', minWidth: 100 }}>
+                      <div style={{
+                        fontFamily: "'Bebas Neue', sans-serif",
+                        fontSize: 'var(--fs-score)',
+                        letterSpacing: '.1em',
+                        lineHeight: 1,
+                        color: slot.played ? 'var(--text)' : 'var(--muted)',
+                      }}>
+                        {slot.played ? `${slot.home_score} : ${slot.away_score}` : 'VS'}
                       </div>
-                    ))}
+                      <span style={{
+                        display: 'inline-block',
+                        fontSize: '.6rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '.1em',
+                        padding: '2px 7px',
+                        borderRadius: 20,
+                        marginTop: '.25rem',
+                        background: slot.played ? 'rgba(22,163,74,.1)' : 'var(--border)',
+                        color: slot.played ? 'var(--success)' : 'var(--muted)',
+                      }}>
+                        {slot.played ? '✓ Odehráno' : 'Plánováno'}
+                      </span>
+                    </div>
+
+                    {/* Away team */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem' }}>
+                      {aT && <span className="team-dot" style={{ background: aT.color, width: 12, height: 12, flexShrink: 0 }} />}
+                      <span style={{
+                        fontWeight: aw ? 700 : 500,
+                        fontSize: 'var(--fs-body)',
+                        color: aw ? winnerColor : aT ? 'var(--text)' : 'var(--muted)',
+                        fontStyle: aT ? 'normal' : 'italic',
+                        background: aw ? winnerBg : 'transparent',
+                        padding: aw ? '2px 8px' : '2px 0',
+                        borderRadius: aw ? 5 : 0,
+                        transition: 'background .15s',
+                      }}>
+                        {aT ? aT.name : 'TBD'}
+                      </span>
+                    </div>
                   </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
