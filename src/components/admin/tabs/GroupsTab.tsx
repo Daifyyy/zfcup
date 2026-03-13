@@ -1,0 +1,213 @@
+import { useState } from 'react'
+import { supabase } from '../../../lib/supabase'
+import type { Team } from '../../../hooks/useTeams'
+import type { Group } from '../../../hooks/useGroups'
+import type { Match } from '../../../hooks/useMatches'
+import { matchCount, addMinutes } from '../../../lib/constants'
+
+interface Props {
+  teams: Team[]
+  groups: Group[]
+  matches: Match[]
+  showToast: (msg: string) => void
+}
+
+interface GroupForm {
+  name: string
+  teamIds: string[]
+  schedule: 'once' | 'twice'
+  tiebreaker: 'score_first' | 'h2h_first'
+  start_time: string
+  match_duration: string
+  break_between: string
+}
+
+function generatePairs(teamIds: string[], schedule: 'once' | 'twice') {
+  const pairs: { home_id: string; away_id: string }[] = []
+  for (let i = 0; i < teamIds.length; i++)
+    for (let j = i + 1; j < teamIds.length; j++) {
+      pairs.push({ home_id: teamIds[i], away_id: teamIds[j] })
+      if (schedule === 'twice')
+        pairs.push({ home_id: teamIds[j], away_id: teamIds[i] })
+    }
+  return pairs
+}
+
+export default function GroupsTab({ teams, groups, matches, showToast }: Props) {
+  const [form, setForm] = useState<GroupForm>({
+    name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_first',
+    start_time: '', match_duration: '20', break_between: '5',
+  })
+
+  const toggle = (id: string) =>
+    setForm(f => ({ ...f, teamIds: f.teamIds.includes(id) ? f.teamIds.filter(x => x !== id) : [...f.teamIds, id] }))
+
+  const previewEnd = () => {
+    if (!form.start_time || !form.teamIds.length) return null
+    const n = form.teamIds.length
+    const total = matchCount(n, form.schedule)
+    const dur = parseInt(form.match_duration) || 20
+    const brk = parseInt(form.break_between) || 5
+    const end = addMinutes(form.start_time, total * (dur + brk) - brk)
+    return `${total} zápasů · ${form.start_time}–${end}`
+  }
+
+  const createGroup = async () => {
+    if (!form.name.trim()) { showToast('Zadej název skupiny'); return }
+    if (form.teamIds.length < 2) { showToast('Vyber alespoň 2 týmy'); return }
+
+    const { data: grp, error: grpErr } = await supabase.from('groups').insert({
+      name: form.name.trim(),
+      team_ids: form.teamIds,
+      schedule: form.schedule,
+      tiebreaker: form.tiebreaker,
+      start_time: form.start_time,
+      match_duration: parseInt(form.match_duration) || 20,
+      break_between: parseInt(form.break_between) || 5,
+    }).select().single()
+
+    if (grpErr) { showToast('Chyba: ' + grpErr.message); return }
+
+    const pairs = generatePairs(form.teamIds, form.schedule)
+    const dur = parseInt(form.match_duration) || 20
+    const brk = parseInt(form.break_between) || 5
+    const matchRows = pairs.map((p, i) => ({
+      group_id: grp.id,
+      round: form.name.trim(),
+      home_id: p.home_id,
+      away_id: p.away_id,
+      home_score: 0,
+      away_score: 0,
+      played: false,
+      scheduled_time: form.start_time ? addMinutes(form.start_time, i * (dur + brk)) : '',
+    }))
+
+    const { error: mErr } = await supabase.from('matches').insert(matchRows)
+    if (mErr) { showToast('Skupina vytvořena, chyba při generování zápasů: ' + mErr.message); return }
+
+    setForm({ name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_first', start_time: '', match_duration: '20', break_between: '5' })
+    showToast(`Skupina přidána, vygenerováno ${matchRows.length} zápasů ✓`)
+  }
+
+  const removeGroup = async (g: Group) => {
+    const del = confirm(`Smazat skupinu "${g.name}"?\n\nOK = smazat i vygenerované zápasy\nCancel = ponechat zápasy`)
+    const { error } = await supabase.from('groups').delete().eq('id', g.id)
+    if (error) { showToast('Chyba: ' + error.message); return }
+    if (del) {
+      await supabase.from('matches').delete().eq('group_id', g.id)
+    }
+    showToast('Skupina smazána')
+  }
+
+  const preview = previewEnd()
+
+  return (
+    <div>
+      {!teams.length && (
+        <div className="warn-box"><strong>Nejsou žádné týmy.</strong> Nejprve přidej týmy v záložce Týmy.</div>
+      )}
+
+      <div className="sub-title">Vytvořit skupinu</div>
+      <div className="field-group">
+        <label className="field-label">Název skupiny</label>
+        <input className="field-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Skupina A" />
+      </div>
+      <div className="field-group">
+        <label className="field-label">Týmy ve skupině</label>
+        <div className="chk-list">
+          {!teams.length ? <span style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Nejsou týmy.</span>
+            : teams.map(t => (
+              <div key={t.id} className="chk-item" onClick={() => toggle(t.id)}>
+                <input type="checkbox" readOnly checked={form.teamIds.includes(t.id)} />
+                <label><span className="team-dot" style={{ background: t.color }} />{t.name}</label>
+              </div>
+            ))}
+        </div>
+        {form.teamIds.length >= 2 && (
+          <div className="gen-preview">
+            ✓ {form.teamIds.length} týmů → {matchCount(form.teamIds.length, form.schedule)} zápasů
+            {preview && ` · ${preview}`}
+          </div>
+        )}
+      </div>
+      <div className="field-group">
+        <label className="field-label">Systém odehrání</label>
+        <div className="radio-row">
+          <div className="radio-item" onClick={() => setForm(f => ({ ...f, schedule: 'once' }))}>
+            <input type="radio" readOnly checked={form.schedule === 'once'} />
+            <label>1× každý s každým</label>
+          </div>
+          <div className="radio-item" onClick={() => setForm(f => ({ ...f, schedule: 'twice' }))}>
+            <input type="radio" readOnly checked={form.schedule === 'twice'} />
+            <label>2× každý s každým</label>
+          </div>
+        </div>
+      </div>
+      <div className="field-group">
+        <label className="field-label">Tiebreaker</label>
+        <div className="radio-row">
+          <div className="radio-item" onClick={() => setForm(f => ({ ...f, tiebreaker: 'score_first' }))}>
+            <input type="radio" readOnly checked={form.tiebreaker === 'score_first'} />
+            <label>A: Skóre → vzájemné</label>
+          </div>
+          <div className="radio-item" onClick={() => setForm(f => ({ ...f, tiebreaker: 'h2h_first' }))}>
+            <input type="radio" readOnly checked={form.tiebreaker === 'h2h_first'} />
+            <label>B: Vzájemné → skóre</label>
+          </div>
+        </div>
+      </div>
+      <div className="field-row">
+        <div className="field-group">
+          <label className="field-label">Začátek (čas)</label>
+          <input className="field-input" type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} />
+        </div>
+        <div className="field-group" />
+      </div>
+      <div className="field-row">
+        <div className="field-group">
+          <label className="field-label">Délka zápasu (min)</label>
+          <input className="field-input" type="number" min="1" value={form.match_duration} onChange={e => setForm(f => ({ ...f, match_duration: e.target.value }))} />
+        </div>
+        <div className="field-group">
+          <label className="field-label">Přestávka (min)</label>
+          <input className="field-input" type="number" min="0" value={form.break_between} onChange={e => setForm(f => ({ ...f, break_between: e.target.value }))} />
+        </div>
+      </div>
+      <button className="btn btn-p" onClick={createGroup}>⚡ Vytvořit skupinu a generovat zápasy</button>
+
+      <hr className="divider" />
+      <div className="sub-title">Existující skupiny</div>
+      {!groups.length ? (
+        <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Žádné skupiny.</p>
+      ) : groups.map(g => {
+        const cnt = matches.filter(m => m.group_id === g.id).length
+        const playedCnt = matches.filter(m => m.group_id === g.id && m.played).length
+        return (
+          <div key={g.id} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem 1rem', marginBottom: '.6rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.4rem' }}>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.95rem', letterSpacing: '.06em', flex: 1 }}>{g.name}</span>
+              <button className="btn btn-d btn-sm" onClick={() => removeGroup(g)}>Smazat</button>
+            </div>
+            <div style={{ fontSize: '.71rem', color: 'var(--muted)', marginBottom: '.4rem' }}>
+              {g.team_ids.length} týmů · {cnt} zápasů ({playedCnt} odehráno) · {g.schedule === 'twice' ? '2×' : '1×'} každý s každým
+              {g.start_time && ` · od ${g.start_time}`}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {g.team_ids.map(id => {
+                const t = teams.find(t => t.id === id)
+                return t ? (
+                  <span key={id} style={{
+                    fontSize: '.7rem', background: '#fff', border: '1px solid var(--border)',
+                    borderRadius: 5, padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <span className="team-dot" style={{ background: t.color }} />{t.name}
+                  </span>
+                ) : null
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}

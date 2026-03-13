@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firemní turnaj</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── JSONBIN CONFIG ─────────────────────────────────────────────────────────
+   1. Založ účet na https://jsonbin.io (zdarma)
+   2. Klikni "Create Bin" → vlož {} → ulož → zkopíruj ID z URL
+   3. Account → API Keys → zkopíruj Master Key
+   Nahraď hodnoty níže v <script type="text/babel"> sekci
+   ─────────────────────────────────────────────────────────────────────────── */
+:root{
+  --bg:#080b0f;--card:#131920;--card2:#192028;--border:#1d2730;--border2:#253040;
+  --accent:#00cc65;--adim:rgba(0,204,101,.1);--red:#e8304a;--gold:#f0b429;
+  --text:#e2eaf2;--muted:#5e7588;--dim:#2d3d4d;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body,#root{min-height:100%;background:var(--bg);}
+body{font-family:'DM Sans',sans-serif;color:var(--text);}
+body::before{content:'';position:fixed;inset:0;background:
+  radial-gradient(ellipse 70% 45% at 15% -5%,rgba(0,204,101,.055),transparent 60%),
+  radial-gradient(ellipse 50% 40% at 90% 105%,rgba(0,80,200,.04),transparent 55%);
+  pointer-events:none;z-index:0;}
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:100;background:rgba(8,11,15,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+.hdr-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:1.1rem;height:58px;padding:0 1.5rem;}
+.logo{width:33px;height:33px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;cursor:pointer;user-select:none;}
+.tw{flex:1;min-width:0;}
+.tw h1{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.05em;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tw small{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.13em;}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s;}
+.s-ok{background:var(--accent);}
+.s-load{background:var(--gold);animation:pulse .8s infinite;}
+.s-err{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+nav{display:flex;flex-wrap:nowrap;overflow-x:auto;}
+.nb{background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.09em;padding:0 .8rem;height:58px;cursor:pointer;position:relative;transition:color .2s;white-space:nowrap;flex-shrink:0;}
+.nb::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent);transform:scaleX(0);transition:transform .25s;}
+.nb:hover,.nb.act{color:var(--text);}
+.nb.act::after{transform:scaleX(1);}
+/* MAIN */
+.main{max-width:1180px;margin:0 auto;padding:2rem 1.5rem 4rem;position:relative;z-index:1;}
+/* SEC */
+.sh{display:flex;align-items:baseline;gap:.8rem;margin-bottom:1.6rem;}
+.st{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.06em;}
+.sbadge{font-size:.63rem;font-weight:600;color:var(--accent);border:1px solid rgba(0,204,101,.3);padding:2px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.1em;}
+/* OV */
+.ov-g{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:.9rem;}
+.ovc{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:1rem 1.2rem;}
+.ovl{font-size:.63rem;text-transform:uppercase;letter-spacing:.13em;color:var(--muted);margin-bottom:.25rem;}
+.ovv{font-family:'Bebas Neue',sans-serif;font-size:1.45rem;}
+.ovv.g{color:var(--accent);}
+.ov-desc{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:1.2rem 1.5rem;font-size:.87rem;color:var(--muted);line-height:1.75;}
+/* TEAMS */
+.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.8rem;}
+.tc{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:1.1rem;position:relative;overflow:hidden;transition:border-color .2s;}
+.tc:hover{border-color:var(--border2);}
+.tbar{position:absolute;top:0;left:0;right:0;height:3px;}
+.tb{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#000;margin-bottom:.65rem;}
+.tn_{font-weight:600;font-size:.87rem;}
+/* RESULTS */
+.rl{font-family:'Bebas Neue',sans-serif;font-size:.83rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin:1.4rem 0 .5rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+.rl:first-child{margin-top:0;}
+.ml{display:flex;flex-direction:column;gap:.42rem;margin-bottom:.5rem;}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.72rem 1.1rem;display:grid;grid-template-columns:1fr 84px 1fr;align-items:center;gap:.7rem;}
+.mt{font-weight:500;font-size:.86rem;}
+.mt.h{text-align:right;}
+.mt.w{color:var(--accent);}
+.msb{text-align:center;}
+.msc{font-family:'Bebas Neue',sans-serif;font-size:1.38rem;letter-spacing:.1em;}
+.mst{font-size:.59rem;text-transform:uppercase;letter-spacing:.11em;}
+.sp{color:var(--accent);}
+.su{color:var(--dim);}
+/* STANDINGS */
+.stbl-wrap{margin-bottom:1.6rem;}
+.grp-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:1.2rem;}
+.grp-hdr{padding:.75rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.7rem;}
+.grp-name{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.08em;}
+.grp-meta{font-size:.68rem;color:var(--muted);}
+.stbl{width:100%;border-collapse:collapse;font-size:.83rem;}
+.stbl th{font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding:.45rem .9rem;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap;}
+.stbl th.left{text-align:left;}
+.stbl td{padding:.6rem .9rem;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;}
+.stbl td.left{text-align:left;}
+.stbl tr:last-child td{border-bottom:none;}
+.stbl tr:hover td{background:var(--card2);}
+.rank{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--muted);}
+.rank.r1{color:var(--gold);}
+.rank.r2{color:#aab4be;}
+.rank.r3{color:#cd7f32;}
+.pts{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--accent);}
+.tdot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle;flex-shrink:0;}
+.trow-n{display:flex;align-items:center;}
+/* SCORERS */
+.scr-card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.scr-tbl{width:100%;border-collapse:collapse;font-size:.85rem;}
+.scr-tbl th{font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding:.45rem .9rem;text-align:left;border-bottom:1px solid var(--border);}
+.scr-tbl th.c{text-align:center;}
+.scr-tbl td{padding:.62rem .9rem;border-bottom:1px solid var(--border);}
+.scr-tbl td.c{text-align:center;}
+.scr-tbl tr:last-child td{border-bottom:none;}
+.scr-tbl tr:hover td{background:var(--card2);}
+.scr-rank{font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--muted);}
+.scr-rank.r1{color:var(--gold);}
+.scr-rank.r2{color:#aab4be;}
+.scr-rank.r3{color:#cd7f32;}
+.scr-goals{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--accent);}
+.scr-name{font-weight:600;}
+.scr-team{font-size:.74rem;color:var(--muted);}
+/* BRACKET */
+.bkw{overflow-x:auto;padding-bottom:.5rem;}
+.bk{display:flex;align-items:stretch;}
+.bkr{display:flex;flex-direction:column;min-width:172px;}
+.bkrh{font-family:'Bebas Neue',sans-serif;font-size:.77rem;letter-spacing:.13em;color:var(--muted);text-align:center;padding:0 6px .65rem;border-bottom:1px solid var(--border);white-space:nowrap;}
+.bksl{flex:1;display:flex;flex-direction:column;}
+.bksl_{display:flex;align-items:center;padding:5px 6px;}
+.bkm{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;width:160px;}
+.bkm.fin{border-color:rgba(240,180,41,.35);}
+.bkt{display:flex;justify-content:space-between;align-items:center;padding:.4rem .68rem;font-size:.77rem;font-weight:500;border-bottom:1px solid var(--border);}
+.bkt:last-child{border-bottom:none;}
+.bkt.bkw_{background:var(--adim);color:var(--accent);}
+.bkt.bkwf{background:rgba(240,180,41,.1);color:var(--gold);}
+.bksc{font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:var(--muted);margin-left:4px;}
+.bktbd{color:var(--dim);font-style:italic;}
+.bkconn{display:flex;flex-direction:column;width:24px;flex-shrink:0;}
+.bkcp{flex:1;display:flex;flex-direction:column;position:relative;}
+.bkcp::after{content:'';position:absolute;right:0;top:25%;height:50%;width:1px;background:var(--border2);}
+.bkcs{flex:1;position:relative;}
+.bkcs::after{content:'';position:absolute;right:0;top:50%;width:100%;height:1px;background:var(--border2);}
+/* ADMIN */
+.aov{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;backdrop-filter:blur(6px);display:flex;justify-content:flex-end;}
+.apanel{width:min(540px,100vw);height:100vh;background:#0d1117;border-left:1px solid var(--border2);display:flex;flex-direction:column;overflow:hidden;animation:slideIn .25s ease;}
+@keyframes slideIn{from{transform:translateX(100%);}to{transform:translateX(0);}}
+.aphdr{padding:.9rem 1.3rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.65rem;flex-shrink:0;}
+.aphdr h2{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.06em;flex:1;}
+.abadge{font-size:.61rem;background:var(--adim);color:var(--accent);border:1px solid rgba(0,204,101,.25);padding:2px 7px;border-radius:20px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;}
+.acls{background:none;border:1px solid var(--border2);color:var(--muted);cursor:pointer;padding:.27rem .72rem;border-radius:6px;font-size:.76rem;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.acls:hover{border-color:var(--red);color:var(--red);}
+.atabs{display:flex;border-bottom:1px solid var(--border);padding:0 .6rem;overflow-x:auto;flex-shrink:0;}
+.atab{background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:.67rem;font-weight:600;text-transform:uppercase;letter-spacing:.09em;padding:.62rem .6rem;cursor:pointer;white-space:nowrap;position:relative;transition:color .2s;}
+.atab::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent);transform:scaleX(0);transition:transform .2s;}
+.atab.act{color:var(--accent);}
+.atab.act::after{transform:scaleX(1);}
+.abody{flex:1;overflow-y:auto;padding:1.15rem 1.2rem;}
+/* FORMS */
+.fg{margin-bottom:.88rem;}
+.fl{display:block;font-size:.67rem;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);margin-bottom:.28rem;}
+.fi,.fsel,.fta{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.84rem;padding:.5rem .83rem;transition:border-color .2s;outline:none;appearance:none;-webkit-appearance:none;}
+.fi:focus,.fsel:focus,.fta:focus{border-color:var(--accent);}
+.fta{resize:vertical;min-height:64px;line-height:1.5;}
+.fsel{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M0 0l5 6 5-6' stroke='%235e7588' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:1.8rem;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:.68rem;}
+.fr3{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:.5rem;}
+.ssep{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--muted);text-align:center;padding-bottom:.5rem;}
+/* CHECKBOXES */
+.chk-list{display:flex;flex-direction:column;gap:.3rem;max-height:200px;overflow-y:auto;background:var(--card);border:1px solid var(--border2);border-radius:7px;padding:.5rem .7rem;}
+.chk-item{display:flex;align-items:center;gap:.6rem;padding:.22rem 0;cursor:pointer;}
+.chk-item input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;flex-shrink:0;}
+.chk-item label{font-size:.84rem;cursor:pointer;display:flex;align-items:center;gap:.45rem;}
+.radio-row{display:flex;gap:1rem;}
+.radio-item{display:flex;align-items:center;gap:.5rem;cursor:pointer;}
+.radio-item input[type=radio]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;}
+.radio-item label{font-size:.84rem;cursor:pointer;}
+/* BTNS */
+.btn{display:inline-flex;align-items:center;gap:.28rem;padding:.47rem .88rem;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;transition:all .15s;border:none;}
+.bp{background:var(--accent);color:#000;}
+.bp:hover{background:#00f07a;}
+.bs{background:var(--card);color:var(--text);border:1px solid var(--border2);}
+.bs:hover{border-color:var(--accent);color:var(--accent);}
+.bg_{background:none;border:1px solid transparent;color:var(--muted);}
+.bg_:hover{color:var(--red);border-color:var(--red);}
+.bsm{padding:.26rem .62rem;font-size:.67rem;}
+.bfull{width:100%;justify-content:center;}
+.brow{display:flex;gap:.42rem;margin-top:.42rem;flex-wrap:wrap;}
+.div{border:none;border-top:1px solid var(--border);margin:.95rem 0;}
+.ss{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.09em;color:var(--muted);margin:1rem 0 .48rem;}
+.ss:first-child{margin-top:0;}
+/* ADMIN LIST */
+.alist{display:flex;flex-direction:column;gap:.4rem;margin-bottom:.65rem;}
+.ai{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:.58rem .88rem;display:flex;align-items:center;gap:.65rem;}
+.adot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.ain{flex:1;font-size:.83rem;font-weight:500;}
+.asub{font-size:.69rem;color:var(--muted);}
+/* COLORS */
+.colors{display:flex;gap:5px;flex-wrap:wrap;}
+.csw{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s;}
+.csw:hover{transform:scale(1.15);}
+.csw.sel{border-color:white;}
+/* INFO BOX */
+.info-box{background:rgba(0,204,101,.06);border:1px solid rgba(0,204,101,.2);border-radius:8px;padding:.8rem 1rem;font-size:.76rem;color:var(--muted);line-height:1.65;margin-bottom:1rem;}
+.info-box strong{color:var(--accent);}
+.warn-box{background:rgba(240,180,41,.06);border:1px solid rgba(240,180,41,.2);border-radius:8px;padding:.75rem .95rem;font-size:.76rem;color:var(--muted);line-height:1.65;margin-bottom:.9rem;}
+.warn-box strong{color:var(--gold);}
+/* LOGIN */
+.alogin{padding:1.7rem;display:flex;flex-direction:column;gap:.9rem;}
+.alogin h3{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.06em;}
+/* EMPTY */
+.empty{text-align:center;padding:3rem 2rem;color:var(--muted);}
+.eic{font-size:2rem;opacity:.3;margin-bottom:.65rem;}
+.etx{font-size:.82rem;}
+/* TOAST */
+.toast-wrap{position:fixed;bottom:1.2rem;right:1.3rem;z-index:2000;pointer-events:none;}
+.toast_{background:#192028;border:1px solid var(--accent);color:var(--text);padding:.58rem 1.05rem;border-radius:8px;font-size:.79rem;transform:translateY(20px);opacity:0;transition:all .25s;}
+.toast_.show{transform:translateY(0);opacity:1;}
+/* GEN PREVIEW */
+.gen-preview{font-size:.76rem;color:var(--accent);margin-top:.35rem;}
+/* GROUP ADMIN CARD */
+.grp-admin-card{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:.9rem 1rem;margin-bottom:.6rem;}
+.grp-admin-hdr{display:flex;align-items:center;gap:.7rem;margin-bottom:.4rem;}
+.grp-admin-name{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.06em;flex:1;}
+.grp-admin-sub{font-size:.71rem;color:var(--muted);}
+
+@media(max-width:700px){
+  .ov-g{grid-template-columns:1fr 1fr;}
+  .main{padding:1.4rem 1rem 3rem;}
+  .apanel{width:100vw;}
+  nav .nb{padding:0 .6rem;font-size:.65rem;}
+  .fr{grid-template-columns:1fr;}
+}
+@media(max-width:440px){.ov-g{grid-template-columns:1fr;}}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+// ═══════════════════════════════════════════════════════════════════════════
+// JSONBIN CONFIG — vyplň vlastní hodnoty
+// ═══════════════════════════════════════════════════════════════════════════
+const JSONBIN_ID  = "69b30812b7ec241ddc62cf84";   // např. "6657f3e2ad19ca34f8a1b2c3"
+const JSONBIN_KEY = "$2a$10$9.ysR9MT9.LDN8o8gt8Kw.GoIEMKdfFummU9qvpZE29Dlkvt/FTFu";   // např. "$2a$10$xyz..."
+const BIN_URL     = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+
+async function remoteLoad() {
+  if (JSONBIN_ID === "TVOJE_BIN_ID") return null;
+  try {
+    const r = await fetch(`${BIN_URL}/latest`, { headers: { "X-Master-Key": JSONBIN_KEY } });
+    if (!r.ok) throw new Error();
+    return (await r.json()).record;
+  } catch { return null; }
+}
+async function remoteSave(state) {
+  if (JSONBIN_ID === "TVOJE_BIN_ID") return;
+  try {
+    await fetch(BIN_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Master-Key": JSONBIN_KEY },
+      body: JSON.stringify(state)
+    });
+  } catch {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+const COLORS = ["#00cc65","#3b82f6","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#ec4899","#84cc16","#e2eaf2"];
+const DEF = {
+  tournament: { name:"", subtitle:"", date:"", venue:"", description:"" },
+  teams:[], matches:[], bracket:[], scorers:[], groups:[], password:"admin"
+};
+const uid = () => "_" + Math.random().toString(36).substr(2,9);
+
+function localLoad() {
+  try { const s = localStorage.getItem("ft_v4"); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEF)); }
+  catch { return JSON.parse(JSON.stringify(DEF)); }
+}
+
+// ── Standings per group ────────────────────────────────────────────────────
+function calcGroupStandings(group, teams, matches) {
+  const rows = {};
+  group.teamIds.forEach(id => { rows[id] = {w:0,d:0,l:0,gf:0,ga:0,pts:0}; });
+  matches
+    .filter(m => m.played && group.teamIds.includes(m.homeId) && group.teamIds.includes(m.awayId))
+    .forEach(m => {
+      const h = rows[m.homeId], a = rows[m.awayId];
+      if (!h || !a) return;
+      const hs = Number(m.homeScore), as_ = Number(m.awayScore);
+      h.gf += hs; h.ga += as_; a.gf += as_; a.ga += hs;
+      if (hs > as_)       { h.w++; h.pts+=3; a.l++; }
+      else if (hs < as_)  { a.w++; a.pts+=3; h.l++; }
+      else                { h.d++; h.pts+=1; a.d++; a.pts+=1; }
+    });
+  return Object.entries(rows)
+    .map(([id,s]) => ({id,...s, gd:s.gf-s.ga, played:s.w+s.d+s.l}))
+    .sort((a,b) => b.pts-a.pts || (b.gd-a.gd) || (b.gf-a.gf));
+}
+
+// ── Round robin match generation ──────────────────────────────────────────
+function generateMatches(group) {
+  const ids = group.teamIds;
+  const pairs = [];
+  for (let i=0; i<ids.length; i++)
+    for (let j=i+1; j<ids.length; j++) {
+      pairs.push({id:uid(), round:group.name, homeId:ids[i], awayId:ids[j], homeScore:0, awayScore:0, played:false});
+      if (group.schedule === "twice")
+        pairs.push({id:uid(), round:group.name, homeId:ids[j], awayId:ids[i], homeScore:0, awayScore:0, played:false});
+    }
+  return pairs;
+}
+
+function matchCount(n, schedule) {
+  return schedule === "twice" ? n*(n-1) : n*(n-1)/2;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// APP
+// ═══════════════════════════════════════════════════════════════════════════
+const { useState, useEffect, useRef } = React;
+
+function App() {
+  const [S, setS_]      = useState(localLoad);
+  const [tab, setTab]   = useState("overview");
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [authed, setAuthed]       = useState(false);
+  const [aTab, setATab]           = useState("info");
+  const [pw, setPw]               = useState("");
+  const [pwErr, setPwErr]         = useState(false);
+  const [toast, setToast]         = useState("");
+  const [toastShow, setToastShow] = useState(false);
+  const [sync, setSync]           = useState("ok");
+  const [selColor, setSelColor]   = useState(COLORS[0]);
+  const [editMid, setEditMid]     = useState(null);
+  const [editSid, setEditSid]     = useState(null);
+  const [fi, setFi]   = useState({...DEF.tournament});
+  const [ftname, setFtname] = useState("");
+  const [fm, setFm]   = useState({round:"",homeId:"",awayId:"",s1:"",s2:"",played:false});
+  const [fs, setFs]   = useState({name:"",teamId:"",goals:""});
+  const [fb, setFb]   = useState({name:"",slots:"1"});
+  // group form
+  const [fg, setFg]   = useState({name:"", teamIds:[], schedule:"once"});
+  const toastRef = useRef(null);
+
+  // Remote load on mount
+  useEffect(() => {
+    if (JSONBIN_ID === "TVOJE_BIN_ID") return;
+    setSync("load");
+    remoteLoad().then(d => {
+      if (d) { setS_(d); try { localStorage.setItem("ft_v4", JSON.stringify(d)); } catch {} }
+      setSync(d ? "ok" : "err");
+    });
+  }, []);
+
+  // Keyboard shortcut
+  useEffect(() => {
+    const h = e => {
+      if (e.ctrlKey && e.shiftKey && e.key==="A") { e.preventDefault(); setAdminOpen(true); }
+      if (e.key==="Escape") setAdminOpen(false);
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  useEffect(() => {
+    if (adminOpen && authed) setFi({...DEF.tournament,...S.tournament});
+  }, [adminOpen, authed]);
+
+  function setS(upd) {
+    setS_(prev => {
+      const next = typeof upd==="function" ? upd(prev) : upd;
+      try { localStorage.setItem("ft_v4", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+  async function sync_(upd) {
+    let next;
+    setS_(prev => {
+      next = typeof upd==="function" ? upd(prev) : upd;
+      try { localStorage.setItem("ft_v4", JSON.stringify(next)); } catch {}
+      return next;
+    });
+    if (JSONBIN_ID !== "TVOJE_BIN_ID") {
+      setSync("load");
+      await remoteSave(next);
+      setSync("ok");
+    }
+  }
+
+  function showToast(msg) {
+    setToast(msg); setToastShow(true);
+    clearTimeout(toastRef.current);
+    toastRef.current = setTimeout(() => setToastShow(false), 2400);
+  }
+
+  const T  = S.tournament;
+  const gt = id => S.teams.find(t => t.id===id);
+  const tn = id => { const t=gt(id); return t?t.name:"—"; };
+  const played = S.matches.filter(m=>m.played).length;
+  const rounds = {};
+  S.matches.forEach(m => { const r=m.round||"Bez kola"; if(!rounds[r]) rounds[r]=[]; rounds[r].push(m); });
+  const groups = S.groups||[];
+  const scorers = [...(S.scorers||[])].sort((a,b)=>Number(b.goals)-Number(a.goals));
+
+  // ── ADMIN ACTIONS ────────────────────────────────────────────────────────
+  const checkPw = () => {
+    if (pw===S.password) { setAuthed(true); setPwErr(false); setFi({...DEF.tournament,...S.tournament}); }
+    else setPwErr(true);
+  };
+  const saveInfo = async () => { await sync_(s=>({...s,tournament:{...fi}})); showToast("Uloženo ✓"); };
+  const addTeam = async () => {
+    if (!ftname.trim()) return;
+    await sync_(s=>({...s,teams:[...s.teams,{id:uid(),name:ftname.trim(),color:selColor}]}));
+    setFtname(""); showToast("Tým přidán ✓");
+  };
+  const removeTeam = async id => {
+    if (!confirm("Smazat tým?")) return;
+    await sync_(s=>({...s,
+      teams:s.teams.filter(t=>t.id!==id),
+      matches:s.matches.filter(m=>m.homeId!==id&&m.awayId!==id),
+      scorers:(s.scorers||[]).filter(sc=>sc.teamId!==id),
+      groups:(s.groups||[]).map(g=>({...g,teamIds:g.teamIds.filter(x=>x!==id)}))
+    }));
+    showToast("Tým smazán");
+  };
+  const saveMatch = async () => {
+    if (!fm.homeId||!fm.awayId) { showToast("Vyberte oba týmy"); return; }
+    if (fm.homeId===fm.awayId)  { showToast("Týmy musí být různé"); return; }
+    const m = {round:fm.round,homeId:fm.homeId,awayId:fm.awayId,homeScore:parseInt(fm.s1)||0,awayScore:parseInt(fm.s2)||0,played:fm.played};
+    if (editMid) await sync_(s=>({...s,matches:s.matches.map(x=>x.id===editMid?{...x,...m}:x)}));
+    else         await sync_(s=>({...s,matches:[...s.matches,{id:uid(),...m}]}));
+    setFm({round:"",homeId:"",awayId:"",s1:"",s2:"",played:false}); setEditMid(null);
+    showToast("Zápas uložen ✓");
+  };
+  const editMatch = id => {
+    const m=S.matches.find(x=>x.id===id); if(!m) return;
+    setFm({round:m.round||"",homeId:m.homeId||"",awayId:m.awayId||"",s1:m.homeScore??"",s2:m.awayScore??"",played:!!m.played});
+    setEditMid(id); setATab("matches");
+  };
+  const removeMatch = async id => {
+    if (!confirm("Smazat zápas?")) return;
+    await sync_(s=>({...s,matches:s.matches.filter(m=>m.id!==id)})); showToast("Smazáno");
+  };
+  const saveScorer = async () => {
+    if (!fs.name.trim()) { showToast("Zadej jméno"); return; }
+    const entry = {name:fs.name.trim(),teamId:fs.teamId||"",goals:parseInt(fs.goals)||0};
+    if (editSid) await sync_(s=>({...s,scorers:(s.scorers||[]).map(x=>x.id===editSid?{...x,...entry}:x)}));
+    else         await sync_(s=>({...s,scorers:[...(s.scorers||[]),{id:uid(),...entry}]}));
+    setFs({name:"",teamId:"",goals:""}); setEditSid(null); showToast("Uloženo ✓");
+  };
+  const editScorer = id => {
+    const sc=(S.scorers||[]).find(x=>x.id===id); if(!sc) return;
+    setFs({name:sc.name||"",teamId:sc.teamId||"",goals:sc.goals??""});
+    setEditSid(id); setATab("scorers");
+  };
+  const removeScorer = async id => {
+    if (!confirm("Smazat?")) return;
+    await sync_(s=>({...s,scorers:(s.scorers||[]).filter(x=>x.id!==id)})); showToast("Smazáno");
+  };
+  // Groups
+  const addGroup = async () => {
+    if (!fg.name.trim())       { showToast("Zadej název skupiny"); return; }
+    if (fg.teamIds.length < 2) { showToast("Vyber alespoň 2 týmy"); return; }
+    const group = {id:uid(), name:fg.name.trim(), teamIds:fg.teamIds, schedule:fg.schedule};
+    const newMatches = generateMatches(group);
+    await sync_(s=>({...s, groups:[...(s.groups||[]),group], matches:[...s.matches,...newMatches]}));
+    setFg({name:"",teamIds:[],schedule:"once"});
+    showToast(`Skupina přidána, vygenerováno ${newMatches.length} zápasů ✓`);
+  };
+  const removeGroup = async id => {
+    const g = (S.groups||[]).find(x=>x.id===id);
+    if (!g) return;
+    const del = confirm(`Smazat skupinu "${g.name}"?\n\nOK = smazat i vygenerované zápasy\nCancel = ponechat zápasy`);
+    await sync_(s => {
+      const groups = (s.groups||[]).filter(x=>x.id!==id);
+      const matches = del
+        ? s.matches.filter(m => !(m.round===g.name && g.teamIds.includes(m.homeId) && g.teamIds.includes(m.awayId)))
+        : s.matches;
+      return {...s, groups, matches};
+    });
+    showToast("Skupina smazána");
+  };
+  const toggleGroupTeam = id => {
+    setFg(f => ({...f, teamIds: f.teamIds.includes(id) ? f.teamIds.filter(x=>x!==id) : [...f.teamIds,id]}));
+  };
+  // Bracket
+  const addBracketRound = async () => {
+    if (!fb.name.trim()) return;
+    const slots = Array.from({length:parseInt(fb.slots)},()=>({homeId:"",awayId:"",homeScore:0,awayScore:0,played:false}));
+    await sync_(s=>({...s,bracket:[...s.bracket,{id:uid(),name:fb.name.trim(),slots}]}));
+    setFb({name:"",slots:"1"}); showToast("Kolo přidáno ✓");
+  };
+  const removeBracketRound = async rid => {
+    if (!confirm("Smazat kolo?")) return;
+    await sync_(s=>({...s,bracket:s.bracket.filter(r=>r.id!==rid)})); showToast("Smazáno");
+  };
+  const saveBracketSlot = async (rid,si,data) => {
+    await sync_(s=>({...s,bracket:s.bracket.map(r=>r.id===rid
+      ?{...r,slots:r.slots.map((sl,i)=>i===si?{...sl,...data}:sl)}:r)}));
+    showToast("Uloženo ✓");
+  };
+  const changePw = async (p1,p2) => {
+    if (!p1) { showToast("Zadejte heslo"); return; }
+    if (p1!==p2) { showToast("Hesla se neshodují"); return; }
+    await sync_(s=>({...s,password:p1})); showToast("Heslo změněno ✓");
+  };
+  const resetAll = () => {
+    if (!confirm("Opravdu smazat vše?")) return;
+    const fresh = JSON.parse(JSON.stringify(DEF));
+    if (JSONBIN_ID!=="TVOJE_BIN_ID") remoteSave(fresh);
+    try { localStorage.removeItem("ft_v4"); } catch {}
+    setS_(fresh); setAuthed(false); setAdminOpen(false); showToast("Vše smazáno");
+  };
+
+  const TABS = [
+    ["overview","Přehled"],["teams","Týmy"],["results","Výsledky"],
+    ["standings","Tabulka"],["scorers","Střelci"],["bracket","Pavouk"]
+  ];
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
+  return (
+    <div>
+      {/* HEADER */}
+      <div className="hdr">
+        <div className="hdr-in">
+          <div className="logo" onClick={()=>setAdminOpen(true)} title="Admin (Ctrl+Shift+A)">⚽</div>
+          <div className="tw">
+            <h1>{T.name||"Firemní turnaj"}</h1>
+            <small>{[T.subtitle,T.date,T.venue].filter(Boolean).join(" · ")||"Klikni na ⚽ pro admin"}</small>
+          </div>
+          <div className={`sync-dot s-${sync}`} title={sync==="ok"?"Synced":sync==="load"?"Saving...":"Offline — JSONBin?"}/>
+          <nav>{TABS.map(([k,l])=>(
+            <button key={k} className={`nb${tab===k?" act":""}`} onClick={()=>setTab(k)}>{l}</button>
+          ))}</nav>
+        </div>
+      </div>
+
+      <div className="main">
+
+        {/* OVERVIEW */}
+        {tab==="overview" && <div>
+          <div className="sh"><span className="st">{T.name||"Turnaj"}</span></div>
+          <div className="ov-g">
+            <div className="ovc"><div className="ovl">Počet týmů</div><div className="ovv g">{S.teams.length}</div></div>
+            <div className="ovc"><div className="ovl">Zápasů celkem</div><div className="ovv">{S.matches.length}</div></div>
+            <div className="ovc"><div className="ovl">Odehráno</div><div className="ovv g">{played}</div></div>
+            <div className="ovc"><div className="ovl">Skupin</div><div className="ovv">{groups.length}</div></div>
+          </div>
+          <div className="ov-desc">{T.description||"Klikni na ⚽ vlevo nahoře nebo stiskni Ctrl+Shift+A."}</div>
+        </div>}
+
+        {/* TEAMS */}
+        {tab==="teams" && <div>
+          <div className="sh"><span className="st">Týmy</span><span className="sbadge">{S.teams.length}</span></div>
+          {!S.teams.length ? <Empty icon="👥" text="Žádné týmy."/> : (
+            <div className="tg">{S.teams.map(t=>(
+              <div key={t.id} className="tc">
+                <div className="tbar" style={{background:t.color}}/>
+                <div className="tb" style={{background:t.color}}>{t.name.substring(0,2).toUpperCase()}</div>
+                <div className="tn_">{t.name}</div>
+              </div>
+            ))}</div>
+          )}
+        </div>}
+
+        {/* RESULTS */}
+        {tab==="results" && <div>
+          <div className="sh"><span className="st">Výsledky</span></div>
+          {!S.matches.length ? <Empty icon="📋" text="Žádné zápasy."/> :
+            Object.entries(rounds).map(([r,ms])=>(
+              <div key={r}>
+                <div className="rl">{r}</div>
+                <div className="ml">{ms.map(m=>{
+                  const hw=m.played&&m.homeScore>m.awayScore, aw=m.played&&m.awayScore>m.homeScore;
+                  return <div key={m.id} className="mc">
+                    <div className={`mt h${hw?" w":""}`}>{tn(m.homeId)}</div>
+                    <div className="msb">
+                      <div className="msc">{m.played?`${m.homeScore} : ${m.awayScore}`:"vs"}</div>
+                      <div className={`mst ${m.played?"sp":"su"}`}>{m.played?"Odehráno":"Plánováno"}</div>
+                    </div>
+                    <div className={`mt${aw?" w":""}`}>{tn(m.awayId)}</div>
+                  </div>;
+                })}</div>
+              </div>
+            ))
+          }
+        </div>}
+
+        {/* STANDINGS */}
+        {tab==="standings" && <div>
+          <div className="sh"><span className="st">Tabulka</span></div>
+          {!groups.length
+            ? <Empty icon="📊" text="Nejsou definovány žádné skupiny. Přidej je v admin panelu → Skupiny."/>
+            : groups.map(group => {
+              const rows = calcGroupStandings(group, S.teams, S.matches);
+              const totalPlayed = rows.reduce((s,r)=>s+r.played,0)/2;
+              return (
+                <div key={group.id} className="grp-card">
+                  <div className="grp-hdr">
+                    <span className="grp-name">{group.name}</span>
+                    <span className="grp-meta">{group.teamIds.length} týmů · {totalPlayed} odehráno</span>
+                  </div>
+                  <div style={{overflowX:"auto"}}>
+                    <table className="stbl">
+                      <thead><tr>
+                        <th style={{width:28}}>#</th>
+                        <th className="left">Tým</th>
+                        <th title="Odehráno">Z</th>
+                        <th title="Výhry">V</th>
+                        <th title="Remízy">R</th>
+                        <th title="Prohry">P</th>
+                        <th title="Skóre">Skóre</th>
+                        <th title="Rozdíl gólů">+/−</th>
+                        <th title="Body">Body</th>
+                      </tr></thead>
+                      <tbody>{rows.map((row,i)=>{
+                        const team = gt(row.id);
+                        const rc = i===0?" r1":i===1?" r2":i===2?" r3":"";
+                        return <tr key={row.id}>
+                          <td><span className={`rank${rc}`}>{i+1}</span></td>
+                          <td className="left"><div className="trow-n">
+                            {team && <span className="tdot" style={{background:team.color}}/>}
+                            {team?team.name:row.id}
+                          </div></td>
+                          <td>{row.played}</td>
+                          <td>{row.w}</td>
+                          <td>{row.d}</td>
+                          <td>{row.l}</td>
+                          <td>{row.gf}:{row.ga}</td>
+                          <td style={{color:row.gd>0?"var(--accent)":row.gd<0?"var(--red)":"var(--muted)"}}>{row.gd>0?"+":""}{row.gd}</td>
+                          <td><span className="pts">{row.pts}</span></td>
+                        </tr>;
+                      })}</tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })
+          }
+        </div>}
+
+        {/* SCORERS */}
+        {tab==="scorers" && <div>
+          <div className="sh"><span className="st">Střelci</span><span className="sbadge">{scorers.length}</span></div>
+          {!scorers.length ? <Empty icon="⚽" text="Žádní střelci."/> : (
+            <div className="scr-card">
+              <table className="scr-tbl">
+                <thead><tr>
+                  <th style={{width:36,textAlign:"center"}}>#</th>
+                  <th>Hráč</th><th>Tým</th>
+                  <th className="c">Góly</th>
+                </tr></thead>
+                <tbody>{scorers.map((sc,i)=>{
+                  const team=gt(sc.teamId);
+                  const rc=i===0?" r1":i===1?" r2":i===2?" r3":"";
+                  return <tr key={sc.id}>
+                    <td style={{textAlign:"center"}}><span className={`scr-rank${rc}`}>{i+1}</span></td>
+                    <td><div className="scr-name">{sc.name}</div></td>
+                    <td>{team?<div style={{display:"flex",alignItems:"center",gap:5}}><span className="tdot" style={{background:team.color}}/><span className="scr-team">{team.name}</span></div>:<span className="scr-team">—</span>}</td>
+                    <td className="c"><span style={{fontSize:".8rem",opacity:.6}}>⚽ </span><span className="scr-goals">{sc.goals}</span></td>
+                  </tr>;
+                })}</tbody>
+              </table>
+            </div>
+          )}
+        </div>}
+
+        {/* BRACKET */}
+        {tab==="bracket" && <div>
+          <div className="sh"><span className="st">Pavouk</span></div>
+          {!S.bracket.length ? <Empty icon="🏆" text="Pavouk není nastaven."/> : (
+            <div className="bkw"><div className="bk">
+              {S.bracket.map((round,ri)=>{
+                const UNIT=90, slotH=UNIT*Math.pow(2,ri), isFinal=ri===S.bracket.length-1;
+                return (
+                  <React.Fragment key={round.id}>
+                    <div className="bkr">
+                      <div className="bkrh">{round.name}</div>
+                      <div className="bksl">
+                        {round.slots.map((slot,si)=>{
+                          const hw=slot.played&&Number(slot.homeScore)>Number(slot.awayScore);
+                          const aw=slot.played&&Number(slot.awayScore)>Number(slot.homeScore);
+                          const hT=gt(slot.homeId), aT=gt(slot.awayId);
+                          return <div key={si} className="bksl_" style={{height:slotH}}>
+                            <div className={`bkm${isFinal?" fin":""}`}>
+                              <div className={`bkt${hw?(isFinal?" bkwf":" bkw_"):""}`}>
+                                <span className={!hT?"bktbd":""}>{hT?hT.name:"TBD"}</span>
+                                <span className="bksc">{slot.played?slot.homeScore:""}</span>
+                              </div>
+                              <div className={`bkt${aw?(isFinal?" bkwf":" bkw_"):""}`}>
+                                <span className={!aT?"bktbd":""}>{aT?aT.name:"TBD"}</span>
+                                <span className="bksc">{slot.played?slot.awayScore:""}</span>
+                              </div>
+                            </div>
+                          </div>;
+                        })}
+                      </div>
+                    </div>
+                    {ri<S.bracket.length-1 && (
+                      <div className="bkconn" style={{minHeight:slotH*round.slots.length,paddingTop:"calc(.65rem + 1px)"}}>
+                        {Array.from({length:Math.ceil(round.slots.length/2)},(_,p)=>(
+                          <div key={p} className="bkcp" style={{height:slotH*2}}>
+                            <div className="bkcs" style={{height:"50%"}}/>
+                            <div className="bkcs" style={{height:"50%"}}/>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div></div>
+          )}
+        </div>}
+
+      </div>
+
+      {/* ── ADMIN OVERLAY ─────────────────────────────────────────────────── */}
+      {adminOpen && (
+        <div className="aov" onClick={e=>e.target===e.currentTarget&&setAdminOpen(false)}>
+          <div className="apanel">
+            <div className="aphdr">
+              <span>⚽</span><h2>Admin panel</h2>
+              <span className="abadge">Správce</span>
+              <button className="acls" onClick={()=>setAdminOpen(false)}>✕ Zavřít</button>
+            </div>
+
+            {!authed ? (
+              <div className="alogin">
+                <h3>Přihlášení</h3>
+                <p style={{fontSize:".8rem",color:"var(--muted)"}}>Výchozí heslo: <strong>admin</strong></p>
+                <div className="fg">
+                  <label className="fl">Heslo</label>
+                  <input className="fi" type="password" value={pw} onChange={e=>setPw(e.target.value)}
+                    onKeyDown={e=>e.key==="Enter"&&checkPw()} autoFocus/>
+                </div>
+                <button className="btn bp bfull" onClick={checkPw}>Přihlásit</button>
+                {pwErr && <p style={{color:"var(--red)",fontSize:".76rem"}}>Špatné heslo.</p>}
+              </div>
+            ) : (
+              <>
+                <div className="atabs">
+                  {[["info","Info"],["teams","Týmy"],["groups","Skupiny"],
+                    ["matches","Zápasy"],["scorers","Střelci"],["bracket","Pavouk"],["settings","Nastavení"]].map(([k,l])=>(
+                    <button key={k} className={`atab${aTab===k?" act":""}`} onClick={()=>setATab(k)}>{l}</button>
+                  ))}
+                </div>
+                <div className="abody">
+
+                  {/* ── INFO ─── */}
+                  {aTab==="info" && <div>
+                    <div className="fg"><label className="fl">Název turnaje</label>
+                      <input className="fi" value={fi.name} onChange={e=>setFi(f=>({...f,name:e.target.value}))} placeholder="Firemní fotbalový turnaj"/></div>
+                    <div className="fg"><label className="fl">Podnázev / rok</label>
+                      <input className="fi" value={fi.subtitle} onChange={e=>setFi(f=>({...f,subtitle:e.target.value}))} placeholder="2025"/></div>
+                    <div className="fr">
+                      <div className="fg"><label className="fl">Datum</label>
+                        <input className="fi" value={fi.date} onChange={e=>setFi(f=>({...f,date:e.target.value}))} placeholder="15. 6. 2025"/></div>
+                      <div className="fg"><label className="fl">Místo</label>
+                        <input className="fi" value={fi.venue} onChange={e=>setFi(f=>({...f,venue:e.target.value}))} placeholder="Sportovní hala"/></div>
+                    </div>
+                    <div className="fg"><label className="fl">Popis</label>
+                      <textarea className="fta" value={fi.description} onChange={e=>setFi(f=>({...f,description:e.target.value}))} placeholder="Stručný popis turnaje..."/></div>
+                    <button className="btn bp bfull" onClick={saveInfo}>💾 Uložit</button>
+                  </div>}
+
+                  {/* ── TEAMS ─── */}
+                  {aTab==="teams" && <div>
+                    <div className="ss">Přidat tým</div>
+                    <div className="fg"><label className="fl">Název týmu</label>
+                      <input className="fi" value={ftname} onChange={e=>setFtname(e.target.value)}
+                        onKeyDown={e=>e.key==="Enter"&&addTeam()} placeholder="Název týmu"/></div>
+                    <div className="fg"><label className="fl">Barva</label>
+                      <div className="colors">{COLORS.map(c=>(
+                        <div key={c} className={`csw${selColor===c?" sel":""}`} style={{background:c}} onClick={()=>setSelColor(c)}/>
+                      ))}</div>
+                    </div>
+                    <button className="btn bp" onClick={addTeam}>+ Přidat tým</button>
+                    <hr className="div"/>
+                    <div className="ss">Týmy</div>
+                    {!S.teams.length ? <p style={{fontSize:".76rem",color:"var(--muted)"}}>Žádné týmy.</p> : (
+                      <div className="alist">{S.teams.map(t=>(
+                        <div key={t.id} className="ai">
+                          <div className="adot" style={{background:t.color}}/>
+                          <div className="ain">{t.name}</div>
+                          <button className="btn bg_ bsm" onClick={()=>removeTeam(t.id)}>Smazat</button>
+                        </div>
+                      ))}</div>
+                    )}
+                  </div>}
+
+                  {/* ── GROUPS ─── */}
+                  {aTab==="groups" && <div>
+                    {!S.teams.length && (
+                      <div className="warn-box"><strong>Nejsou žádné týmy.</strong> Nejprve přidej týmy v záložce Týmy.</div>
+                    )}
+                    <div className="ss">Vytvořit skupinu</div>
+                    <div className="fg"><label className="fl">Název skupiny</label>
+                      <input className="fi" value={fg.name} onChange={e=>setFg(f=>({...f,name:e.target.value}))} placeholder="Skupina A, Skupina B..."/></div>
+                    <div className="fg">
+                      <label className="fl">Týmy ve skupině</label>
+                      <div className="chk-list">
+                        {!S.teams.length
+                          ? <span style={{fontSize:".76rem",color:"var(--muted)"}}>Nejsou týmy.</span>
+                          : S.teams.map(t=>(
+                          <div key={t.id} className="chk-item" onClick={()=>toggleGroupTeam(t.id)}>
+                            <input type="checkbox" readOnly checked={fg.teamIds.includes(t.id)} style={{accentColor:"var(--accent)"}}/>
+                            <label>
+                              <span className="tdot" style={{background:t.color}}/>
+                              {t.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      {fg.teamIds.length >= 2 && (
+                        <div className="gen-preview">
+                          ✓ {fg.teamIds.length} týmů → vygeneruje {matchCount(fg.teamIds.length, fg.schedule)} zápasů
+                        </div>
+                      )}
+                    </div>
+                    <div className="fg">
+                      <label className="fl">Systém odehrání</label>
+                      <div className="radio-row">
+                        <div className="radio-item" onClick={()=>setFg(f=>({...f,schedule:"once"}))}>
+                          <input type="radio" readOnly checked={fg.schedule==="once"}/>
+                          <label>Každý s každým jednou</label>
+                        </div>
+                        <div className="radio-item" onClick={()=>setFg(f=>({...f,schedule:"twice"}))}>
+                          <input type="radio" readOnly checked={fg.schedule==="twice"}/>
+                          <label>Každý s každým dvakrát</label>
+                        </div>
+                      </div>
+                    </div>
+                    <button className="btn bp" onClick={addGroup}>⚡ Vytvořit skupinu a generovat zápasy</button>
+                    <hr className="div"/>
+                    <div className="ss">Existující skupiny</div>
+                    {!groups.length
+                      ? <p style={{fontSize:".76rem",color:"var(--muted)"}}>Žádné skupiny.</p>
+                      : groups.map(g=>{
+                        const cnt = S.matches.filter(m=>g.teamIds.includes(m.homeId)&&g.teamIds.includes(m.awayId)).length;
+                        const playedCnt = S.matches.filter(m=>m.played&&g.teamIds.includes(m.homeId)&&g.teamIds.includes(m.awayId)).length;
+                        return (
+                          <div key={g.id} className="grp-admin-card">
+                            <div className="grp-admin-hdr">
+                              <span className="grp-admin-name">{g.name}</span>
+                              <button className="btn bg_ bsm" onClick={()=>removeGroup(g.id)}>Smazat</button>
+                            </div>
+                            <div className="grp-admin-sub">
+                              {g.teamIds.length} týmů · {cnt} zápasů ({playedCnt} odehráno) · {g.schedule==="twice"?"2× každý s každým":"1× každý s každým"}
+                            </div>
+                            <div style={{marginTop:".45rem",display:"flex",flexWrap:"wrap",gap:4}}>
+                              {g.teamIds.map(id=>{const t=gt(id);return t?(
+                                <span key={id} style={{fontSize:".7rem",background:"var(--card2)",border:"1px solid var(--border)",borderRadius:4,padding:"1px 7px",display:"flex",alignItems:"center",gap:4}}>
+                                  <span className="tdot" style={{background:t.color,margin:0}}/>
+                                  {t.name}
+                                </span>
+                              ):null;})}
+                            </div>
+                          </div>
+                        );
+                      })
+                    }
+                  </div>}
+
+                  {/* ── MATCHES ─── */}
+                  {aTab==="matches" && <div>
+                    <div className="ss">{editMid?"Upravit zápas":"Přidat zápas"}</div>
+                    <div className="fg"><label className="fl">Kolo / skupina</label>
+                      <input className="fi" value={fm.round} onChange={e=>setFm(f=>({...f,round:e.target.value}))} placeholder="Skupina A, Semifinále..."/></div>
+                    <div className="fr">
+                      <div className="fg"><label className="fl">Domácí tým</label>
+                        <select className="fi fsel" value={fm.homeId} onChange={e=>setFm(f=>({...f,homeId:e.target.value}))}>
+                          <option value="">— Vyberte —</option>
+                          {S.teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select></div>
+                      <div className="fg"><label className="fl">Hostující tým</label>
+                        <select className="fi fsel" value={fm.awayId} onChange={e=>setFm(f=>({...f,awayId:e.target.value}))}>
+                          <option value="">— Vyberte —</option>
+                          {S.teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select></div>
+                    </div>
+                    <div className="fr3">
+                      <div className="fg"><label className="fl">Skóre (domácí)</label>
+                        <input className="fi" type="number" min="0" value={fm.s1} onChange={e=>setFm(f=>({...f,s1:e.target.value}))} placeholder="0"/></div>
+                      <div className="ssep">:</div>
+                      <div className="fg"><label className="fl">Skóre (hosté)</label>
+                        <input className="fi" type="number" min="0" value={fm.s2} onChange={e=>setFm(f=>({...f,s2:e.target.value}))} placeholder="0"/></div>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:".5rem",marginBottom:"1rem"}}>
+                      <input type="checkbox" id="mpl" checked={fm.played} onChange={e=>setFm(f=>({...f,played:e.target.checked}))} style={{accentColor:"var(--accent)",width:14,height:14}}/>
+                      <label htmlFor="mpl" style={{fontSize:".82rem",cursor:"pointer"}}>Zápas odehrán</label>
+                    </div>
+                    <div className="brow">
+                      <button className="btn bp" onClick={saveMatch}>+ Uložit zápas</button>
+                      {editMid && <button className="btn bg_ bsm" onClick={()=>{setEditMid(null);setFm({round:"",homeId:"",awayId:"",s1:"",s2:"",played:false});}}>✕ Zrušit</button>}
+                    </div>
+                    <hr className="div"/>
+                    <div className="ss">Přehled zápasů</div>
+                    {!S.matches.length ? <p style={{fontSize:".76rem",color:"var(--muted)"}}>Žádné zápasy.</p> : (
+                      <div className="alist">{S.matches.map(m=>(
+                        <div key={m.id} className="ai">
+                          <div style={{flex:1}}>
+                            <div className="ain">{tn(m.homeId)} vs {tn(m.awayId)}</div>
+                            <div className="asub">{m.round||"—"} · {m.played?`${m.homeScore}:${m.awayScore}`:"Plánováno"}</div>
+                          </div>
+                          <button className="btn bg_ bsm" onClick={()=>editMatch(m.id)}>Upravit</button>
+                          <button className="btn bg_ bsm" onClick={()=>removeMatch(m.id)}>Smazat</button>
+                        </div>
+                      ))}</div>
+                    )}
+                  </div>}
+
+                  {/* ── SCORERS ─── */}
+                  {aTab==="scorers" && <div>
+                    <div className="ss">{editSid?"Upravit střelce":"Přidat střelce"}</div>
+                    <div className="fg"><label className="fl">Jméno hráče</label>
+                      <input className="fi" value={fs.name} onChange={e=>setFs(f=>({...f,name:e.target.value}))} placeholder="Jan Novák"/></div>
+                    <div className="fr">
+                      <div className="fg"><label className="fl">Tým</label>
+                        <select className="fi fsel" value={fs.teamId} onChange={e=>setFs(f=>({...f,teamId:e.target.value}))}>
+                          <option value="">— Bez týmu —</option>
+                          {S.teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select></div>
+                      <div className="fg"><label className="fl">Počet gólů</label>
+                        <input className="fi" type="number" min="0" value={fs.goals} onChange={e=>setFs(f=>({...f,goals:e.target.value}))} placeholder="0"/></div>
+                    </div>
+                    <div className="brow">
+                      <button className="btn bp" onClick={saveScorer}>+ Uložit střelce</button>
+                      {editSid && <button className="btn bg_ bsm" onClick={()=>{setEditSid(null);setFs({name:"",teamId:"",goals:""});}}>✕ Zrušit</button>}
+                    </div>
+                    <hr className="div"/>
+                    <div className="ss">Přehled střelců</div>
+                    {!scorers.length ? <p style={{fontSize:".76rem",color:"var(--muted)"}}>Žádní střelci.</p> : (
+                      <div className="alist">{scorers.map(sc=>(
+                        <div key={sc.id} className="ai">
+                          <div style={{flex:1}}>
+                            <div className="ain">{sc.name}</div>
+                            <div className="asub">{tn(sc.teamId)} · {sc.goals} gólů</div>
+                          </div>
+                          <button className="btn bg_ bsm" onClick={()=>editScorer(sc.id)}>Upravit</button>
+                          <button className="btn bg_ bsm" onClick={()=>removeScorer(sc.id)}>Smazat</button>
+                        </div>
+                      ))}</div>
+                    )}
+                  </div>}
+
+                  {/* ── BRACKET ─── */}
+                  {aTab==="bracket" && <div>
+                    <p style={{fontSize:".79rem",color:"var(--muted)",marginBottom:"1rem",lineHeight:1.6}}>
+                      Přidávej kola v pořadí: Čtvrtfinále → Semifinále → Finále.</p>
+                    <div className="ss">Přidat kolo</div>
+                    <div className="fg"><label className="fl">Název kola</label>
+                      <input className="fi" value={fb.name} onChange={e=>setFb(f=>({...f,name:e.target.value}))} placeholder="Semifinále, Finále..."/></div>
+                    <div className="fg"><label className="fl">Počet zápasů</label>
+                      <select className="fi fsel" value={fb.slots} onChange={e=>setFb(f=>({...f,slots:e.target.value}))}>
+                        <option value="1">1 zápas (Finále)</option>
+                        <option value="2">2 zápasy (Semifinále)</option>
+                        <option value="4">4 zápasy (Čtvrtfinále)</option>
+                        <option value="8">8 zápasů</option>
+                      </select></div>
+                    <button className="btn bs" onClick={addBracketRound}>+ Přidat kolo</button>
+                    <hr className="div"/>
+                    {!S.bracket.length ? <p style={{fontSize:".76rem",color:"var(--muted)"}}>Žádná kola.</p> :
+                      S.bracket.map(round=>(
+                        <BracketAdmin key={round.id} round={round} teams={S.teams}
+                          onSave={(si,d)=>saveBracketSlot(round.id,si,d)}
+                          onRemove={()=>removeBracketRound(round.id)}/>
+                      ))
+                    }
+                  </div>}
+
+                  {/* ── SETTINGS ─── */}
+                  {aTab==="settings" && <SettingsTab configured={JSONBIN_ID!=="TVOJE_BIN_ID"} onPw={changePw} onReset={resetAll}/>}
+
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="toast-wrap">
+        <div className={`toast_${toastShow?" show":""}`}>{toast}</div>
+      </div>
+    </div>
+  );
+}
+
+function Empty({icon,text}) {
+  return <div className="empty"><div className="eic">{icon}</div><div className="etx">{text}</div></div>;
+}
+
+function BracketAdmin({round, teams, onSave, onRemove}) {
+  const [slots, setSlots] = useState(round.slots.map(s=>({...s})));
+  const upd = (si,f,v) => setSlots(s=>s.map((sl,i)=>i===si?{...sl,[f]:v}:sl));
+  return (
+    <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:8,padding:".85rem .95rem",marginBottom:".65rem"}}>
+      <div style={{display:"flex",alignItems:"center",gap:".65rem",marginBottom:".55rem"}}>
+        <span style={{fontFamily:"'Bebas Neue',sans-serif",letterSpacing:".06em",flex:1}}>{round.name}</span>
+        <button className="btn bg_ bsm" onClick={onRemove}>Smazat kolo</button>
+      </div>
+      {slots.map((slot,si)=>(
+        <div key={si} style={{borderTop:"1px solid var(--border)",paddingTop:".55rem",marginTop:".55rem"}}>
+          <div style={{fontSize:".63rem",color:"var(--dim)",textTransform:"uppercase",letterSpacing:".1em",marginBottom:".38rem"}}>Zápas {si+1}</div>
+          <div className="fr" style={{marginBottom:".32rem"}}>
+            <select className="fi fsel" style={{fontSize:".78rem"}} value={slot.homeId} onChange={e=>upd(si,"homeId",e.target.value)}>
+              <option value="">TBD</option>
+              {teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <select className="fi fsel" style={{fontSize:".78rem"}} value={slot.awayId} onChange={e=>upd(si,"awayId",e.target.value)}>
+              <option value="">TBD</option>
+              {teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          <div className="fr3" style={{marginBottom:".32rem"}}>
+            <input className="fi" type="number" min="0" style={{fontSize:".78rem"}} value={slot.homeScore} onChange={e=>upd(si,"homeScore",parseInt(e.target.value)||0)}/>
+            <div className="ssep">:</div>
+            <input className="fi" type="number" min="0" style={{fontSize:".78rem"}} value={slot.awayScore} onChange={e=>upd(si,"awayScore",parseInt(e.target.value)||0)}/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:".42rem",marginBottom:".35rem"}}>
+            <input type="checkbox" checked={slot.played} onChange={e=>upd(si,"played",e.target.checked)} style={{accentColor:"var(--accent)"}}/>
+            <span style={{fontSize:".78rem",cursor:"pointer"}}>Odehráno</span>
+          </div>
+          <button className="btn bs bsm" onClick={()=>onSave(si,slots[si])}>💾 Uložit</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SettingsTab({configured, onPw, onReset}) {
+  const [p1,setP1]=useState(""), [p2,setP2]=useState("");
+  return (
+    <div>
+      {!configured && (
+        <div className="info-box">
+          <strong>JSONBin není nakonfigurován.</strong><br/>
+          1. Účet na <strong>jsonbin.io</strong> (zdarma)<br/>
+          2. Create Bin → vlož <code>{"{}"}</code> → ulož → zkopíruj ID<br/>
+          3. Account → API Keys → Master Key<br/>
+          4. V HTML souboru nahraď <code>TVOJE_BIN_ID</code> a <code>TVUJ_API_KEY</code><br/>
+          Momentálně se data ukládají pouze lokálně v tomto prohlížeči.
+        </div>
+      )}
+      <div className="ss">Změna hesla</div>
+      <div className="fg"><label className="fl">Nové heslo</label>
+        <input className="fi" type="password" value={p1} onChange={e=>setP1(e.target.value)} placeholder="Nové heslo"/></div>
+      <div className="fg"><label className="fl">Potvrdit</label>
+        <input className="fi" type="password" value={p2} onChange={e=>setP2(e.target.value)} placeholder="Znovu nové heslo"/></div>
+      <button className="btn bs" onClick={()=>onPw(p1,p2)}>Změnit heslo</button>
+      <hr className="div"/>
+      <div className="ss">Nebezpečná zóna</div>
+      <p style={{fontSize:".76rem",color:"var(--muted)",marginBottom:".65rem"}}>Smaže veškerá data nevratně.</p>
+      <button className="btn bg_" style={{border:"1px solid var(--border2)"}} onClick={onReset}>🗑 Vymazat vše</button>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
