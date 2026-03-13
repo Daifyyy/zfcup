@@ -23,6 +23,7 @@ import Toast from './components/ui/Toast'
 import type { Session } from '@supabase/supabase-js'
 
 export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket'
+const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket']
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview')
@@ -43,12 +44,14 @@ export default function App() {
   const { rounds: bracketRounds, slots: bracketSlots } = useBracket()
   const { announcements } = useAnnouncements()
 
+  // ── Auth ──────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => subscription.unsubscribe()
   }, [])
 
+  // ── Keyboard shortcuts ────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') { e.preventDefault(); setAdminOpen(true) }
@@ -58,14 +61,39 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [adminOpen])
 
-  // Sync kiosk state with URL param
+  // ── Kiosk URL sync ────────────────────────────────────
   useEffect(() => {
     const url = new URL(window.location.href)
     if (kiosk) url.searchParams.set('kiosk', '1')
     else url.searchParams.delete('kiosk')
-    window.history.replaceState({}, '', url.toString())
-  }, [kiosk])
+    window.history.replaceState({ tab }, '', url.toString())
+  }, [kiosk, tab])
 
+  // ── History navigation (Android back button) ──────────
+  // Push initial state on mount
+  useEffect(() => {
+    window.history.replaceState({ tab: 'overview' }, '')
+    const handlePopstate = (e: PopStateEvent) => {
+      const prev = e.state?.tab as Tab | undefined
+      if (prev && VALID_TABS.includes(prev)) {
+        setTab(prev)
+      } else {
+        // Bottom of history stack — stay in app, go to overview
+        window.history.pushState({ tab: 'overview' }, '')
+        setTab('overview')
+      }
+    }
+    window.addEventListener('popstate', handlePopstate)
+    return () => window.removeEventListener('popstate', handlePopstate)
+  }, [])
+
+  // ── Tab navigation with history ───────────────────────
+  const navigateTab = useCallback((t: Tab) => {
+    window.history.pushState({ tab: t }, '')
+    setTab(t)
+  }, [])
+
+  // ── Toast ─────────────────────────────────────────────
   const showToast = useCallback((msg: string) => {
     setToast(msg)
     setToastShow(true)
@@ -104,14 +132,14 @@ export default function App() {
       <Header
         tournament={tournament}
         tab={tab}
-        onTab={setTab}
+        onTab={navigateTab}
         onAdmin={() => setAdminOpen(true)}
         onKiosk={() => setKiosk(true)}
         onScoreboard={() => setScoreboard(true)}
         isAdmin={!!session}
       />
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-        {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} announcements={announcements} onTab={setTab} />}
+        {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} announcements={announcements} onTab={navigateTab} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} />}
@@ -137,7 +165,7 @@ export default function App() {
           onClose={() => setAdminOpen(false)}
         />
       )}
-      <BottomNav tab={tab} onTab={setTab} />
+      <BottomNav tab={tab} onTab={navigateTab} />
       <Toast message={toast} show={toastShow} />
     </div>
   )

@@ -84,17 +84,18 @@ export default function Overview({ tournament, teams, matches, groups, announcem
         </div>
       </div>
 
-      {/* Stats grid */}
+      {/* Stats / nav grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4,1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
         gap: '.9rem',
         marginBottom: '1.4rem',
       }}>
-        <StatCard icon="👥" label="Týmů"     value={teams.length}   accent onClick={onTab ? () => onTab('teams')     : undefined} />
-        <StatCard icon="📋" label="Zápasů"   value={matches.length}        onClick={onTab ? () => onTab('results')   : undefined} />
-        <StatCard icon="✅" label="Odehráno" value={played}         accent onClick={onTab ? () => onTab('results')   : undefined} />
-        <StatCard icon="🏆" label="Skupin"   value={groups.length}         onClick={onTab ? () => onTab('standings') : undefined} />
+        <StatCard icon="👥" label="Týmy"     value={teams.length}   accent onClick={onTab ? () => onTab('teams')     : undefined} />
+        <StatCard icon="📋" label="Zápasy"   value={matches.length}        onClick={onTab ? () => onTab('results')   : undefined} />
+        <StatCard icon="📊" label="Tabulka"  value={groups.length}  accent onClick={onTab ? () => onTab('standings') : undefined} />
+        <StatCard icon="⚽" label="Střelci"  value={played}                onClick={onTab ? () => onTab('scorers')   : undefined} />
+        <StatCard icon="🏆" label="Play-off" value="→"                     onClick={onTab ? () => onTab('bracket')   : undefined} />
       </div>
 
       {/* Description */}

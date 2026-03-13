@@ -240,7 +240,7 @@ body {
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
   /* Push content above bottom nav */
-  .page-main { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important; }
+  .page-main { padding-bottom: calc(80px + max(env(safe-area-inset-bottom, 0px), 6px)) !important; }
 }
 @media (min-width: 769px) {
   .mobile-only { display: none !important; }

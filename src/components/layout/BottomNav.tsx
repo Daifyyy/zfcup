@@ -28,7 +28,7 @@ export default function BottomNav({ tab, onTab }: Props) {
         borderTop: '1px solid var(--border)',
         boxShadow: '0 -2px 16px rgba(0,0,0,.08)',
         display: 'flex',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 6px)',
       }}
     >
       {TABS.map(t => {
