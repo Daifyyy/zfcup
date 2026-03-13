@@ -140,16 +140,17 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
     if (!form.home_id || !form.away_id) { showToast('Vyberte oba týmy'); return }
     if (form.home_id === form.away_id) { showToast('Týmy musí být různé'); return }
     const data = {
-      round: form.round,
+      round: form.round || null,
       home_id: form.home_id,
       away_id: form.away_id,
       home_score: parseInt(form.home_score) || 0,
       away_score: parseInt(form.away_score) || 0,
       played: form.played,
-      scheduled_time: form.scheduled_time,
+      scheduled_time: form.scheduled_time || null,
     }
     if (editId) {
-      const { error } = await supabase.from('matches').update(data).eq('id', editId)
+      const id = editId
+      const { error } = await supabase.from('matches').update(data).eq('id', id).select('id')
       if (error) { showToast('Chyba: ' + error.message); return }
     } else {
       const { error } = await supabase.from('matches').insert(data)

@@ -23,14 +23,30 @@ interface GroupForm {
 }
 
 function generatePairs(teamIds: string[], schedule: 'once' | 'twice') {
-  const pairs: { home_id: string; away_id: string }[] = []
+  // Generate all pairs
+  const base: { home_id: string; away_id: string }[] = []
   for (let i = 0; i < teamIds.length; i++)
-    for (let j = i + 1; j < teamIds.length; j++) {
-      pairs.push({ home_id: teamIds[i], away_id: teamIds[j] })
-      if (schedule === 'twice')
-        pairs.push({ home_id: teamIds[j], away_id: teamIds[i] })
-    }
-  return pairs
+    for (let j = i + 1; j < teamIds.length; j++)
+      base.push({ home_id: teamIds[i], away_id: teamIds[j] })
+
+  const all = schedule === 'twice'
+    ? [...base, ...base.map(p => ({ home_id: p.away_id, away_id: p.home_id }))]
+    : base
+
+  // Greedy re-order: vždy preferuj zápas kde ani jeden tým nehrál předchozí zápas
+  // Minimalizuje situace kdy tým hraje dvakrát za sebou
+  const result: { home_id: string; away_id: string }[] = []
+  const remaining = [...all]
+
+  while (remaining.length > 0) {
+    const prev = result[result.length - 1]
+    const busy = prev ? new Set([prev.home_id, prev.away_id]) : new Set<string>()
+    // Najdi zápas kde oba týmy mají pauzu
+    const idx = remaining.findIndex(m => !busy.has(m.home_id) && !busy.has(m.away_id))
+    result.push(...remaining.splice(idx !== -1 ? idx : 0, 1))
+  }
+
+  return result
 }
 
 export default function GroupsTab({ teams, groups, matches, showToast }: Props) {

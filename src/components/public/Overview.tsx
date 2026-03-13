@@ -77,7 +77,7 @@ export default function Overview({ tournament, teams, matches, groups, announcem
           )}
         </div>
         <div style={{ flexShrink: 0, textAlign: 'center' }}>
-          <QRCode size={80} />
+          <QRCode size={56} />
           <div style={{ fontSize: '.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: '.35rem' }}>
             Sdílet
           </div>
@@ -91,6 +91,7 @@ export default function Overview({ tournament, teams, matches, groups, announcem
         gap: '.9rem',
         marginBottom: '1.4rem',
       }}>
+        <StatCard icon="ℹ️"  label="Informace" value="→"                     onClick={onTab ? () => onTab('info')      : undefined} />
         <StatCard icon="👥" label="Týmy"     value={teams.length}   accent onClick={onTab ? () => onTab('teams')     : undefined} />
         <StatCard icon="📋" label="Zápasy"   value={matches.length}        onClick={onTab ? () => onTab('results')   : undefined} />
         <StatCard icon="📊" label="Tabulka"  value={groups.length}  accent onClick={onTab ? () => onTab('standings') : undefined} />
