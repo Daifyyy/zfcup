@@ -13,12 +13,14 @@ export default function Results({ matches, teams }: Props) {
 
   if (!matches.length) return <Empty icon="📋" text="Žádné zápasy." />
 
-  const rounds: Record<string, Match[]> = {}
+  const roundsMap: Record<string, Match[]> = {}
   for (const m of matches) {
     const r = m.round || 'Bez skupiny'
-    if (!rounds[r]) rounds[r] = []
-    rounds[r].push(m)
+    if (!roundsMap[r]) roundsMap[r] = []
+    roundsMap[r].push(m)
   }
+  // Sort round names alphabetically so order is stable regardless of DB fetch order
+  const rounds = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
 
   return (
     <div>
@@ -26,7 +28,7 @@ export default function Results({ matches, teams }: Props) {
         <span className="sec-title">Výsledky</span>
       </div>
 
-      {Object.entries(rounds).map(([round, ms]) => (
+      {rounds.map(([round, ms]) => (
         <div key={round}>
           {/* Group header — prominent separator */}
           <div style={{

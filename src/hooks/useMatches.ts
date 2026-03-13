@@ -19,7 +19,9 @@ export function useMatches() {
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('matches').select('*').order('scheduled_time')
+      const { data } = await supabase.from('matches').select('*')
+        .order('scheduled_time', { nullsFirst: false })
+        .order('id')
       setMatches(data ?? [])
       setLoading(false)
     }

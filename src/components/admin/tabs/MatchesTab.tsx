@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
@@ -58,10 +58,11 @@ function GoalEditor({
     const ops = Object.entries(counts)
     for (const [player_id, count] of ops) {
       if (count > 0) {
-        await supabase.from('goals').upsert(
+        const { error } = await supabase.from('goals').upsert(
           { player_id, match_id: match.id, count },
           { onConflict: 'player_id,match_id' }
         )
+        if (error) { showToast('Chyba: ' + error.message); return }
       } else {
         await supabase.from('goals').delete().match({ player_id, match_id: match.id })
       }
@@ -82,6 +83,7 @@ function GoalEditor({
       <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <button
+          type="button"
           onClick={() => change(p.id, -1)}
           style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}
         >−</button>
@@ -89,6 +91,7 @@ function GoalEditor({
           {counts[p.id] ?? 0}
         </span>
         <button
+          type="button"
           onClick={() => change(p.id, +1)}
           style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}
         >+</button>
@@ -122,8 +125,8 @@ function GoalEditor({
         </div>
       )}
       <div style={{ display: 'flex', gap: '.4rem' }}>
-        <button className="btn btn-p btn-sm" onClick={saveGoals}>💾 Uložit góly</button>
-        <button className="btn btn-d btn-sm" onClick={onClose}>Zavřít</button>
+        <button type="button" className="btn btn-p btn-sm" onClick={saveGoals}>💾 Uložit góly</button>
+        <button type="button" className="btn btn-d btn-sm" onClick={onClose}>Zavřít</button>
       </div>
     </div>
   )
@@ -133,26 +136,39 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
   const [form, setForm] = useState<MatchForm>(DEF_FORM)
   const [editId, setEditId] = useState<string | null>(null)
   const [goalMatchId, setGoalMatchId] = useState<string | null>(null)
+  const formRef = useRef<HTMLDivElement>(null)
 
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
+
+  // Auto-check played when score > 0 is entered
+  const handleScore = (k: 'home_score' | 'away_score') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    const num = parseInt(val) || 0
+    setForm(p => ({ ...p, [k]: val, played: num > 0 ? true : p.played }))
+  }
 
   const saveMatch = async () => {
     if (!form.home_id || !form.away_id) { showToast('Vyberte oba týmy'); return }
     if (form.home_id === form.away_id) { showToast('Týmy musí být různé'); return }
+
+    const homeScore = parseInt(form.home_score) || 0
+    const awayScore = parseInt(form.away_score) || 0
+    // Auto-mark as played when any score is non-zero
+    const played = form.played || homeScore > 0 || awayScore > 0
+
     const data = {
       round: form.round || null,
       home_id: form.home_id,
       away_id: form.away_id,
-      home_score: parseInt(form.home_score) || 0,
-      away_score: parseInt(form.away_score) || 0,
-      played: form.played,
+      home_score: homeScore,
+      away_score: awayScore,
+      played,
       scheduled_time: form.scheduled_time || null,
     }
+
     if (editId) {
-      const id = editId
-      const { data: updated, error } = await supabase.from('matches').update(data).eq('id', id).select('id')
+      const { error } = await supabase.from('matches').update(data).eq('id', editId)
       if (error) { showToast('Chyba: ' + error.message); return }
-      if (!updated || updated.length === 0) { showToast('Nelze uložit — zkontroluj přihlášení admina'); return }
     } else {
       const { error } = await supabase.from('matches').insert(data)
       if (error) { showToast('Chyba: ' + error.message); return }
@@ -166,14 +182,15 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
       round: m.round || '',
       home_id: m.home_id,
       away_id: m.away_id,
-      home_score: String(m.home_score),
-      away_score: String(m.away_score),
-      played: m.played,
+      home_score: String(m.home_score ?? 0),
+      away_score: String(m.away_score ?? 0),
+      played: Boolean(m.played),
       scheduled_time: m.scheduled_time || '',
     })
     setEditId(m.id)
     setGoalMatchId(null)
-    window.scrollTo({ top: 0 })
+    // Scroll to form — uses scrollIntoView so it works inside the panel's own scroll container
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30)
   }
 
   const removeMatch = async (id: string) => {
@@ -187,66 +204,81 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
   const f = (k: keyof MatchForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }))
 
-  // Group matches by round for display
-  const rounds: Record<string, Match[]> = {}
+  // Group matches by round — sorted alphabetically for stable display order
+  const roundsMap: Record<string, Match[]> = {}
   for (const m of matches) {
     const r = m.round || 'Bez skupiny'
-    if (!rounds[r]) rounds[r] = []
-    rounds[r].push(m)
+    if (!roundsMap[r]) roundsMap[r] = []
+    roundsMap[r].push(m)
   }
+  const roundEntries = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
 
   return (
     <div>
-      <div className="sub-title">{editId ? 'Upravit zápas' : 'Přidat zápas'}</div>
-      <div className="field-group">
-        <label className="field-label">Kolo / skupina</label>
-        <input className="field-input" value={form.round} onChange={f('round')} placeholder="Skupina A, Semifinále…" />
-      </div>
-      <div className="field-row">
-        <div className="field-group">
-          <label className="field-label">Domácí tým</label>
-          <select className="field-input field-select" value={form.home_id} onChange={f('home_id')}>
-            <option value="">— Vyberte —</option>
-            {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-        <div className="field-group">
-          <label className="field-label">Hostující tým</label>
-          <select className="field-input field-select" value={form.away_id} onChange={f('away_id')}>
-            <option value="">— Vyberte —</option>
-            {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className="field-row3">
-        <div className="field-group">
-          <label className="field-label">Skóre (domácí)</label>
-          <input className="field-input" type="number" min="0" value={form.home_score} onChange={f('home_score')} />
-        </div>
-        <div className="field-sep">:</div>
-        <div className="field-group">
-          <label className="field-label">Skóre (hosté)</label>
-          <input className="field-input" type="number" min="0" value={form.away_score} onChange={f('away_score')} />
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', marginBottom: '.85rem', flexWrap: 'wrap' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', cursor: 'pointer', fontSize: '.82rem' }}>
-          <input type="checkbox" checked={form.played}
-            onChange={e => setForm(p => ({ ...p, played: e.target.checked }))}
-            style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
-          Zápas odehrán
-        </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-          <label className="field-label" style={{ margin: 0 }}>Čas:</label>
-          <input className="field-input" type="time" value={form.scheduled_time} onChange={f('scheduled_time')}
-            style={{ width: 110 }} />
-        </div>
-      </div>
-      <div className="btn-row">
-        <button className="btn btn-p" onClick={saveMatch}>+ Uložit zápas</button>
+      {/* Form section — ref used for scrollIntoView */}
+      <div ref={formRef}>
+        <div className="sub-title">{editId ? '✎ Upravit zápas' : 'Přidat zápas'}</div>
         {editId && (
-          <button className="btn btn-d btn-sm" onClick={() => { setEditId(null); setForm(DEF_FORM) }}>✕ Zrušit</button>
+          <div style={{ fontSize: '.72rem', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid rgba(37,99,235,.2)', borderRadius: 6, padding: '.35rem .75rem', marginBottom: '.7rem' }}>
+            Editační mód — upraven bude existující zápas
+          </div>
         )}
+        <div className="field-group">
+          <label className="field-label">Kolo / skupina</label>
+          <input className="field-input" value={form.round} onChange={f('round')} placeholder="Skupina A, Semifinále…" />
+        </div>
+        <div className="field-row">
+          <div className="field-group">
+            <label className="field-label">Domácí tým</label>
+            <select className="field-input field-select" value={form.home_id} onChange={f('home_id')}>
+              <option value="">— Vyberte —</option>
+              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          <div className="field-group">
+            <label className="field-label">Hostující tým</label>
+            <select className="field-input field-select" value={form.away_id} onChange={f('away_id')}>
+              <option value="">— Vyberte —</option>
+              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="field-row3">
+          <div className="field-group">
+            <label className="field-label">Skóre (domácí)</label>
+            <input className="field-input" type="number" min="0" value={form.home_score} onChange={handleScore('home_score')} />
+          </div>
+          <div className="field-sep">:</div>
+          <div className="field-group">
+            <label className="field-label">Skóre (hosté)</label>
+            <input className="field-input" type="number" min="0" value={form.away_score} onChange={handleScore('away_score')} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', marginBottom: '.85rem', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', cursor: 'pointer', fontSize: '.82rem' }}>
+            <input
+              type="checkbox"
+              checked={form.played}
+              onChange={e => setForm(p => ({ ...p, played: e.target.checked }))}
+              style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
+            />
+            Zápas odehrán
+            {form.played && <span style={{ color: 'var(--success)', marginLeft: 2 }}>✓</span>}
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+            <label className="field-label" style={{ margin: 0 }}>Čas:</label>
+            <input className="field-input" type="time" value={form.scheduled_time} onChange={f('scheduled_time')}
+              style={{ width: 110 }} />
+          </div>
+        </div>
+        <div className="btn-row">
+          <button type="button" className="btn btn-p" onClick={saveMatch}>
+            {editId ? '💾 Uložit změny' : '+ Přidat zápas'}
+          </button>
+          {editId && (
+            <button type="button" className="btn btn-d btn-sm" onClick={() => { setEditId(null); setForm(DEF_FORM) }}>✕ Zrušit</button>
+          )}
+        </div>
       </div>
 
       <hr className="divider" />
@@ -254,7 +286,7 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
       {!matches.length ? (
         <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Žádné zápasy.</p>
       ) : (
-        Object.entries(rounds).map(([round, ms]) => (
+        roundEntries.map(([round, ms]) => (
           <div key={round} style={{ marginBottom: '.9rem' }}>
             <div style={{
               fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.11em',
@@ -282,12 +314,12 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
                           {totalGoals > 0 && <> · ⚽ {totalGoals} gólů</>}
                         </div>
                       </div>
-                      <button className="btn btn-s btn-sm"
+                      <button type="button" className="btn btn-s btn-sm"
                         onClick={() => setGoalMatchId(goalMatchId === m.id ? null : m.id)}>
                         ⚽ Góly
                       </button>
-                      <button className="btn btn-d btn-sm" onClick={() => editMatch(m)}>Upravit</button>
-                      <button className="btn btn-d btn-sm" onClick={() => removeMatch(m.id)}>Smazat</button>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => editMatch(m)}>Upravit</button>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => removeMatch(m.id)}>Smazat</button>
                     </div>
                     {goalMatchId === m.id && (
                       <div style={{ padding: '0 .85rem .65rem' }}>
