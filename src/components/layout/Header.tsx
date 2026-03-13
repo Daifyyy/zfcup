@@ -79,8 +79,9 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
           )}
         </div>
 
-        {/* Scoreboard button */}
+        {/* Scoreboard button — desktop only */}
         <button
+          className="desktop-only"
           onClick={onScoreboard}
           title="Výsledková tabule — fullscreen přehled skupin, zápasů a pavouka"
           style={{
@@ -109,8 +110,9 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
           <span className="hide-mobile">Tabule</span>
         </button>
 
-        {/* Kiosk button */}
+        {/* Kiosk button — desktop only */}
         <button
+          className="desktop-only"
           onClick={onKiosk}
           title="Kiosk / TV mode — fullscreen, auto-rotace záložek"
           style={{
@@ -139,8 +141,8 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
           <span className="hide-mobile">TV / Kiosk</span>
         </button>
 
-        {/* Nav */}
-        <nav style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto' }}>
+        {/* Nav — desktop only */}
+        <nav className="desktop-only" style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto' }}>
           {TABS.map(([key, label]) => (
             <button
               key={key}

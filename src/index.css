@@ -236,6 +236,16 @@ body {
   .show-mobile-only { display: none !important; }
 }
 
+/* Mobile nav breakpoint */
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  /* Push content above bottom nav */
+  .page-main { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+@media (min-width: 769px) {
+  .mobile-only { display: none !important; }
+}
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }

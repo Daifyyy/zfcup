@@ -9,6 +9,7 @@ import { useGoals } from './hooks/useGoals'
 import { useBracket } from './hooks/useBracket'
 import { useAnnouncements } from './hooks/useAnnouncements'
 import Header from './components/layout/Header'
+import BottomNav from './components/layout/BottomNav'
 import Overview from './components/public/Overview'
 import Teams from './components/public/Teams'
 import Results from './components/public/Results'
@@ -109,8 +110,8 @@ export default function App() {
         onScoreboard={() => setScoreboard(true)}
         isAdmin={!!session}
       />
-      <main style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-        {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} announcements={announcements} />}
+      <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+        {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} announcements={announcements} onTab={setTab} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} />}
@@ -136,6 +137,7 @@ export default function App() {
           onClose={() => setAdminOpen(false)}
         />
       )}
+      <BottomNav tab={tab} onTab={setTab} />
       <Toast message={toast} show={toastShow} />
     </div>
   )

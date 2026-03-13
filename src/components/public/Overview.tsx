@@ -3,6 +3,7 @@ import type { Team } from '../../hooks/useTeams'
 import type { Match } from '../../hooks/useMatches'
 import type { Group } from '../../hooks/useGroups'
 import type { Announcement } from '../../hooks/useAnnouncements'
+import type { Tab } from '../../App'
 import QRCode from '../ui/QRCode'
 
 interface Props {
@@ -11,11 +12,30 @@ interface Props {
   matches: Match[]
   groups: Group[]
   announcements: Announcement[]
+  onTab?: (t: Tab) => void
 }
 
-function StatCard({ label, value, accent, icon }: { label: string; value: number | string; accent?: boolean; icon?: string }) {
+function StatCard({ label, value, accent, icon, onClick }: {
+  label: string; value: number | string; accent?: boolean; icon?: string; onClick?: () => void
+}) {
   return (
-    <div className="card" style={{ padding: 'var(--pad-card)', textAlign: 'center' }}>
+    <div
+      className="card"
+      onClick={onClick}
+      style={{
+        padding: 'var(--pad-card)', textAlign: 'center',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: onClick ? 'transform .15s, box-shadow .15s' : undefined,
+      }}
+      onMouseEnter={onClick ? e => {
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'
+        ;(e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(37,99,235,.13)'
+      } : undefined}
+      onMouseLeave={onClick ? e => {
+        (e.currentTarget as HTMLElement).style.transform = ''
+        ;(e.currentTarget as HTMLElement).style.boxShadow = ''
+      } : undefined}
+    >
       {icon && <div style={{ fontSize: '1.5rem', marginBottom: '.4rem', opacity: .7 }}>{icon}</div>}
       <div style={{
         fontFamily: "'Bebas Neue', sans-serif",
@@ -39,7 +59,7 @@ function StatCard({ label, value, accent, icon }: { label: string; value: number
   )
 }
 
-export default function Overview({ tournament, teams, matches, groups, announcements }: Props) {
+export default function Overview({ tournament, teams, matches, groups, announcements, onTab }: Props) {
   const played = matches.filter(m => m.played).length
 
   return (
@@ -71,10 +91,10 @@ export default function Overview({ tournament, teams, matches, groups, announcem
         gap: '.9rem',
         marginBottom: '1.4rem',
       }}>
-        <StatCard icon="👥" label="Týmů"        value={teams.length}   accent />
-        <StatCard icon="📋" label="Zápasů"       value={matches.length} />
-        <StatCard icon="✅" label="Odehráno"      value={played}         accent />
-        <StatCard icon="🏆" label="Skupin"        value={groups.length}  />
+        <StatCard icon="👥" label="Týmů"     value={teams.length}   accent onClick={onTab ? () => onTab('teams')     : undefined} />
+        <StatCard icon="📋" label="Zápasů"   value={matches.length}        onClick={onTab ? () => onTab('results')   : undefined} />
+        <StatCard icon="✅" label="Odehráno" value={played}         accent onClick={onTab ? () => onTab('results')   : undefined} />
+        <StatCard icon="🏆" label="Skupin"   value={groups.length}         onClick={onTab ? () => onTab('standings') : undefined} />
       </div>
 
       {/* Description */}
