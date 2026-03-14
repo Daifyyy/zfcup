@@ -7,6 +7,7 @@ import { useGroups } from './hooks/useGroups'
 import { useMatches } from './hooks/useMatches'
 import { useGoals } from './hooks/useGoals'
 import { useBracket } from './hooks/useBracket'
+import { useBracketGoals } from './hooks/useBracketGoals'
 import { useAnnouncements } from './hooks/useAnnouncements'
 import Header from './components/layout/Header'
 import BottomNav from './components/layout/BottomNav'
@@ -43,6 +44,7 @@ export default function App() {
   const { matches, refetch: refetchMatches } = useMatches()
   const { goals, refetch: refetchGoals } = useGoals()
   const { rounds: bracketRounds, slots: bracketSlots } = useBracket()
+  const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals()
   const { announcements } = useAnnouncements()
 
   // ── Auth ──────────────────────────────────────────────
@@ -168,8 +170,10 @@ export default function App() {
           {...shared}
           session={session}
           tournament={tournament}
+          bracketGoals={bracketGoals}
           refetchMatches={refetchMatches}
           refetchGoals={refetchGoals}
+          refetchBracketGoals={refetchBracketGoals}
           onClose={() => setAdminOpen(false)}
         />
       )}

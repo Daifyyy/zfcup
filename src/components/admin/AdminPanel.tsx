@@ -8,6 +8,7 @@ import type { Group } from '../../hooks/useGroups'
 import type { Match } from '../../hooks/useMatches'
 import type { Goal } from '../../hooks/useGoals'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
+import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { Announcement } from '../../hooks/useAnnouncements'
 import InfoTab from './tabs/InfoTab'
 import AnnouncementsTab from './tabs/AnnouncementsTab'
@@ -42,14 +43,16 @@ interface Props {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   announcements: Announcement[]
+  bracketGoals: BracketGoal[]
   refetchMatches: () => void
   refetchGoals: () => void
+  refetchBracketGoals: () => void
   showToast: (msg: string) => void
   onClose: () => void
 }
 
 export default function AdminPanel(props: Props) {
-  const { session, onClose, showToast, refetchMatches, refetchGoals } = props
+  const { session, onClose, showToast, refetchMatches, refetchGoals, refetchBracketGoals } = props
   const [aTab, setATab] = useState<ATab>('info')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -70,7 +73,7 @@ export default function AdminPanel(props: Props) {
     showToast('Odhlášen ✓')
   }
 
-  const tabProps = { ...props, showToast, refetchMatches, refetchGoals }
+  const tabProps = { ...props, showToast, refetchMatches, refetchGoals, refetchBracketGoals }
 
   return (
     <div

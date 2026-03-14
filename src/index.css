@@ -277,24 +277,36 @@ body {
 @media (max-width: 500px) {
   /* Switch to vertical flex — each team on its own row */
   .match-grid {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     gap: .22rem;
     padding: .7rem .9rem;
   }
-  .match-col-home { flex-direction: row; }
-  .match-col-score { display: none; }   /* hide center score */
+  /* Reset grid-area so it doesn't interfere when parent is flex */
+  .match-col-home, .match-col-away, .match-col-score, .match-col-meta {
+    grid-area: unset !important;
+  }
+  .match-col-home,
+  .match-col-away {
+    width: 100%;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: center;
+    gap: .5rem;
+  }
+  .match-col-score { display: none !important; }
   .match-col-meta  { justify-content: flex-start; margin-top: .1rem; }
-  /* Name takes remaining space, pushing score to the right */
-  .match-team-name { flex: 1; min-width: 0; }
-  /* Per-team score on the right */
+  /* Name takes remaining space */
+  .match-team-name { flex: 1 !important; min-width: 0 !important; }
+  /* Per-team score pinned to the right */
   .match-score-side {
-    display: block;
-    margin-left: auto;
+    display: block !important;
     font-family: 'Bebas Neue', sans-serif;
     font-size: var(--fs-score);
     line-height: 1;
     flex-shrink: 0;
+    padding-left: .4rem;
   }
 }
 
