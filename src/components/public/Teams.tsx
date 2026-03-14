@@ -1,14 +1,40 @@
 import type { Team } from '../../hooks/useTeams'
 import type { Player } from '../../hooks/usePlayers'
+import type { Goal } from '../../hooks/useGoals'
 import Empty from '../ui/Empty'
 
 interface Props {
   teams: Team[]
   players: Player[]
+  goals: Goal[]
 }
 
-export default function Teams({ teams, players }: Props) {
+function RoleBadge({ role }: { role: string | null }) {
+  if (role === 'captain') return (
+    <span style={{
+      fontSize: '.65rem', fontWeight: 700, color: '#92400e',
+      background: 'rgba(217,119,6,.12)', border: '1px solid rgba(217,119,6,.3)',
+      borderRadius: 4, padding: '1px 5px', lineHeight: 1.4, flexShrink: 0,
+    }}>C</span>
+  )
+  if (role === 'goalkeeper') return (
+    <span style={{
+      fontSize: '.65rem', fontWeight: 700, color: '#166534',
+      background: 'rgba(22,163,74,.12)', border: '1px solid rgba(22,163,74,.3)',
+      borderRadius: 4, padding: '1px 5px', lineHeight: 1.4, flexShrink: 0,
+    }}>B</span>
+  )
+  return null
+}
+
+export default function Teams({ teams, players, goals }: Props) {
   if (!teams.length) return <Empty icon="👥" text="Žádné týmy." />
+
+  // Aggregate goals per player
+  const playerGoals: Record<string, number> = {}
+  for (const g of goals) {
+    playerGoals[g.player_id] = (playerGoals[g.player_id] ?? 0) + g.count
+  }
 
   return (
     <div>
@@ -21,7 +47,7 @@ export default function Teams({ teams, players }: Props) {
         {teams.map(t => {
           const roster = players
             .filter(p => p.team_id === t.id)
-            .sort((a, b) => (a.number ?? 999) - (b.number ?? 999))
+            .sort((a, b) => a.name.localeCompare(b.name, 'cs'))
 
           return (
             <div key={t.id} className="card" style={{ padding: '1.1rem', position: 'relative', overflow: 'hidden' }}>
@@ -48,24 +74,30 @@ export default function Teams({ teams, players }: Props) {
                 <div style={{ fontSize: '.72rem', color: 'var(--muted)', fontStyle: 'italic' }}>Soupiska není zadána.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '.18rem' }}>
-                  {roster.map(p => (
-                    <div key={p.id} style={{
-                      display: 'flex', alignItems: 'center', gap: '.5rem',
-                      padding: '.22rem .3rem',
-                      borderRadius: 5,
-                      fontSize: '.8rem',
-                    }}>
-                      <span style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: '.85rem',
-                        color: t.color,
-                        width: 22, textAlign: 'right', flexShrink: 0,
+                  {roster.map(p => {
+                    const g = playerGoals[p.id] ?? 0
+                    return (
+                      <div key={p.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '.45rem',
+                        padding: '.22rem .3rem',
+                        borderRadius: 5,
+                        fontSize: '.8rem',
                       }}>
-                        {p.number ?? '—'}
-                      </span>
-                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>{p.name}</span>
-                    </div>
-                  ))}
+                        <span style={{ color: 'var(--text)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.name}
+                        </span>
+                        <RoleBadge role={p.role} />
+                        {g > 0 && (
+                          <span style={{
+                            fontSize: '.72rem', fontWeight: 700,
+                            color: 'var(--accent)', flexShrink: 0,
+                          }}>
+                            ⚽{g}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>

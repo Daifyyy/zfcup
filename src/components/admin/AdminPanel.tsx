@@ -42,12 +42,14 @@ interface Props {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   announcements: Announcement[]
+  refetchMatches: () => void
+  refetchGoals: () => void
   showToast: (msg: string) => void
   onClose: () => void
 }
 
 export default function AdminPanel(props: Props) {
-  const { session, onClose, showToast } = props
+  const { session, onClose, showToast, refetchMatches, refetchGoals } = props
   const [aTab, setATab] = useState<ATab>('info')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -68,7 +70,7 @@ export default function AdminPanel(props: Props) {
     showToast('Odhlášen ✓')
   }
 
-  const tabProps = { ...props, showToast }
+  const tabProps = { ...props, showToast, refetchMatches, refetchGoals }
 
   return (
     <div

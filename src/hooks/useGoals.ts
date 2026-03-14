@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export interface Goal {
@@ -19,6 +19,7 @@ export interface ScorerRow {
 export function useGoals() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
+  const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
@@ -26,6 +27,7 @@ export function useGoals() {
       setGoals(data ?? [])
       setLoading(false)
     }
+    fetchRef.current = fetch
     fetch()
 
     const sub = supabase
@@ -37,5 +39,5 @@ export function useGoals() {
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])
 
-  return { goals, loading }
+  return { goals, loading, refetch: () => fetchRef.current() }
 }

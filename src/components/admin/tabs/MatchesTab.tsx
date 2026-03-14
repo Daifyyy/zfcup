@@ -12,6 +12,8 @@ interface Props {
   matches: Match[]
   goals: Goal[]
   groups: Group[]
+  refetchMatches: () => void
+  refetchGoals: () => void
   showToast: (msg: string) => void
 }
 
@@ -28,7 +30,7 @@ interface MatchForm {
 const DEF_FORM: MatchForm = { round: '', home_id: '', away_id: '', home_score: '0', away_score: '0', played: false, scheduled_time: '' }
 
 function GoalEditor({
-  match, teams, players, goals, showToast, onClose,
+  match, teams, players, goals, showToast, onClose, refetchGoals,
 }: {
   match: Match
   teams: Team[]
@@ -36,6 +38,7 @@ function GoalEditor({
   goals: Goal[]
   showToast: (m: string) => void
   onClose: () => void
+  refetchGoals: () => void
 }) {
   const homePlayers = players.filter(p => p.team_id === match.home_id).sort((a, b) => (a.number ?? 999) - (b.number ?? 999))
   const awayPlayers = players.filter(p => p.team_id === match.away_id).sort((a, b) => (a.number ?? 999) - (b.number ?? 999))
@@ -67,6 +70,7 @@ function GoalEditor({
         await supabase.from('goals').delete().match({ player_id, match_id: match.id })
       }
     }
+    refetchGoals()
     showToast('Góly uloženy ✓')
     onClose()
   }
@@ -132,7 +136,7 @@ function GoalEditor({
   )
 }
 
-export default function MatchesTab({ teams, players, matches, goals, groups, showToast }: Props) {
+export default function MatchesTab({ teams, players, matches, goals, groups, refetchMatches, refetchGoals, showToast }: Props) {
   const [form, setForm] = useState<MatchForm>(DEF_FORM)
   const [editId, setEditId] = useState<string | null>(null)
   const [goalMatchId, setGoalMatchId] = useState<string | null>(null)
@@ -181,6 +185,7 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
       const { error } = await supabase.from('matches').insert(data)
       if (error) { showToast('Chyba: ' + error.message); return }
     }
+    refetchMatches()
     setForm(DEF_FORM); setEditId(null)
     showToast('Zápas uložen ✓')
   }
@@ -348,6 +353,7 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
                         <GoalEditor
                           match={m} teams={teams} players={players} goals={goals}
                           showToast={showToast} onClose={() => setGoalMatchId(null)}
+                          refetchGoals={refetchGoals}
                         />
                       </div>
                     )}

@@ -241,6 +241,8 @@ body {
   .desktop-only { display: none !important; }
   /* Push content above bottom nav */
   .page-main { padding-bottom: calc(80px + max(env(safe-area-inset-bottom, 0px), 6px)) !important; }
+  /* Prevent browser auto-zoom on input focus (triggers when font-size < 16px) */
+  input, select, textarea { font-size: 16px !important; }
 }
 @media (min-width: 769px) {
   .mobile-only { display: none !important; }

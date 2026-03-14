@@ -10,20 +10,39 @@ interface Props {
   showToast: (msg: string) => void
 }
 
+const ROLE_LABELS: Record<string, string> = { captain: 'C', goalkeeper: 'B' }
+const ROLE_COLORS: Record<string, { color: string; bg: string; border: string }> = {
+  captain:    { color: '#92400e', bg: 'rgba(217,119,6,.12)',  border: 'rgba(217,119,6,.3)' },
+  goalkeeper: { color: '#166534', bg: 'rgba(22,163,74,.12)', border: 'rgba(22,163,74,.3)' },
+}
+
+function RoleBadge({ role }: { role: string | null }) {
+  if (!role || !ROLE_LABELS[role]) return null
+  const s = ROLE_COLORS[role]
+  return (
+    <span style={{
+      fontSize: '.65rem', fontWeight: 700, color: s.color,
+      background: s.bg, border: `1px solid ${s.border}`,
+      borderRadius: 4, padding: '1px 5px', lineHeight: 1.4, flexShrink: 0,
+    }}>{ROLE_LABELS[role]}</span>
+  )
+}
+
 function RosterSection({ team, players, showToast }: { team: Team; players: Player[]; showToast: (m: string) => void }) {
   const [name, setName] = useState('')
-  const [number, setNumber] = useState('')
-  const roster = players.filter(p => p.team_id === team.id).sort((a, b) => (a.number ?? 999) - (b.number ?? 999))
+  const [role, setRole] = useState('')
+  const roster = players.filter(p => p.team_id === team.id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
 
   const addPlayer = async () => {
     if (!name.trim()) { showToast('Zadej jméno'); return }
     const { error } = await supabase.from('players').insert({
       team_id: team.id,
       name: name.trim(),
-      number: number ? parseInt(number) : null,
+      number: null,
+      role: role || null,
     })
     if (error) { showToast('Chyba: ' + error.message); return }
-    setName(''); setNumber('')
+    setName(''); setRole('')
     showToast('Hráč přidán ✓')
   }
 
@@ -43,7 +62,7 @@ function RosterSection({ team, players, showToast }: { team: Team; players: Play
         <div className="a-list" style={{ marginBottom: '.5rem' }}>
           {roster.map(p => (
             <div key={p.id} className="a-item" style={{ padding: '.4rem .7rem' }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.9rem', color: 'var(--muted)', width: 24, textAlign: 'center', flexShrink: 0 }}>{p.number ?? '—'}</span>
+              <RoleBadge role={p.role} />
               <span className="a-item-main" style={{ fontSize: '.8rem' }}>{p.name}</span>
               <button className="btn btn-d btn-sm" onClick={() => removePlayer(p.id)}>✕</button>
             </div>
@@ -51,15 +70,18 @@ function RosterSection({ team, players, showToast }: { team: Team; players: Play
         </div>
       )}
       <div style={{ display: 'flex', gap: '.4rem', alignItems: 'flex-end' }}>
-        <div style={{ width: 64, flexShrink: 0 }}>
-          <label className="field-label"># Dres</label>
-          <input className="field-input" type="number" min="1" max="99" value={number}
-            onChange={e => setNumber(e.target.value)} placeholder="10" />
-        </div>
         <div style={{ flex: 1 }}>
           <label className="field-label">Jméno hráče</label>
           <input className="field-input" value={name} onChange={e => setName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addPlayer()} placeholder="Jan Novák" />
+        </div>
+        <div style={{ width: 110, flexShrink: 0 }}>
+          <label className="field-label">Role</label>
+          <select className="field-input field-select" value={role} onChange={e => setRole(e.target.value)}>
+            <option value="">Žádná</option>
+            <option value="captain">Kapitán (C)</option>
+            <option value="goalkeeper">Brankář (B)</option>
+          </select>
         </div>
         <button className="btn btn-s btn-sm" onClick={addPlayer} style={{ flexShrink: 0, marginBottom: 1 }}>+ Přidat</button>
       </div>

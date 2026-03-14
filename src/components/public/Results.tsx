@@ -60,7 +60,7 @@ export default function Results({ matches, teams }: Props) {
                   gap: '1rem',
                 }}>
                   {/* Home */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.6rem', minWidth: 0 }}>
                     <span style={{
                       fontWeight: hw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
@@ -68,8 +68,9 @@ export default function Results({ matches, teams }: Props) {
                       background: hw ? 'var(--accent-dim)' : 'transparent',
                       padding: hw ? '2px 8px' : '2px 0',
                       borderRadius: hw ? 5 : 0,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{tn(m.home_id)}</span>
-                    <span className="team-dot" style={{ background: tc(m.home_id), width: 12, height: 12 }} />
+                    <span className="team-dot" style={{ background: tc(m.home_id), width: 12, height: 12, flexShrink: 0 }} />
                   </div>
 
                   {/* Score */}
@@ -104,8 +105,8 @@ export default function Results({ matches, teams }: Props) {
                   </div>
 
                   {/* Away */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-                    <span className="team-dot" style={{ background: tc(m.away_id), width: 12, height: 12 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', minWidth: 0 }}>
+                    <span className="team-dot" style={{ background: tc(m.away_id), width: 12, height: 12, flexShrink: 0 }} />
                     <span style={{
                       fontWeight: aw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
@@ -113,6 +114,7 @@ export default function Results({ matches, teams }: Props) {
                       background: aw ? 'var(--accent-dim)' : 'transparent',
                       padding: aw ? '2px 8px' : '2px 0',
                       borderRadius: aw ? 5 : 0,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{tn(m.away_id)}</span>
                   </div>
                 </div>

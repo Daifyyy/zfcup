@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export interface Match {
@@ -16,6 +16,7 @@ export interface Match {
 export function useMatches() {
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
+  const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
@@ -25,6 +26,7 @@ export function useMatches() {
       setMatches(data ?? [])
       setLoading(false)
     }
+    fetchRef.current = fetch
     fetch()
 
     const sub = supabase
@@ -36,5 +38,5 @@ export function useMatches() {
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])
 
-  return { matches, loading }
+  return { matches, loading, refetch: () => fetchRef.current() }
 }

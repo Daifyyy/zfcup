@@ -40,8 +40,8 @@ export default function App() {
   const { teams } = useTeams()
   const { players } = usePlayers()
   const { groups } = useGroups()
-  const { matches } = useMatches()
-  const { goals } = useGoals()
+  const { matches, refetch: refetchMatches } = useMatches()
+  const { goals, refetch: refetchGoals } = useGoals()
   const { rounds: bracketRounds, slots: bracketSlots } = useBracket()
   const { announcements } = useAnnouncements()
 
@@ -143,7 +143,7 @@ export default function App() {
       />
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} goals={goals} announcements={announcements} onTab={navigateTab} />}
-        {tab === 'teams'     && <Teams teams={teams} players={players} />}
+        {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} />}
         {tab === 'scorers'   && <Scorers goals={goals} players={players} teams={teams} />}
@@ -168,6 +168,8 @@ export default function App() {
           {...shared}
           session={session}
           tournament={tournament}
+          refetchMatches={refetchMatches}
+          refetchGoals={refetchGoals}
           onClose={() => setAdminOpen(false)}
         />
       )}
