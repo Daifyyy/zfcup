@@ -99,5 +99,12 @@ Pokud vidíš zároveň:
 - [ ] Vercel env vars jsou nastaveny (Settings → Environment Variables → Production)
 - [ ] Vercel má provedený nový build PO nastavení env vars
 
+## TV Scoreboard (Tabule) — architektura
+3 sloupce, `overflow: hidden` všude (žádný scroll), fluid fonty přes `clamp()`:
+- **Levý (27%)**: skupinové tabulky + top-5 střelců dole (`marginTop: auto`)
+- **Prostřední (46%)**: skupinové zápasy abecedně dle kola, VS i skóre stejná velikost fontu (`S.score`), kompaktní karty
+- **Pravý (27%)**: flat list playoff kol oddělených nadpisy; detekce finále (`/finále/i` bez "3") → zlatá + 🏆, o 3. místo (`/3/i` nebo `/třet/i` nebo `/bronze/i`) → bronzová + 🥉
+- Props: `tournament, teams, players, groups, matches, goals, bracketRounds, bracketSlots, onExit`
+
 ## Nové funkce (zbývá implementovat)
 1. Los skupin (draw/random assignment of teams to groups)
