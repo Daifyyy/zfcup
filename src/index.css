@@ -260,30 +260,42 @@ body {
 .match-col-home {
   grid-area: home;
   display: flex; align-items: center; gap: .6rem; min-width: 0;
-  /* row-reverse so DOM order is [dot, name] but displays as [name, dot] right-aligned */
   flex-direction: row-reverse; justify-content: flex-start;
 }
 .match-col-score { grid-area: score; text-align: center; min-width: 110px; }
-.match-col-away  { grid-area: away;  display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.match-col-away  { grid-area: away; display: flex; align-items: center; gap: .6rem; min-width: 0; }
 .match-col-meta  {
   grid-area: meta;
   display: flex; justify-content: center; align-items: center;
   gap: .4rem; flex-wrap: wrap; margin-top: .2rem;
 }
+/* Individual side scores — hidden on desktop, shown on mobile */
+.match-score-side { display: none; }
+/* Team name base */
+.match-team-name  { word-break: break-word; }
 
 @media (max-width: 500px) {
+  /* Switch to vertical flex — each team on its own row */
   .match-grid {
-    grid-template-columns: 1fr auto;
-    grid-template-areas:
-      "home  score"
-      "away  score"
-      "meta  meta";
-    gap: .28rem .65rem;
+    display: flex;
+    flex-direction: column;
+    gap: .22rem;
     padding: .7rem .9rem;
   }
-  .match-col-home  { flex-direction: row; } /* dot before name on mobile */
-  .match-col-score { min-width: 0; align-self: center; }
-  .match-col-meta  { margin-top: .15rem; justify-content: flex-start; }
+  .match-col-home { flex-direction: row; }
+  .match-col-score { display: none; }   /* hide center score */
+  .match-col-meta  { justify-content: flex-start; margin-top: .1rem; }
+  /* Name takes remaining space, pushing score to the right */
+  .match-team-name { flex: 1; min-width: 0; }
+  /* Per-team score on the right */
+  .match-score-side {
+    display: block;
+    margin-left: auto;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: var(--fs-score);
+    line-height: 1;
+    flex-shrink: 0;
+  }
 }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }

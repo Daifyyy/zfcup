@@ -56,18 +56,21 @@ export default function Results({ matches, teams }: Props) {
                   {/* Home — dot before name in DOM; CSS row-reverse shows [name][dot] on desktop */}
                   <div className="match-col-home">
                     <span className="team-dot" style={{ background: tc(m.home_id), width: 12, height: 12, flexShrink: 0 }} />
-                    <span style={{
+                    <span className="match-team-name" style={{
                       fontWeight: hw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
                       color: hw ? 'var(--accent)' : aw ? 'var(--muted)' : 'var(--text)',
                       background: hw ? 'var(--accent-dim)' : 'transparent',
                       padding: hw ? '2px 8px' : '2px 0',
                       borderRadius: hw ? 5 : 0,
-                      wordBreak: 'break-word',
                     }}>{tn(m.home_id)}</span>
+                    {/* Per-team score — shown only on mobile */}
+                    <span className="match-score-side" style={{ color: hw ? 'var(--accent)' : 'var(--muted)' }}>
+                      {m.played ? m.home_score : ''}
+                    </span>
                   </div>
 
-                  {/* Score */}
+                  {/* Score — shown only on desktop */}
                   <div className="match-col-score">
                     <div style={{
                       fontFamily: "'Bebas Neue', sans-serif",
@@ -83,18 +86,21 @@ export default function Results({ matches, teams }: Props) {
                   {/* Away */}
                   <div className="match-col-away">
                     <span className="team-dot" style={{ background: tc(m.away_id), width: 12, height: 12, flexShrink: 0 }} />
-                    <span style={{
+                    <span className="match-team-name" style={{
                       fontWeight: aw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
                       color: aw ? 'var(--accent)' : hw ? 'var(--muted)' : 'var(--text)',
                       background: aw ? 'var(--accent-dim)' : 'transparent',
                       padding: aw ? '2px 8px' : '2px 0',
                       borderRadius: aw ? 5 : 0,
-                      wordBreak: 'break-word',
                     }}>{tn(m.away_id)}</span>
+                    {/* Per-team score — shown only on mobile */}
+                    <span className="match-score-side" style={{ color: aw ? 'var(--accent)' : 'var(--muted)' }}>
+                      {m.played ? m.away_score : ''}
+                    </span>
                   </div>
 
-                  {/* Meta row: time + badge (centered below score on desktop, full-width on mobile) */}
+                  {/* Meta row: time + badge */}
                   <div className="match-col-meta">
                     {m.scheduled_time && (
                       <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{m.scheduled_time}</span>
