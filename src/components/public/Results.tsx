@@ -52,15 +52,10 @@ export default function Results({ matches, teams }: Props) {
               const hw = m.played && m.home_score > m.away_score
               const aw = m.played && m.away_score > m.home_score
               return (
-                <div key={m.id} className="card" style={{
-                  padding: 'var(--pad-match)',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto 1fr',
-                  alignItems: 'center',
-                  gap: '1rem',
-                }}>
-                  {/* Home */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.6rem', minWidth: 0 }}>
+                <div key={m.id} className="card match-grid">
+                  {/* Home — dot before name in DOM; CSS row-reverse shows [name][dot] on desktop */}
+                  <div className="match-col-home">
+                    <span className="team-dot" style={{ background: tc(m.home_id), width: 12, height: 12, flexShrink: 0 }} />
                     <span style={{
                       fontWeight: hw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
@@ -69,13 +64,11 @@ export default function Results({ matches, teams }: Props) {
                       padding: hw ? '2px 8px' : '2px 0',
                       borderRadius: hw ? 5 : 0,
                       wordBreak: 'break-word',
-                      textAlign: 'right',
                     }}>{tn(m.home_id)}</span>
-                    <span className="team-dot" style={{ background: tc(m.home_id), width: 12, height: 12, flexShrink: 0 }} />
                   </div>
 
                   {/* Score */}
-                  <div style={{ textAlign: 'center', minWidth: 110 }}>
+                  <div className="match-col-score">
                     <div style={{
                       fontFamily: "'Bebas Neue', sans-serif",
                       fontSize: 'var(--fs-score)',
@@ -85,28 +78,10 @@ export default function Results({ matches, teams }: Props) {
                     }}>
                       {m.played ? `${m.home_score} : ${m.away_score}` : 'VS'}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '.4rem', marginTop: '.2rem' }}>
-                      {m.scheduled_time && (
-                        <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{m.scheduled_time}</span>
-                      )}
-                      <span style={{
-                        display: 'inline-block',
-                        fontSize: '.62rem',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '.1em',
-                        padding: '2px 7px',
-                        borderRadius: 20,
-                        background: m.played ? 'rgba(22,163,74,.1)' : 'var(--border)',
-                        color: m.played ? 'var(--success)' : 'var(--muted)',
-                      }}>
-                        {m.played ? '✓ Odehráno' : 'Plánováno'}
-                      </span>
-                    </div>
                   </div>
 
                   {/* Away */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', minWidth: 0 }}>
+                  <div className="match-col-away">
                     <span className="team-dot" style={{ background: tc(m.away_id), width: 12, height: 12, flexShrink: 0 }} />
                     <span style={{
                       fontWeight: aw ? 700 : 500,
@@ -117,6 +92,22 @@ export default function Results({ matches, teams }: Props) {
                       borderRadius: aw ? 5 : 0,
                       wordBreak: 'break-word',
                     }}>{tn(m.away_id)}</span>
+                  </div>
+
+                  {/* Meta row: time + badge (centered below score on desktop, full-width on mobile) */}
+                  <div className="match-col-meta">
+                    {m.scheduled_time && (
+                      <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{m.scheduled_time}</span>
+                    )}
+                    <span style={{
+                      fontSize: '.62rem', fontWeight: 600,
+                      textTransform: 'uppercase', letterSpacing: '.1em',
+                      padding: '2px 7px', borderRadius: 20,
+                      background: m.played ? 'rgba(22,163,74,.1)' : 'var(--border)',
+                      color: m.played ? 'var(--success)' : 'var(--muted)',
+                    }}>
+                      {m.played ? '✓ Odehráno' : 'Plánováno'}
+                    </span>
                   </div>
                 </div>
               )
