@@ -68,7 +68,8 @@ export default function Results({ matches, teams }: Props) {
                       background: hw ? 'var(--accent-dim)' : 'transparent',
                       padding: hw ? '2px 8px' : '2px 0',
                       borderRadius: hw ? 5 : 0,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      wordBreak: 'break-word',
+                      textAlign: 'right',
                     }}>{tn(m.home_id)}</span>
                     <span className="team-dot" style={{ background: tc(m.home_id), width: 12, height: 12, flexShrink: 0 }} />
                   </div>
@@ -114,7 +115,7 @@ export default function Results({ matches, teams }: Props) {
                       background: aw ? 'var(--accent-dim)' : 'transparent',
                       padding: aw ? '2px 8px' : '2px 0',
                       borderRadius: aw ? 5 : 0,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      wordBreak: 'break-word',
                     }}>{tn(m.away_id)}</span>
                   </div>
                 </div>

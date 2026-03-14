@@ -244,24 +244,26 @@ function MatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] }) {
 
                   {/* Score / VS — same size whether played or not */}
                   <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(3.2rem, 5.5vw, 7rem)' }}>
-                    {m.played ? (
-                      <span style={{
-                        fontFamily: "'Bebas Neue', sans-serif",
-                        fontSize: S.score,
-                        color: C.text,
-                        letterSpacing: '.06em',
-                        lineHeight: 1,
-                      }}>
-                        {m.home_score}:{m.away_score}
-                      </span>
-                    ) : (
-                      <div>
+                    <div>
+                      {m.played ? (
+                        <span style={{
+                          fontFamily: "'Bebas Neue', sans-serif",
+                          fontSize: S.score,
+                          color: C.text,
+                          letterSpacing: '.06em',
+                          lineHeight: 1,
+                        }}>
+                          {m.home_score}:{m.away_score}
+                        </span>
+                      ) : (
                         <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.muted, letterSpacing: '.06em' }}>VS</span>
-                        {m.scheduled_time && (
-                          <div style={{ fontSize: S.label, color: C.accent, marginTop: 1 }}>{m.scheduled_time}</div>
-                        )}
-                      </div>
-                    )}
+                      )}
+                      {m.scheduled_time && (
+                        <div style={{ fontSize: S.label, color: m.played ? C.muted : C.accent, marginTop: 1, fontWeight: m.played ? 400 : 600 }}>
+                          {m.scheduled_time}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Away */}
