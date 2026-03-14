@@ -384,9 +384,9 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
       const field = isEven ? 'home_id' : 'away_id'
 
       const ops: Promise<unknown>[] = []
-      if (finalSlot && !finalSlot[field])
+      if (finalSlot)
         ops.push(supabase.from('bracket_slots').update({ [field]: winner }).eq('id', finalSlot.id))
-      if (thirdSlot && !thirdSlot[field])
+      if (thirdSlot)
         ops.push(supabase.from('bracket_slots').update({ [field]: loser }).eq('id', thirdSlot.id))
       await Promise.all(ops)
       showToast('Uloženo ✓ — vítěz postoupil do finále')
@@ -396,7 +396,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
       const nextSlots = slotsOf(nextRound.id)
       const targetSlot = nextSlots[Math.floor(slot.position / 2)]
       const field = isEven ? 'home_id' : 'away_id'
-      if (targetSlot && !targetSlot[field]) {
+      if (targetSlot) {
         await supabase.from('bracket_slots').update({ [field]: winner }).eq('id', targetSlot.id)
         showToast('Uloženo ✓ — vítěz postoupil dál')
       } else {

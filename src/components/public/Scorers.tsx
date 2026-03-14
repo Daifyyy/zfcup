@@ -1,19 +1,22 @@
 import type { Goal } from '../../hooks/useGoals'
 import type { Player } from '../../hooks/usePlayers'
 import type { Team } from '../../hooks/useTeams'
+import type { BracketGoal } from '../../hooks/useBracketGoals'
 import Empty from '../ui/Empty'
 
 interface Props {
   goals: Goal[]
+  bracketGoals: BracketGoal[]
   players: Player[]
   teams: Team[]
 }
 
-export default function Scorers({ goals, players, teams }: Props) {
+export default function Scorers({ goals, bracketGoals, players, teams }: Props) {
   const gt = (id: string) => teams.find(t => t.id === id)
 
   const agg: Record<string, number> = {}
   for (const g of goals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
+  for (const g of bracketGoals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
 
   const scorers = Object.entries(agg)
     .map(([pid, goals]) => {
