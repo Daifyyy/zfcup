@@ -173,8 +173,65 @@ export default function BracketTab({ teams, groups, matches, bracketRounds, brac
 
   const saveSlot = async (slotId: string, data: Partial<BracketSlot>) => {
     const { error } = await supabase.from('bracket_slots').update(data).eq('id', slotId)
-    if (error) showToast('Chyba: ' + error.message)
-    else showToast('Uloženo ✓')
+    if (error) { showToast('Chyba: ' + error.message); return }
+
+    // ── Auto-advance winner to next round ─────────────────────────────
+    // Only when: result is decisive (no draw), slot has both teams assigned
+    const isDecisive = data.played && data.home_score !== data.away_score
+    const hasBothTeams = data.home_id && data.away_id
+    if (!isDecisive || !hasBothTeams) { showToast('Uloženo ✓'); return }
+
+    const slot = bracketSlots.find(s => s.id === slotId)
+    const currentRound = slot ? bracketRounds.find(r => r.id === slot.round_id) : null
+    if (!slot || !currentRound) { showToast('Uloženo ✓'); return }
+
+    const maxPos = Math.max(...bracketRounds.map(r => r.position))
+    // Don't advance from 3rd place or final
+    if (currentRound.position >= maxPos - 1) { showToast('Uloženo ✓'); return }
+
+    const homeWins = (data.home_score ?? 0) > (data.away_score ?? 0)
+    const winner = homeWins ? data.home_id! : data.away_id!
+    const loser  = homeWins ? data.away_id! : data.home_id!
+    const isEven = slot.position % 2 === 0
+
+    const slotsOf = (roundId: string) =>
+      [...bracketSlots].filter(s => s.round_id === roundId).sort((a, b) => a.position - b.position)
+
+    const isSemifinal = currentRound.position === maxPos - 2
+
+    if (isSemifinal) {
+      // Winner → Final (maxPos), Loser → O 3. místo (maxPos - 1)
+      const finalRound  = bracketRounds.find(r => r.position === maxPos)
+      const thirdRound  = bracketRounds.find(r => r.position === maxPos - 1)
+      const finalSlots  = finalRound  ? slotsOf(finalRound.id)  : []
+      const thirdSlots  = thirdRound  ? slotsOf(thirdRound.id)  : []
+      const finalSlot   = finalSlots[0]
+      const thirdSlot   = thirdSlots[0]
+      const field = isEven ? 'home_id' : 'away_id'
+
+      const ops: Promise<unknown>[] = []
+      if (finalSlot && !finalSlot[field])
+        ops.push(supabase.from('bracket_slots').update({ [field]: winner }).eq('id', finalSlot.id))
+      if (thirdSlot && !thirdSlot[field])
+        ops.push(supabase.from('bracket_slots').update({ [field]: loser }).eq('id', thirdSlot.id))
+
+      await Promise.all(ops)
+      showToast('Uloženo ✓ — vítěz postoupil do finále')
+    } else {
+      // Earlier round: winner → next round slot floor(S/2), home if even, away if odd
+      const nextRound = bracketRounds.find(r => r.position === currentRound.position + 1)
+      if (!nextRound) { showToast('Uloženo ✓'); return }
+      const nextSlots = slotsOf(nextRound.id)
+      const targetSlot = nextSlots[Math.floor(slot.position / 2)]
+      const field = isEven ? 'home_id' : 'away_id'
+
+      if (targetSlot && !targetSlot[field]) {
+        await supabase.from('bracket_slots').update({ [field]: winner }).eq('id', targetSlot.id)
+        showToast('Uloženo ✓ — vítěz postoupil dál')
+      } else {
+        showToast('Uloženo ✓')
+      }
+    }
   }
 
   const sorted = [...bracketRounds].sort((a, b) => a.position - b.position)
