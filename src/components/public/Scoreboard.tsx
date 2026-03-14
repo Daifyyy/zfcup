@@ -165,9 +165,16 @@ function StandingsCol({ groups, matches, teams, players, goals }: {
                   {i + 1}
                 </span>
                 {s.team && <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.team.color, flexShrink: 0, display: 'inline-block' }} />}
-                <span style={{ flex: 1, fontSize: S.body, fontWeight: i === 0 ? 700 : 500, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {s.name}
-                </span>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: S.body, fontWeight: i === 0 ? 700 : 500, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {s.name}
+                  </span>
+                  {s.team && (
+                    <span style={{ fontSize: S.label, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {s.team.name}
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: i === 0 ? C.gold : C.accent, flexShrink: 0 }}>
                   {s.total}
                 </span>

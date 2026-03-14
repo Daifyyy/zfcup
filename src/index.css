@@ -310,6 +310,35 @@ body {
   }
 }
 
+/* ── Standings table — all columns visible on mobile via compact scaling ── */
+@media (max-width: 600px) {
+  .standings-table th,
+  .standings-table td {
+    padding: .38rem .18rem !important;
+    font-size: .65rem !important;
+  }
+  /* Rank column tighter */
+  .standings-table th:first-child,
+  .standings-table td:first-child {
+    width: 22px !important;
+  }
+  /* Points — keep Bebas Neue but scale down */
+  .standings-table td .rank,
+  .standings-table td span[style*="Bebas"] {
+    font-size: 1rem !important;
+  }
+  /* Team name: can wrap to max 2 lines, no truncation */
+  .standings-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    line-height: 1.25;
+    font-size: .75rem !important;
+  }
+}
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; }

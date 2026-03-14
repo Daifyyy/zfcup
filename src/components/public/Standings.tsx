@@ -40,20 +40,18 @@ export default function Standings({ groups, matches, teams }: Props) {
                 {group.team_ids.length} týmů · {playedCount} odehráno
               </span>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-body)' }}>
+            <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-body)' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)' }}>
                   {(['#', 'Tým', 'Z', 'V', 'R', 'P', 'Skóre', '+/−', 'Body'] as const).map((h, i) => (
-                    <th key={h}
-                      className={['R', 'Skóre', '+/−'].includes(h) ? 'hide-mobile' : ''}
-                      style={{
-                        padding: 'var(--pad-cell)',
-                        color: 'var(--muted)', fontSize: 'var(--fs-label)',
-                        textTransform: 'uppercase', letterSpacing: '.12em',
-                        textAlign: i <= 1 ? 'left' : 'center',
-                        fontWeight: 600, whiteSpace: 'nowrap',
-                        width: i === 0 ? 40 : undefined,
-                      }}>
+                    <th key={h} style={{
+                      padding: 'var(--pad-cell)',
+                      color: 'var(--muted)', fontSize: 'var(--fs-label)',
+                      textTransform: 'uppercase', letterSpacing: '.12em',
+                      textAlign: i <= 1 ? 'left' : 'center',
+                      fontWeight: 600, whiteSpace: 'nowrap',
+                      width: i === 0 ? 40 : undefined,
+                    }}>
                       {h}
                     </th>
                   ))}
@@ -74,17 +72,16 @@ export default function Standings({ groups, matches, teams }: Props) {
                         <span className={rankClass}>{i + 1}</span>
                       </td>
                       <td style={{ padding: 'var(--pad-cell)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          {team && <span className="team-dot" style={{ background: team.color, width: 12, height: 12 }} />}
-                          <span style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {team && <span className="team-dot" style={{ background: team.color, width: 10, height: 10, flexShrink: 0 }} />}
+                          <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
                         </div>
                       </td>
                       {[row.played, row.w, row.d, row.l].map((v, j) => (
-                        <td key={j} className={j === 2 ? 'hide-mobile' : ''}
-                          style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: 'var(--muted)' }}>{v}</td>
+                        <td key={j} style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: 'var(--muted)' }}>{v}</td>
                       ))}
-                      <td className="hide-mobile" style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: 'var(--muted)' }}>{row.gf}:{row.ga}</td>
-                      <td className="hide-mobile" style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: gdColor, fontWeight: 600 }}>
+                      <td style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: 'var(--muted)' }}>{row.gf}:{row.ga}</td>
+                      <td style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: gdColor, fontWeight: 600 }}>
                         {row.gd > 0 ? '+' : ''}{row.gd}
                       </td>
                       <td style={{ textAlign: 'center', padding: 'var(--pad-cell)' }}>
