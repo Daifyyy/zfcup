@@ -147,6 +147,13 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
     setForm(p => ({ ...p, [k]: val, played: num > 0 ? true : p.played }))
   }
 
+  const changeScore = (k: 'home_score' | 'away_score', delta: number) => {
+    setForm(p => {
+      const next = Math.max(0, (parseInt(p[k]) || 0) + delta)
+      return { ...p, [k]: String(next), played: next > 0 ? true : p.played }
+    })
+  }
+
   const saveMatch = async () => {
     if (!form.home_id || !form.away_id) { showToast('Vyberte oba týmy'); return }
     if (form.home_id === form.away_id) { showToast('Týmy musí být různé'); return }
@@ -247,12 +254,26 @@ export default function MatchesTab({ teams, players, matches, goals, groups, sho
         <div className="field-row3">
           <div className="field-group">
             <label className="field-label">Skóre (domácí)</label>
-            <input className="field-input" type="number" min="0" value={form.home_score} onChange={handleScore('home_score')} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button type="button" onClick={() => changeScore('home_score', -1)}
+                style={{ width: 34, height: 34, borderRadius: 7, border: '1px solid var(--border)', background: '#f8fafc', fontSize: '1.1rem', fontWeight: 700, color: 'var(--muted)', cursor: 'pointer' }}>−</button>
+              <input className="field-input" type="number" min="0" value={form.home_score} onChange={handleScore('home_score')}
+                style={{ width: 56, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem' }} />
+              <button type="button" onClick={() => changeScore('home_score', +1)}
+                style={{ width: 34, height: 34, borderRadius: 7, border: '1px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)', cursor: 'pointer' }}>+</button>
+            </div>
           </div>
           <div className="field-sep">:</div>
           <div className="field-group">
             <label className="field-label">Skóre (hosté)</label>
-            <input className="field-input" type="number" min="0" value={form.away_score} onChange={handleScore('away_score')} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button type="button" onClick={() => changeScore('away_score', -1)}
+                style={{ width: 34, height: 34, borderRadius: 7, border: '1px solid var(--border)', background: '#f8fafc', fontSize: '1.1rem', fontWeight: 700, color: 'var(--muted)', cursor: 'pointer' }}>−</button>
+              <input className="field-input" type="number" min="0" value={form.away_score} onChange={handleScore('away_score')}
+                style={{ width: 56, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem' }} />
+              <button type="button" onClick={() => changeScore('away_score', +1)}
+                style={{ width: 34, height: 34, borderRadius: 7, border: '1px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)', cursor: 'pointer' }}>+</button>
+            </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', marginBottom: '.85rem', flexWrap: 'wrap' }}>
