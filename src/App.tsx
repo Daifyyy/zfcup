@@ -117,8 +117,10 @@ export default function App() {
           <Scoreboard
             tournament={tournament}
             teams={teams}
+            players={players}
             groups={groups}
             matches={matches}
+            goals={goals}
             bracketRounds={bracketRounds}
             bracketSlots={bracketSlots}
             onExit={() => setScoreboard(false)}
@@ -152,8 +154,10 @@ export default function App() {
         <Scoreboard
           tournament={tournament}
           teams={teams}
+          players={players}
           groups={groups}
           matches={matches}
+          goals={goals}
           bracketRounds={bracketRounds}
           bracketSlots={bracketSlots}
           onExit={() => setScoreboard(false)}
