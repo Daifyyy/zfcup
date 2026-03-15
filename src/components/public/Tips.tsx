@@ -167,12 +167,29 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }
   specialTips: ReturnType<typeof useSpecialTips>['specialTips']
   showToast: (m: string) => void
 }) {
+  const [selected, setSelected] = useState<Record<string, string>>({})
+  const [dirty, setDirty] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState<Record<string, boolean>>({})
 
-  const getSpecialTip = (tipType: string) =>
-    specialTips.find(t => t.tip_type === tipType)?.predicted_team_id ?? ''
+  // Initialize/refresh selections from DB — skip dirty entries (user is editing)
+  useEffect(() => {
+    setSelected(prev => {
+      const next = { ...prev }
+      for (const tip of specialTips) {
+        if (dirty.has(tip.tip_type)) continue
+        next[tip.tip_type] = tip.predicted_team_id
+      }
+      return next
+    })
+  }, [specialTips]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const saveSpecialTip = async (tipType: string, teamId: string) => {
+  const handleChange = (tipType: string, teamId: string) => {
+    setDirty(prev => new Set([...prev, tipType]))
+    setSelected(prev => ({ ...prev, [tipType]: teamId }))
+  }
+
+  const saveSpecialTip = async (tipType: string) => {
+    const teamId = selected[tipType]
     if (!teamId) return
     setSaving(prev => ({ ...prev, [tipType]: true }))
     const existing = specialTips.find(t => t.tip_type === tipType)
@@ -187,16 +204,17 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }
     showToast('Tip uložen ✓')
   }
 
-  const SpecialRow = ({ tipType, label, teamPool, points }: { tipType: string; label: string; teamPool: Team[]; points: number }) => {
-    const existing = specialTips.find(t => t.tip_type === tipType)
-    const [selected, setSelected] = useState(existing?.predicted_team_id ?? '')
-    useEffect(() => { setSelected(existing?.predicted_team_id ?? '') }, [existing?.predicted_team_id])
+  const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
 
-    const changed = selected !== (existing?.predicted_team_id ?? '')
+  const renderRow = (tipType: string, label: string, teamPool: Team[], points: number, isLast: boolean) => {
+    const existing = specialTips.find(t => t.tip_type === tipType)
     const isEvaluated = existing?.evaluated
+    const currentVal = selected[tipType] ?? ''
+    const savedVal = existing?.predicted_team_id ?? ''
+    const changed = currentVal !== savedVal
 
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: '1px solid var(--border)' }}>
+      <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
           <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{points} b. za správný tip</div>
@@ -219,17 +237,17 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }
             <select
               className="field-input field-select"
               style={{ width: 'auto', minWidth: 120, fontSize: '.78rem', padding: '.3rem .5rem' }}
-              value={selected}
-              onChange={e => setSelected(e.target.value)}
+              value={currentVal}
+              onChange={e => handleChange(tipType, e.target.value)}
             >
               <option value="">— vyber tým —</option>
               {teamPool.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
-            {changed && selected && (
+            {changed && currentVal && (
               <button type="button" className="btn btn-s btn-sm"
-                onClick={() => saveSpecialTip(tipType, selected)}
+                onClick={() => saveSpecialTip(tipType)}
                 style={{ opacity: saving[tipType] ? .6 : 1, whiteSpace: 'nowrap' }}>
                 {saving[tipType] ? '…' : 'Uložit'}
               </button>
@@ -240,27 +258,23 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }
     )
   }
 
-  const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+  // Build flat list of all rows to know which is last
+  const rows: { tipType: string; label: string; teamPool: Team[]; points: number }[] = [
+    { tipType: 'tournament_winner', label: '🏆 Vítěz turnaje', teamPool: teams, points: 10 },
+    ...sortedGroups.flatMap(g => {
+      const groupTeams = teams.filter(t => g.team_ids.includes(t.id))
+      return [
+        { tipType: `group_winner:${g.id}`, label: `🥇 Vítěz skupiny ${g.name}`, teamPool: groupTeams, points: 5 },
+        { tipType: `group_last:${g.id}`, label: `⬇️ Poslední skupiny ${g.name}`, teamPool: groupTeams, points: 3 },
+      ]
+    }),
+  ]
 
   return (
     <div style={{ marginBottom: '1.8rem' }}>
       <div style={groupHeader}>Speciální tipy</div>
       <div className="card" style={{ overflow: 'hidden', marginBottom: '.3rem' }}>
-        <SpecialRow
-          tipType="tournament_winner"
-          label="🏆 Vítěz turnaje"
-          teamPool={teams}
-          points={10}
-        />
-        {sortedGroups.map(g => {
-          const groupTeams = teams.filter(t => g.team_ids.includes(t.id))
-          return (
-            <div key={g.id}>
-              <SpecialRow tipType={`group_winner:${g.id}`} label={`🥇 Vítěz skupiny ${g.name}`} teamPool={groupTeams} points={5} />
-              <SpecialRow tipType={`group_last:${g.id}`} label={`⬇️ Poslední skupiny ${g.name}`} teamPool={groupTeams} points={3} />
-            </div>
-          )
-        })}
+        {rows.map((r, i) => renderRow(r.tipType, r.label, r.teamPool, r.points, i === rows.length - 1))}
       </div>
       <div style={{ fontSize: '.67rem', color: 'var(--muted)', padding: '0 .2rem' }}>
         Speciální tipy jsou uzamčeny po vyhodnocení adminem.

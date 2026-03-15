@@ -25,10 +25,8 @@ function getPoints(tipType: string): number {
 }
 
 async function recalcTipsterPoints() {
-  // Fetch all tipsters
   const { data: tipsters } = await supabase.from('tipsters').select('id')
   if (!tipsters) return
-
   for (const tipster of tipsters) {
     const [{ data: tips }, { data: bTips }, { data: sTips }] = await Promise.all([
       supabase.from('tips').select('points_earned').eq('tipster_id', tipster.id),
@@ -41,6 +39,60 @@ async function recalcTipsterPoints() {
       (sTips ?? []).reduce((s, r) => s + (r.points_earned ?? 0), 0)
     await supabase.from('tipsters').update({ total_points: total }).eq('id', tipster.id)
   }
+}
+
+// Re-evaluate all tips from scratch based on current match/slot results
+async function recalcAllTips() {
+  // --- Group match tips (3 exact / 1 correct outcome) ---
+  const { data: playedMatches } = await supabase
+    .from('matches').select('id, home_score, away_score').eq('played', true)
+  if (playedMatches?.length) {
+    const { data: allTips } = await supabase
+      .from('tips').select('id, match_id, predicted_home, predicted_away')
+      .in('match_id', playedMatches.map(m => m.id))
+    for (const tip of allTips ?? []) {
+      const m = playedMatches.find(m => m.id === tip.match_id)
+      if (!m) continue
+      let pts = 0
+      if (tip.predicted_home === m.home_score && tip.predicted_away === m.away_score) {
+        pts = 3
+      } else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(m.home_score - m.away_score)) {
+        pts = 1
+      }
+      await supabase.from('tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
+    }
+  }
+
+  // --- Bracket tips (final: 8 exact / 3 correct, other: 5 exact / 2 correct) ---
+  const { data: playedSlots } = await supabase
+    .from('bracket_slots').select('id, round_id, home_score, away_score').eq('played', true)
+  if (playedSlots?.length) {
+    const roundIds = [...new Set(playedSlots.map(s => s.round_id))]
+    const { data: rounds } = await supabase
+      .from('bracket_rounds').select('id, name, position').in('id', roundIds)
+    const maxPos = Math.max(...(rounds ?? []).map(r => r.position))
+    const isFinal = (roundId: string) => {
+      const r = rounds?.find(r => r.id === roundId)
+      return r?.position === maxPos && !/3|třet|bronze/i.test(r.name ?? '')
+    }
+    const { data: allBTips } = await supabase
+      .from('bracket_tips').select('id, slot_id, predicted_home, predicted_away')
+      .in('slot_id', playedSlots.map(s => s.id))
+    for (const tip of allBTips ?? []) {
+      const s = playedSlots.find(s => s.id === tip.slot_id)
+      if (!s) continue
+      const fin = isFinal(s.round_id)
+      let pts = 0
+      if (tip.predicted_home === s.home_score && tip.predicted_away === s.away_score) {
+        pts = fin ? 8 : 5
+      } else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(s.home_score - s.away_score)) {
+        pts = fin ? 3 : 2
+      }
+      await supabase.from('bracket_tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
+    }
+  }
+
+  await recalcTipsterPoints()
 }
 
 // ── Special tip evaluation row ─────────────────────────────────────────────────
@@ -123,6 +175,14 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
 export default function TipsAdminTab({ showToast, teams, groups }: Props) {
   const { tipsters } = useTipsters()
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+  const [recalcing, setRecalcing] = useState(false)
+
+  const handleRecalcAll = async () => {
+    setRecalcing(true)
+    await recalcAllTips()
+    setRecalcing(false)
+    showToast('Body přepočítány ✓')
+  }
 
   const resetAll = async () => {
     if (!confirm('Smazat všechny tipy a vynulovat body? Tuto akci nelze vrátit.')) return
@@ -199,6 +259,16 @@ export default function TipsAdminTab({ showToast, teams, groups }: Props) {
           )
         })}
       </div>
+
+      {/* Manual recalc */}
+      <hr className="divider" />
+      <div className="sub-title">Přepočet bodů</div>
+      <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
+        Přepočítá body za všechny skupinové i playoff tipy podle aktuálních výsledků zápasů. Použij po opravě chybného výsledku.
+      </p>
+      <button type="button" className="btn btn-s" onClick={handleRecalcAll} style={{ opacity: recalcing ? .6 : 1 }}>
+        {recalcing ? 'Přepočítávám…' : '🔄 Přepočítat tipy ze zápasů'}
+      </button>
 
       {/* Danger zone */}
       <hr className="divider" />
