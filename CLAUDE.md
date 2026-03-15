@@ -57,7 +57,7 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - **Mazání skupiny**: nejdříve smazat zápasy (`DELETE FROM matches WHERE group_id = X`), pak teprve skupinu — DB cascade nastaví group_id na NULL a následný delete by nenašel nic
 - **Řazení skupin v zobrazení**: používat `localeCompare` pro řazení round entries abecedně, ne insertion order (jinak se skupiny při edit přehazují kvůli změně scheduled_time formátu)
 - **`played` flag**: auto-nastavit na `true` při ukládání pokud home_score > 0 nebo away_score > 0
-- **Trigger `after_match_result` na matches**: volá `evaluate_tips()` při UPDATE. Funkce obsahovala `UPDATE tipsters SET ... ` bez WHERE clause — Supabase to blokuje a hodí "UPDATE requires a WHERE clause" (400), čímž rollbackne i původní UPDATE matches. Fix: přidat `WHERE id IN (SELECT tipster_id FROM tips WHERE match_id = NEW.id)`. Opraveno přímo v DB funkci.
+- **Trigger `after_match_result` na matches**: volá `evaluate_tips()` při UPDATE. Viz sekci Tipovačka pro správnou verzi funkce. Časté chyby: chybějící WHERE clause na UPDATE tipsters, nebo podmínka `AND evaluated = false` která blokuje re-evaluaci při změně výsledku.
 - **Android touch na disabled tlačítkách**: tlačítka s `disabled` atributem na Androidu nespustí onClick handler. Řešení: odstranit `disabled`, kontrolu provést uvnitř handleru + toast.
 - **Android zoom inputů**: `@media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }` — prohlížeč nezoomuje když font-size ≥ 16px
 
@@ -74,7 +74,8 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 ### Veřejné záložky (BottomNav + Header)
 - `overview` — Dashboard: dlaždice (Informace=počet oznámení, Týmy, Zápasy, Tabulka, Střelci=počet střelců, Play-off), QR kód, oznámení
 - `teams` — Týmy + soupisky; hráči seřazeni abecedně; zobrazení: Jméno | RoleBadge (C/B/CB) | ⚽N (jen pokud > 0)
-- `results` — Výsledky skupinových zápasů (řazené abecedně dle skupiny), zvýraznění vítěze; mobilní layout: týmy vlevo + skóre vpravo (CSS grid/flex s !important override na ≤500px)
+- `results` — Zápasy skupinových zápasů (řazené abecedně dle skupiny), zvýraznění vítěze; mobilní layout: týmy vlevo + skóre vpravo (CSS grid/flex s !important override na ≤500px)
+  - **Poznámka**: záložka se jmenuje `results` (key), ale label v BottomNav i Header je **"Zápasy"** (sjednoceno s dlaždičkou na Přehledu)
 - `standings` — Tabulky skupin (tiebreaker A/B + H2H)
 - `scorers` — Střelci (agregováno z goals + bracket_goals)
 - `bracket` — Play-off jako flat list zápasů oddělených koly (ne pavouk), finále zlatě
@@ -89,7 +90,7 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `matches` — Zápasy + inline GoalEditor (±1 góly per hráč); po save okamžitý refetch přes `refetchMatches()`/`refetchGoals()`
 - `scorers` — Read-only přehled střelců
 - `bracket` — 2-krokový flow: Step 1 = vygenerovat strukturu (vždy dostupné), Step 2 = nasadit týmy (jen pokud jsou všechny skupinové zápasy odehrané); SlotEditor má ±stepery skóre + BracketGoalEditor per hráč
-- `tips` — Tipovačka admin: přehled tipérů, vyhodnocení speciálních tipů, reset/mazání
+- `tips` — Tipovačka admin: přehled tipérů, vyhodnocení speciálních tipů, **přepočet bodů ze zápasů** (tlačítko "🔄 Přepočítat tipy ze zápasů"), reset/mazání
 - `settings` — Nastavení (včetně toggle `tips_enabled`)
 
 ## Bracket (Play-off) — architektura
@@ -212,22 +213,61 @@ CREATE POLICY "admin_write" ON special_tips FOR ALL TO authenticated USING (true
 | Playoff (`bracket_tips`) | Automaticky | DB trigger `after_bracket_slot_result` při UPDATE bracket_slots |
 | Speciální (`special_tips`) | Ručně | Admin v záložce Tipovačka → Vyhodnocení speciálních tipů |
 
-**Trigger `evaluate_tips()` — kritická podmínka:**
-Funkce musí mít `WHERE id IN (SELECT tipster_id FROM tips WHERE match_id = NEW.id)` na UPDATE tipsters — bez toho Supabase hodí "UPDATE requires a WHERE clause" a rollbackne i původní UPDATE matches.
+**Trigger `evaluate_tips()` — kritické požadavky:**
+- Musí mít `WHERE id IN (SELECT tipster_id FROM tips WHERE match_id = NEW.id)` na UPDATE tipsters — bez toho Supabase hodí "UPDATE requires a WHERE clause" a rollbackne i původní UPDATE matches.
+- **Nesmí obsahovat** `AND evaluated = false` ani `AND OLD.played = false` — jinak se body nepřepočítají při změně výsledku již odehraného zápasu.
+- Podmínka spuštění: `IF NEW.played = true` (ne `OLD.played = false`) — trigger musí přepočítat pokaždé.
+- Správná verze funkce (spustit v Supabase SQL Editoru pokud je třeba opravit):
+```sql
+CREATE OR REPLACE FUNCTION evaluate_tips()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.played = true THEN
+    UPDATE tips SET
+      points_earned = CASE
+        WHEN predicted_home = NEW.home_score AND predicted_away = NEW.away_score THEN 3
+        WHEN SIGN(predicted_home - predicted_away) = SIGN(NEW.home_score - NEW.away_score) THEN 1
+        ELSE 0
+      END,
+      evaluated = true
+    WHERE match_id = NEW.id;
+    UPDATE tipsters SET
+      total_points = (
+        SELECT COALESCE(SUM(t.points_earned), 0) FROM tips t WHERE t.tipster_id = tipsters.id
+      ) + (
+        SELECT COALESCE(SUM(bt.points_earned), 0) FROM bracket_tips bt WHERE bt.tipster_id = tipsters.id
+      ) + (
+        SELECT COALESCE(SUM(st.points_earned), 0) FROM special_tips st WHERE st.tipster_id = tipsters.id
+      )
+    WHERE id IN (SELECT tipster_id FROM tips WHERE match_id = NEW.id);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
 
 **Ruční recalc `total_points` (v TipsAdminTab):**
-Po vyhodnocení speciálních tipů klient ručně přepočítá `total_points` jako součet `tips.points_earned + bracket_tips.points_earned + special_tips.points_earned` per tipster a updateuje `tipsters.total_points`.
+- `recalcTipsterPoints()` — sečte existující `points_earned` ze všech tabulek, updateuje `tipsters.total_points`
+- `recalcAllTips()` — přepočítá `tips.points_earned` i `bracket_tips.points_earned` ze skutečných výsledků zápasů/slotů, pak zavolá `recalcTipsterPoints()`. Použít po opravě chybného výsledku pokud trigger selhal.
 
 ### Komponenty tipovačky
 - `src/components/public/Tips.tsx` — hlavní komponenta (veřejná záložka)
-  - `TipsLogin` — registrace/přihlášení (jméno lowercase + 4místný PIN, UNIQUE constraint)
+  - `TipsLogin` — registrace/přihlášení: **dvě pole Jméno + Příjmení** (uloženo jako `"jan novák"` lowercase), 4místný PIN, UNIQUE constraint na celé jméno
   - `Leaderboard` — žebříček tipérů, zvýraznění aktuálního uživatele
-  - `SpecialTipsSection` — vítěz turnaje + vítěz/poslední každé skupiny; po vyhodnocení read-only
+  - `SpecialTipsSection` — vítěz turnaje + vítěz/poslední každé skupiny
+    - **Zamčeno** (read-only 🔒) jakmile je odehrán první zápas (`anyMatchPlayed` prop)
+    - Po vyhodnocení adminem: zobrazuje výsledek + body
+    - State pattern: `selected` (dropdowny) + `savedSelections` (potvrzené v DB) — `savedSelections` se aktualizuje okamžitě po save bez čekání na realtime; `changed = selected !== savedSelections`
+    - **Nesmí být definována jako nested komponenta** — způsobuje unmount/remount na každý re-render a reset state
   - `GroupTipsSection` — skupinové zápasy seřazené dle kola, score inputy, hromadný save
+    - Dirty tracking: user-edited inputy se nepřepisují realtime updatem
+    - Po odehrání: zobrazuje skóre + "tip: X:Y" + body badge (`+N b. ✓` / `0 b.` / `čeká…`)
   - `BracketTipsSection` — playoff sloty; TBD sloty nelze tipovat; po odehrání read-only s body
+    - Stejný dirty tracking jako GroupTipsSection
 - `src/components/admin/tabs/TipsAdminTab.tsx` — admin záložka
   - Přehled tipérů s body + mazání
   - Vyhodnocení speciálních tipů (výběr správného týmu per tip_type)
+  - **Přepočet bodů**: tlačítko "🔄 Přepočítat tipy ze zápasů" — volá `recalcAllTips()` pro re-evaluaci ze skutečných výsledků
   - Reset všech tipů (tips + bracket_tips + special_tips + vynulování bodů)
 - `src/hooks/useTipsters.ts` — seznam tipérů seřazených dle bodů
 - `src/hooks/useTips.ts` — skupinové tipy konkrétního tipéra
