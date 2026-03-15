@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
@@ -10,21 +10,82 @@ interface Props {
   showToast: (msg: string) => void
 }
 
-const ROLE_LABELS: Record<string, string> = { captain: 'C', goalkeeper: 'B' }
-const ROLE_COLORS: Record<string, { color: string; bg: string; border: string }> = {
-  captain:    { color: '#92400e', bg: 'rgba(217,119,6,.12)',  border: 'rgba(217,119,6,.3)' },
-  goalkeeper: { color: '#166534', bg: 'rgba(22,163,74,.12)', border: 'rgba(22,163,74,.3)' },
+const BADGE_CAPTAIN = { label: 'C', color: '#92400e', bg: 'rgba(217,119,6,.12)',  border: 'rgba(217,119,6,.3)' }
+const BADGE_GOALKEEPER = { label: 'B', color: '#166534', bg: 'rgba(22,163,74,.12)', border: 'rgba(22,163,74,.3)' }
+
+function Badge({ b }: { b: typeof BADGE_CAPTAIN }) {
+  return (
+    <span style={{
+      fontSize: '.65rem', fontWeight: 700, color: b.color,
+      background: b.bg, border: `1px solid ${b.border}`,
+      borderRadius: 4, padding: '1px 5px', lineHeight: 1.4, flexShrink: 0,
+    }}>{b.label}</span>
+  )
 }
 
 function RoleBadge({ role }: { role: string | null }) {
-  if (!role || !ROLE_LABELS[role]) return null
-  const s = ROLE_COLORS[role]
+  if (role === 'captain')    return <Badge b={BADGE_CAPTAIN} />
+  if (role === 'goalkeeper') return <Badge b={BADGE_GOALKEEPER} />
+  if (role === 'both')       return <><Badge b={BADGE_CAPTAIN} /><Badge b={BADGE_GOALKEEPER} /></>
+  return null
+}
+
+function LogoSection({ team, showToast }: { team: Team; showToast: (m: string) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const uploadLogo = async (file: File) => {
+    if (!file.type.includes('png')) { showToast('Pouze PNG soubory'); return }
+    if (file.size > 512_000) { showToast('Max velikost je 500 KB'); return }
+    setUploading(true)
+    const path = `${team.id}.png`
+    const { error: upErr } = await supabase.storage
+      .from('team-logos')
+      .upload(path, file, { upsert: true })
+    if (upErr) { showToast('Chyba uploadu: ' + upErr.message); setUploading(false); return }
+    const { data } = supabase.storage.from('team-logos').getPublicUrl(path)
+    const urlWithTs = `${data.publicUrl}?v=${Date.now()}`
+    const { error } = await supabase.from('teams').update({ logo_url: urlWithTs }).eq('id', team.id)
+    setUploading(false)
+    if (error) showToast('Chyba: ' + error.message)
+    else showToast('Logo nahráno ✓')
+  }
+
+  const removeLogo = async () => {
+    if (!confirm('Smazat logo?')) return
+    await supabase.storage.from('team-logos').remove([`${team.id}.png`])
+    await supabase.from('teams').update({ logo_url: null }).eq('id', team.id)
+    showToast('Logo odstraněno')
+  }
+
   return (
-    <span style={{
-      fontSize: '.65rem', fontWeight: 700, color: s.color,
-      background: s.bg, border: `1px solid ${s.border}`,
-      borderRadius: 4, padding: '1px 5px', lineHeight: 1.4, flexShrink: 0,
-    }}>{ROLE_LABELS[role]}</span>
+    <div style={{ marginTop: '.65rem', paddingTop: '.65rem', borderTop: '1px solid var(--border)' }}>
+      <div style={{ fontSize: '.67rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: '.4rem' }}>
+        Logo týmu
+      </div>
+      <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.5rem' }}>
+        PNG · čtverec · max 500 KB · doporučeno 200×200 px
+      </div>
+      {team.logo_url ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem' }}>
+          <img src={team.logo_url} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'contain', border: '1px solid var(--border)', background: '#fff' }} />
+          <button type="button" className="btn btn-d btn-sm" onClick={removeLogo}>Smazat logo</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".png,image/png"
+            style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f) }}
+          />
+          <button type="button" className="btn btn-s btn-sm" onClick={() => fileRef.current?.click()} style={{ opacity: uploading ? .6 : 1 }}>
+            {uploading ? 'Nahrávám…' : '↑ Nahrát logo'}
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -62,9 +123,11 @@ function RosterSection({ team, players, showToast }: { team: Team; players: Play
         <div className="a-list" style={{ marginBottom: '.5rem' }}>
           {roster.map(p => (
             <div key={p.id} className="a-item" style={{ padding: '.4rem .7rem' }}>
-              <RoleBadge role={p.role} />
-              <span className="a-item-main" style={{ fontSize: '.8rem' }}>{p.name}</span>
-              <button className="btn btn-d btn-sm" onClick={() => removePlayer(p.id)}>✕</button>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem', flex: 1, minWidth: 0 }}>
+                <span className="a-item-main" style={{ fontSize: '.8rem' }}>{p.name}</span>
+                <RoleBadge role={p.role} />
+              </span>
+              <button type="button" className="btn btn-d btn-sm" onClick={() => removePlayer(p.id)}>✕</button>
             </div>
           ))}
         </div>
@@ -81,9 +144,10 @@ function RosterSection({ team, players, showToast }: { team: Team; players: Play
             <option value="">Žádná</option>
             <option value="captain">Kapitán (C)</option>
             <option value="goalkeeper">Brankář (B)</option>
+            <option value="both">Kapitán + Brankář</option>
           </select>
         </div>
-        <button className="btn btn-s btn-sm" onClick={addPlayer} style={{ flexShrink: 0, marginBottom: 1 }}>+ Přidat</button>
+        <button type="button" className="btn btn-s btn-sm" onClick={addPlayer} style={{ flexShrink: 0, marginBottom: 1 }}>+ Přidat</button>
       </div>
     </div>
   )
@@ -126,7 +190,7 @@ export default function TeamsTab({ teams, players, showToast }: Props) {
           ))}
         </div>
       </div>
-      <button className="btn btn-p" onClick={addTeam}>+ Přidat tým</button>
+      <button type="button" className="btn btn-p" onClick={addTeam}>+ Přidat tým</button>
 
       <hr className="divider" />
       <div className="sub-title">Týmy ({teams.length})</div>
@@ -140,18 +204,23 @@ export default function TeamsTab({ teams, players, showToast }: Props) {
             return (
               <div key={t.id} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
                 <div style={{ padding: '.55rem .9rem', display: 'flex', alignItems: 'center', gap: '.65rem' }}>
-                  <div className="team-dot" style={{ background: t.color, width: 11, height: 11 }} />
+                  {t.logo_url ? (
+                    <img src={t.logo_url} style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }} />
+                  ) : (
+                    <div className="team-dot" style={{ background: t.color, width: 11, height: 11 }} />
+                  )}
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: '.85rem' }}>{t.name}</div>
                     <div style={{ fontSize: '.68rem', color: 'var(--muted)' }}>{playerCount} hráčů</div>
                   </div>
-                  <button className="btn btn-s btn-sm" onClick={() => setExpandedId(expanded ? null : t.id)}>
+                  <button type="button" className="btn btn-s btn-sm" onClick={() => setExpandedId(expanded ? null : t.id)}>
                     {expanded ? '↑ Zavřít' : '⊕ Soupiska'}
                   </button>
-                  <button className="btn btn-d btn-sm" onClick={() => removeTeam(t.id)}>Smazat</button>
+                  <button type="button" className="btn btn-d btn-sm" onClick={() => removeTeam(t.id)}>Smazat</button>
                 </div>
                 {expanded && (
                   <div style={{ padding: '0 .9rem .75rem' }}>
+                    <LogoSection team={t} showToast={showToast} />
                     <RosterSection team={t} players={players} showToast={showToast} />
                   </div>
                 )}

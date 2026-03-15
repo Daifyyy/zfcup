@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { calcGroupStandings } from '../../lib/standings'
 import QRCode from '../ui/QRCode'
+import { TeamLogo } from '../ui/TeamLogo'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Team } from '../../hooks/useTeams'
 import type { Player } from '../../hooks/usePlayers'
@@ -121,7 +122,7 @@ function StandingsCol({ groups, matches, teams, players, goals }: {
                         <td style={{ padding: '.18rem .28rem', textAlign: 'center', color: C.muted, fontSize: S.label }}>{i + 1}</td>
                         <td style={{ padding: '.18rem .28rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            {team && <span style={{ width: 7, height: 7, borderRadius: '50%', background: team.color, flexShrink: 0, display: 'inline-block' }} />}
+                            {team && <TeamLogo team={team} size={14} />}
                             <span style={{ fontSize: S.body, fontWeight: isTop ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {team?.name ?? row.id}
                             </span>
@@ -164,7 +165,7 @@ function StandingsCol({ groups, matches, teams, players, goals }: {
                 <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: i === 0 ? C.gold : C.muted, width: 18, textAlign: 'center', flexShrink: 0 }}>
                   {i + 1}
                 </span>
-                {s.team && <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.team.color, flexShrink: 0, display: 'inline-block' }} />}
+                {s.team && <TeamLogo team={s.team} size={14} />}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: S.body, fontWeight: i === 0 ? 700 : 500, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.name}
@@ -190,7 +191,7 @@ function StandingsCol({ groups, matches, teams, players, goals }: {
 // ── Matches column (no scroll, compact) ───────────────────────────────────────
 function MatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] }) {
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
-  const tc = (id: string) => teams.find(t => t.id === id)?.color ?? '#94a3b8'
+  const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
 
   if (!matches.length) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: C.muted, fontSize: S.body }}>
@@ -246,7 +247,7 @@ function MatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] }) {
                       color: hw ? C.text : C.muted,
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     }}>{tn(m.home_id)}</span>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: tc(m.home_id), flexShrink: 0, display: 'inline-block' }} />
+                    <TeamLogo team={tt(m.home_id)} size={14} />
                   </div>
 
                   {/* Score / VS — same size whether played or not */}
@@ -275,7 +276,7 @@ function MatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] }) {
 
                   {/* Away */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem', minWidth: 0 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: tc(m.away_id), flexShrink: 0, display: 'inline-block' }} />
+                    <TeamLogo team={tt(m.away_id)} size={14} />
                     <span style={{
                       fontSize: S.body,
                       fontWeight: aw ? 700 : 400,
@@ -354,7 +355,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                       background: hw ? (isFinal ? 'rgba(217,119,6,.1)' : isThird ? 'rgba(146,64,14,.07)' : 'rgba(37,99,235,.08)') : 'transparent',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {hT && <span style={{ width: 8, height: 8, borderRadius: '50%', background: hT.color, flexShrink: 0, display: 'inline-block' }} />}
+                        {hT && <TeamLogo team={hT} size={14} />}
                         <span style={{
                           fontSize: S.body,
                           fontWeight: hw ? 700 : 400,
@@ -378,7 +379,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                       background: aw ? (isFinal ? 'rgba(217,119,6,.1)' : isThird ? 'rgba(146,64,14,.07)' : 'rgba(37,99,235,.08)') : 'transparent',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {aT && <span style={{ width: 8, height: 8, borderRadius: '50%', background: aT.color, flexShrink: 0, display: 'inline-block' }} />}
+                        {aT && <TeamLogo team={aT} size={14} />}
                         <span style={{
                           fontSize: S.body,
                           fontWeight: aw ? 700 : 400,

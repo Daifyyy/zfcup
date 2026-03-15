@@ -1,6 +1,7 @@
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Team } from '../../hooks/useTeams'
 import Empty from '../ui/Empty'
+import { TeamLogo } from '../ui/TeamLogo'
 
 interface Props {
   rounds: BracketRound[]
@@ -86,7 +87,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
                       }}>
                         {hT ? hT.name : 'TBD'}
                       </span>
-                      {hT && <span className="team-dot" style={{ background: hT.color, width: 12, height: 12, flexShrink: 0 }} />}
+                      {hT && <TeamLogo team={hT} size={18} />}
                     </div>
 
                     {/* Score */}
@@ -118,7 +119,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
 
                     {/* Away team */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem' }}>
-                      {aT && <span className="team-dot" style={{ background: aT.color, width: 12, height: 12, flexShrink: 0 }} />}
+                      {aT && <TeamLogo team={aT} size={18} />}
                       <span style={{
                         fontWeight: aw ? 700 : 500,
                         fontSize: 'var(--fs-body)',

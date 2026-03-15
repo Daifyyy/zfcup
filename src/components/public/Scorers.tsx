@@ -3,6 +3,7 @@ import type { Player } from '../../hooks/usePlayers'
 import type { Team } from '../../hooks/useTeams'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
 import Empty from '../ui/Empty'
+import { TeamLogo } from '../ui/TeamLogo'
 
 interface Props {
   goals: Goal[]
@@ -58,7 +59,7 @@ export default function Scorers({ goals, bracketGoals, players, teams }: Props) 
                 <div style={{ fontWeight: 700, fontSize: 'var(--fs-body)' }}>{sc.name}</div>
                 {team && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                    <span className="team-dot" style={{ background: team.color }} />
+                    <TeamLogo team={team} size={18} />
                     <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{team.name}</span>
                   </div>
                 )}

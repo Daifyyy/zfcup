@@ -5,6 +5,7 @@ export interface Team {
   id: string
   name: string
   color: string
+  logo_url: string | null
 }
 
 export function useTeams() {

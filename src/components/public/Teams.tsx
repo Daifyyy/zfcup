@@ -9,21 +9,20 @@ interface Props {
   goals: Goal[]
 }
 
+function Badge({ label, color, bg, border }: { label: string; color: string; bg: string; border: string }) {
+  return (
+    <span style={{
+      fontSize: '.65rem', fontWeight: 700, color,
+      background: bg, border: `1px solid ${border}`,
+      borderRadius: 4, padding: '1px 5px', lineHeight: 1.4, flexShrink: 0,
+    }}>{label}</span>
+  )
+}
+
 function RoleBadge({ role }: { role: string | null }) {
-  if (role === 'captain') return (
-    <span style={{
-      fontSize: '.65rem', fontWeight: 700, color: '#92400e',
-      background: 'rgba(217,119,6,.12)', border: '1px solid rgba(217,119,6,.3)',
-      borderRadius: 4, padding: '1px 5px', lineHeight: 1.4, flexShrink: 0,
-    }}>C</span>
-  )
-  if (role === 'goalkeeper') return (
-    <span style={{
-      fontSize: '.65rem', fontWeight: 700, color: '#166534',
-      background: 'rgba(22,163,74,.12)', border: '1px solid rgba(22,163,74,.3)',
-      borderRadius: 4, padding: '1px 5px', lineHeight: 1.4, flexShrink: 0,
-    }}>B</span>
-  )
+  if (role === 'captain')    return <Badge label="C" color="#92400e" bg="rgba(217,119,6,.12)"  border="rgba(217,119,6,.3)" />
+  if (role === 'goalkeeper') return <Badge label="B" color="#166534" bg="rgba(22,163,74,.12)" border="rgba(22,163,74,.3)" />
+  if (role === 'both')       return <><Badge label="C" color="#92400e" bg="rgba(217,119,6,.12)"  border="rgba(217,119,6,.3)" /><Badge label="B" color="#166534" bg="rgba(22,163,74,.12)" border="rgba(22,163,74,.3)" /></>
   return null
 }
 
@@ -56,13 +55,17 @@ export default function Teams({ teams, players, goals }: Props) {
 
               {/* header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '.65rem', marginBottom: '.75rem' }}>
-                <div style={{
-                  width: 38, height: 38, borderRadius: 9, flexShrink: 0,
-                  background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', color: '#fff', fontWeight: 700,
-                }}>
-                  {t.name.substring(0, 2).toUpperCase()}
-                </div>
+                {t.logo_url ? (
+                  <img src={t.logo_url} style={{ width: 38, height: 38, borderRadius: 9, objectFit: 'contain', flexShrink: 0, border: '1px solid var(--border)', background: '#fff' }} />
+                ) : (
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 9, flexShrink: 0,
+                    background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', color: '#fff', fontWeight: 700,
+                  }}>
+                    {t.name.substring(0, 2).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '.92rem' }}>{t.name}</div>
                   <div style={{ fontSize: '.7rem', color: 'var(--muted)' }}>{roster.length} hráčů</div>
@@ -83,10 +86,12 @@ export default function Teams({ teams, players, goals }: Props) {
                         borderRadius: 5,
                         fontSize: '.8rem',
                       }}>
-                        <span style={{ color: 'var(--text)', fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.name}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem', flex: 1, minWidth: 0 }}>
+                          <span style={{ color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.name}
+                          </span>
+                          <RoleBadge role={p.role} />
                         </span>
-                        <RoleBadge role={p.role} />
                         {g > 0 && (
                           <span style={{
                             fontSize: '.72rem', fontWeight: 700,

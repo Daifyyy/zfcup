@@ -3,6 +3,7 @@ import type { Group } from '../../hooks/useGroups'
 import type { Match } from '../../hooks/useMatches'
 import type { Team } from '../../hooks/useTeams'
 import Empty from '../ui/Empty'
+import { TeamLogo } from '../ui/TeamLogo'
 
 interface Props {
   groups: Group[]
@@ -73,7 +74,7 @@ export default function Standings({ groups, matches, teams }: Props) {
                       </td>
                       <td style={{ padding: 'var(--pad-cell)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {team && <span className="team-dot" style={{ background: team.color, width: 10, height: 10, flexShrink: 0 }} />}
+                          {team && <TeamLogo team={team} size={14} />}
                           <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
                         </div>
                       </td>

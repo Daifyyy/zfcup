@@ -1,6 +1,7 @@
 import type { Match } from '../../hooks/useMatches'
 import type { Team } from '../../hooks/useTeams'
 import Empty from '../ui/Empty'
+import { TeamLogo } from '../ui/TeamLogo'
 
 interface Props {
   matches: Match[]
@@ -9,7 +10,7 @@ interface Props {
 
 export default function Results({ matches, teams }: Props) {
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
-  const tc = (id: string) => teams.find(t => t.id === id)?.color ?? '#94a3b8'
+  const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
 
   if (!matches.length) return <Empty icon="📋" text="Žádné zápasy." />
 
@@ -55,7 +56,7 @@ export default function Results({ matches, teams }: Props) {
                 <div key={m.id} className="card match-grid">
                   {/* Home — dot before name in DOM; CSS row-reverse shows [name][dot] on desktop */}
                   <div className="match-col-home">
-                    <span className="team-dot" style={{ background: tc(m.home_id), width: 12, height: 12, flexShrink: 0 }} />
+                    <TeamLogo team={tt(m.home_id)} size={18} />
                     <span className="match-team-name" style={{
                       fontWeight: hw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
@@ -85,7 +86,7 @@ export default function Results({ matches, teams }: Props) {
 
                   {/* Away */}
                   <div className="match-col-away">
-                    <span className="team-dot" style={{ background: tc(m.away_id), width: 12, height: 12, flexShrink: 0 }} />
+                    <TeamLogo team={tt(m.away_id)} size={18} />
                     <span className="match-team-name" style={{
                       fontWeight: aw ? 700 : 500,
                       fontSize: 'var(--fs-body)',

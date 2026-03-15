@@ -9,6 +9,16 @@ export const TEAM_COLORS = [
   '#db2777', // růžová
   '#65a30d', // limetková
   '#475569', // šedá
+  '#14b8a6', // tyrkysová
+  '#f59e0b', // jantarová
+  '#6366f1', // indigo
+  '#f43f5e', // malinová
+  '#84cc16', // světlá limetková
+  '#78716c', // teplá šedá
+  '#0369a1', // tmavě modrá
+  '#9333ea', // purpurová
+  '#b45309', // hnědá
+  '#059669', // smaragdová
 ]
 
 export function addMinutes(time: string, minutes: number): string {
