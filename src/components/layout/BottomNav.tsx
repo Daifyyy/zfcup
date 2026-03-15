@@ -3,7 +3,7 @@ import type { Tab } from '../../App'
 const BASE_TABS: { key: Tab; icon: string; label: string }[] = [
   { key: 'overview',  icon: '🏠', label: 'Přehled'  },
   { key: 'teams',     icon: '👥', label: 'Týmy'      },
-  { key: 'results',   icon: '📋', label: 'Výsledky'  },
+  { key: 'results',   icon: '📋', label: 'Zápasy'    },
   { key: 'standings', icon: '📊', label: 'Tabulka'   },
   { key: 'scorers',   icon: '⚽', label: 'Střelci'   },
   { key: 'bracket',   icon: '🏆', label: 'Pavouk'    },

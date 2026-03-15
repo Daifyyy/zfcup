@@ -15,7 +15,7 @@ interface Props {
 const BASE_TABS: [Tab, string][] = [
   ['overview',  'Přehled'],
   ['teams',     'Týmy'],
-  ['results',   'Výsledky'],
+  ['results',   'Zápasy'],
   ['standings', 'Tabulka'],
   ['scorers',   'Střelci'],
   ['bracket',   'Pavouk'],
