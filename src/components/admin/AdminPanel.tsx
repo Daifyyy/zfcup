@@ -199,7 +199,7 @@ export default function AdminPanel(props: Props) {
               {aTab === 'matches'       && <MatchesTab {...tabProps} />}
               {aTab === 'scorers'       && <ScorersTab {...tabProps} />}
               {aTab === 'bracket'       && <BracketTab {...tabProps} />}
-              {aTab === 'tips'          && <TipsAdminTab showToast={showToast} />}
+              {aTab === 'tips'          && <TipsAdminTab showToast={showToast} teams={props.teams} groups={props.groups} />}
               {aTab === 'settings'      && <SettingsTab {...tabProps} />}
             </div>
           </>
