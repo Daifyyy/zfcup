@@ -44,23 +44,27 @@ const groupHeader = {
 
 function TipsLogin({ onSuccess, showToast }: { onSuccess: (id: string) => void; showToast: (m: string) => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [pin, setPin] = useState('')
   const [pinConfirm, setPinConfirm] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const buildName = () => `${firstName.trim()} ${lastName.trim()}`.toLowerCase().replace(/\s+/g, ' ').trim()
+
   const handleRegister = async () => {
-    if (!name.trim()) { showToast('Zadej jméno'); return }
+    if (!firstName.trim()) { showToast('Zadej jméno'); return }
+    if (!lastName.trim()) { showToast('Zadej příjmení'); return }
     if (!/^\d{4}$/.test(pin)) { showToast('PIN musí být 4 číslice (0–9)'); return }
     if (pin !== pinConfirm) { showToast('PINy se neshodují'); return }
     setLoading(true)
-    const normalized = name.trim().toLowerCase()
+    const normalized = buildName()
     const { data, error } = await supabase
       .from('tipsters').insert({ name: normalized, pin, total_points: 0 })
       .select('id').single()
     setLoading(false)
     if (error) {
-      if (error.code === '23505') showToast('Toto jméno je již registrováno — přihlas se')
+      if (error.code === '23505') showToast('Tento účet již existuje — přihlas se')
       else showToast('Chyba: ' + error.message)
       return
     }
@@ -68,13 +72,13 @@ function TipsLogin({ onSuccess, showToast }: { onSuccess: (id: string) => void; 
   }
 
   const handleLogin = async () => {
-    if (!name.trim() || !pin) { showToast('Vyplň jméno a PIN'); return }
+    if (!firstName.trim() || !lastName.trim() || !pin) { showToast('Vyplň jméno, příjmení a PIN'); return }
     setLoading(true)
-    const normalized = name.trim().toLowerCase()
+    const normalized = buildName()
     const { data } = await supabase.from('tipsters').select('id')
       .eq('name', normalized).eq('pin', pin).maybeSingle()
     setLoading(false)
-    if (!data) { showToast('Špatné jméno nebo PIN'); return }
+    if (!data) { showToast('Špatné jméno, příjmení nebo PIN'); return }
     onSuccess(data.id)
   }
 
@@ -89,11 +93,17 @@ function TipsLogin({ onSuccess, showToast }: { onSuccess: (id: string) => void; 
             </button>
           ))}
         </div>
-        <div className="field-group">
-          <label className="field-label">Jméno</label>
-          <input className="field-input" value={name} onChange={e => setName(e.target.value)}
-            placeholder="jan novák" autoCapitalize="none" />
-          <div style={{ fontSize: '.68rem', color: 'var(--muted)', marginTop: 3 }}>Malá písmena, bez diakritiky není nutné</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.6rem' }}>
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label">Jméno</label>
+            <input className="field-input" value={firstName} onChange={e => setFirstName(e.target.value)}
+              placeholder="Jan" autoCapitalize="words" />
+          </div>
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label">Příjmení</label>
+            <input className="field-input" value={lastName} onChange={e => setLastName(e.target.value)}
+              placeholder="Novák" autoCapitalize="words" />
+          </div>
         </div>
         <div className="field-group">
           <label className="field-label">PIN (4 číslice)</label>
@@ -160,31 +170,37 @@ function Leaderboard({ tipsters, myId }: { tipsters: ReturnType<typeof useTipste
 
 // ── Special tips ───────────────────────────────────────────────────────────────
 
-function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }: {
+function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPlayed, showToast }: {
   groups: Group[]
   teams: Team[]
   tipsterId: string
   specialTips: ReturnType<typeof useSpecialTips>['specialTips']
+  anyMatchPlayed: boolean
   showToast: (m: string) => void
 }) {
+  // selected = what user sees in dropdowns
+  // savedSelections = what's confirmed saved (updated immediately after save, not waiting for realtime)
   const [selected, setSelected] = useState<Record<string, string>>({})
-  const [dirty, setDirty] = useState<Set<string>>(new Set())
+  const [savedSelections, setSavedSelections] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
 
-  // Initialize/refresh selections from DB — skip dirty entries (user is editing)
+  // On DB load: populate entries not yet seen; always sync savedSelections
   useEffect(() => {
     setSelected(prev => {
       const next = { ...prev }
       for (const tip of specialTips) {
-        if (dirty.has(tip.tip_type)) continue
-        next[tip.tip_type] = tip.predicted_team_id
+        if (!(tip.tip_type in next)) next[tip.tip_type] = tip.predicted_team_id
       }
       return next
     })
-  }, [specialTips]) // eslint-disable-line react-hooks/exhaustive-deps
+    setSavedSelections(prev => {
+      const next = { ...prev }
+      for (const tip of specialTips) next[tip.tip_type] = tip.predicted_team_id
+      return next
+    })
+  }, [specialTips])
 
   const handleChange = (tipType: string, teamId: string) => {
-    setDirty(prev => new Set([...prev, tipType]))
     setSelected(prev => ({ ...prev, [tipType]: teamId }))
   }
 
@@ -200,6 +216,8 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }
         tipster_id: tipsterId, tip_type: tipType, predicted_team_id: teamId, points_earned: 0, evaluated: false,
       })
     }
+    // Mark as saved immediately — don't wait for realtime to clear the save button
+    setSavedSelections(prev => ({ ...prev, [tipType]: teamId }))
     setSaving(prev => ({ ...prev, [tipType]: false }))
     showToast('Tip uložen ✓')
   }
@@ -210,18 +228,19 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }
     const existing = specialTips.find(t => t.tip_type === tipType)
     const isEvaluated = existing?.evaluated
     const currentVal = selected[tipType] ?? ''
-    const savedVal = existing?.predicted_team_id ?? ''
-    const changed = currentVal !== savedVal
+    const savedVal = savedSelections[tipType] ?? ''
+    const changed = currentVal !== savedVal && currentVal !== ''
+    const borderStyle = isLast ? 'none' : '1px solid var(--border)'
 
-    return (
-      <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: isLast ? 'none' : '1px solid var(--border)' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
-          <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{points} b. za správný tip</div>
-        </div>
-        {isEvaluated ? (
+    if (isEvaluated) {
+      return (
+        <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: borderStyle }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
+            <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{points} b. za správný tip</div>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-            <span style={{ fontSize: '.78rem', color: 'var(--muted)' }}>
+            <span style={{ fontSize: '.78rem', color: 'var(--text)' }}>
               {teamPool.find(t => t.id === existing.predicted_team_id)?.name ?? '—'}
             </span>
             <span style={{
@@ -232,33 +251,58 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }
               {existing.points_earned > 0 ? `+${existing.points_earned} b.` : '0 b.'}
             </span>
           </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
-            <select
-              className="field-input field-select"
-              style={{ width: 'auto', minWidth: 120, fontSize: '.78rem', padding: '.3rem .5rem' }}
-              value={currentVal}
-              onChange={e => handleChange(tipType, e.target.value)}
-            >
-              <option value="">— vyber tým —</option>
-              {teamPool.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-            {changed && currentVal && (
-              <button type="button" className="btn btn-s btn-sm"
-                onClick={() => saveSpecialTip(tipType)}
-                style={{ opacity: saving[tipType] ? .6 : 1, whiteSpace: 'nowrap' }}>
-                {saving[tipType] ? '…' : 'Uložit'}
-              </button>
-            )}
+        </div>
+      )
+    }
+
+    if (anyMatchPlayed) {
+      // Locked — show saved selection read-only
+      return (
+        <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: borderStyle, opacity: .75 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
+            <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{points} b. za správný tip</div>
           </div>
-        )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+            <span style={{ fontSize: '.78rem', color: savedVal ? 'var(--text)' : 'var(--muted)', fontStyle: savedVal ? 'normal' : 'italic' }}>
+              {savedVal ? (teamPool.find(t => t.id === savedVal)?.name ?? '—') : 'nezadáno'}
+            </span>
+            <span style={{ fontSize: '.7rem' }}>🔒</span>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: borderStyle }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
+          <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{points} b. za správný tip</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
+          <select
+            className="field-input field-select"
+            style={{ width: 'auto', minWidth: 120, fontSize: '.78rem', padding: '.3rem .5rem' }}
+            value={currentVal}
+            onChange={e => handleChange(tipType, e.target.value)}
+          >
+            <option value="">— vyber tým —</option>
+            {teamPool.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          {changed && (
+            <button type="button" className="btn btn-s btn-sm"
+              onClick={() => saveSpecialTip(tipType)}
+              style={{ opacity: saving[tipType] ? .6 : 1, whiteSpace: 'nowrap' }}>
+              {saving[tipType] ? '…' : 'Uložit'}
+            </button>
+          )}
+        </div>
       </div>
     )
   }
 
-  // Build flat list of all rows to know which is last
   const rows: { tipType: string; label: string; teamPool: Team[]; points: number }[] = [
     { tipType: 'tournament_winner', label: '🏆 Vítěz turnaje', teamPool: teams, points: 10 },
     ...sortedGroups.flatMap(g => {
@@ -273,12 +317,19 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, showToast }
   return (
     <div style={{ marginBottom: '1.8rem' }}>
       <div style={groupHeader}>Speciální tipy</div>
+      {anyMatchPlayed && (
+        <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.5rem', padding: '.3rem .8rem', background: 'rgba(0,0,0,.03)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+          🔒 Speciální tipy jsou uzamčeny — turnaj již probíhá.
+        </div>
+      )}
       <div className="card" style={{ overflow: 'hidden', marginBottom: '.3rem' }}>
         {rows.map((r, i) => renderRow(r.tipType, r.label, r.teamPool, r.points, i === rows.length - 1))}
       </div>
-      <div style={{ fontSize: '.67rem', color: 'var(--muted)', padding: '0 .2rem' }}>
-        Speciální tipy jsou uzamčeny po vyhodnocení adminem.
-      </div>
+      {!anyMatchPlayed && (
+        <div style={{ fontSize: '.67rem', color: 'var(--muted)', padding: '0 .2rem' }}>
+          Speciální tipy se uzamknou po odehrání prvního zápasu.
+        </div>
+      )}
     </div>
   )
 }
@@ -371,13 +422,15 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, showToast }: {
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                         <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '.06em' }}>{m.home_score}:{m.away_score}</span>
                         {tip && <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>tip: {tip.predicted_home}:{tip.predicted_away}</span>}
-                        {tip?.evaluated && (
+                        {tip && (tip.evaluated ? (
                           <span style={{
-                            fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', borderRadius: 20,
-                            background: tip.points_earned > 0 ? 'rgba(22,163,74,.12)' : 'rgba(0,0,0,.06)',
+                            fontSize: '.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                            background: tip.points_earned > 0 ? 'rgba(22,163,74,.15)' : 'rgba(0,0,0,.06)',
                             color: tip.points_earned > 0 ? 'var(--success)' : 'var(--muted)',
-                          }}>{tip.points_earned > 0 ? `+${tip.points_earned} b.` : '0 b.'}</span>
-                        )}
+                          }}>{tip.points_earned > 0 ? `+${tip.points_earned} b. ✓` : '0 b.'}</span>
+                        ) : (
+                          <span style={{ fontSize: '.6rem', color: 'var(--muted)', fontStyle: 'italic' }}>čeká…</span>
+                        ))}
                       </div>
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -512,13 +565,15 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                           <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '.06em', color: isFinal ? 'var(--gold)' : 'var(--text)' }}>{s.home_score}:{s.away_score}</span>
                           {tip && <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>tip: {tip.predicted_home}:{tip.predicted_away}</span>}
-                          {tip?.evaluated && (
+                          {tip && (tip.evaluated ? (
                             <span style={{
-                              fontSize: '.6rem', fontWeight: 700, padding: '1px 6px', borderRadius: 20,
-                              background: tip.points_earned > 0 ? 'rgba(22,163,74,.12)' : 'rgba(0,0,0,.06)',
+                              fontSize: '.65rem', fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                              background: tip.points_earned > 0 ? 'rgba(22,163,74,.15)' : 'rgba(0,0,0,.06)',
                               color: tip.points_earned > 0 ? 'var(--success)' : 'var(--muted)',
-                            }}>{tip.points_earned > 0 ? `+${tip.points_earned} b.` : '0 b.'}</span>
-                          )}
+                            }}>{tip.points_earned > 0 ? `+${tip.points_earned} b. ✓` : '0 b.'}</span>
+                          ) : (
+                            <span style={{ fontSize: '.6rem', color: 'var(--muted)', fontStyle: 'italic' }}>čeká…</span>
+                          ))}
                         </div>
                       ) : canTip ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -632,6 +687,7 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
           <SpecialTipsSection
             groups={groups} teams={teams} tipsterId={tipsterId}
             specialTips={specialTips} showToast={showToast}
+            anyMatchPlayed={matches.some(m => m.played)}
           />
           <GroupTipsSection
             matches={groupMatches} teams={teams} myTips={tips}
