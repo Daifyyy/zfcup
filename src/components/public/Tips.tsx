@@ -316,7 +316,6 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, showToast }: {
       }
       saved++
     }
-    setDirty(new Set())  // after save, allow myTips updates to reflect
     setSaving(false)
     showToast(saved > 0 ? `${saved} tipů uloženo ✓` : 'Žádné nové tipy k uložení')
   }
@@ -451,7 +450,6 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
       }
       saved++
     }
-    setDirty(new Set())  // after save, allow bracketTips updates to reflect
     setSaving(false)
     showToast(saved > 0 ? `${saved} playoff tipů uloženo ✓` : 'Žádné nové tipy k uložení')
   }
