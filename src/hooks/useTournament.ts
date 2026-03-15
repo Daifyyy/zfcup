@@ -8,6 +8,7 @@ export interface Tournament {
   date: string
   venue: string
   description: string
+  tips_enabled: boolean
 }
 
 export function useTournament() {

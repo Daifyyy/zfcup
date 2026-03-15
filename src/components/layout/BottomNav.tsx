@@ -1,6 +1,6 @@
 import type { Tab } from '../../App'
 
-const TABS: { key: Tab; icon: string; label: string }[] = [
+const BASE_TABS: { key: Tab; icon: string; label: string }[] = [
   { key: 'overview',  icon: '🏠', label: 'Přehled'  },
   { key: 'teams',     icon: '👥', label: 'Týmy'      },
   { key: 'results',   icon: '📋', label: 'Výsledky'  },
@@ -12,9 +12,14 @@ const TABS: { key: Tab; icon: string; label: string }[] = [
 interface Props {
   tab: Tab
   onTab: (t: Tab) => void
+  tipsEnabled?: boolean
 }
 
-export default function BottomNav({ tab, onTab }: Props) {
+export default function BottomNav({ tab, onTab, tipsEnabled }: Props) {
+  const TABS = tipsEnabled
+    ? [...BASE_TABS, { key: 'tips' as Tab, icon: '🎯', label: 'Tipy' }]
+    : BASE_TABS
+
   return (
     <nav
       className="mobile-only"

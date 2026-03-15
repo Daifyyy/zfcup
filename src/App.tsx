@@ -18,14 +18,15 @@ import Standings from './components/public/Standings'
 import Scorers from './components/public/Scorers'
 import Bracket from './components/public/Bracket'
 import Info from './components/public/Info'
+import Tips from './components/public/Tips'
 import AdminPanel from './components/admin/AdminPanel'
 import KioskMode from './components/kiosk/KioskMode'
 import Scoreboard from './components/public/Scoreboard'
 import Toast from './components/ui/Toast'
 import type { Session } from '@supabase/supabase-js'
 
-export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket' | 'info'
-const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket', 'info']
+export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket' | 'info' | 'tips'
+const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket', 'info', 'tips']
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview')
@@ -142,6 +143,7 @@ export default function App() {
         onKiosk={() => setKiosk(true)}
         onScoreboard={() => setScoreboard(true)}
         isAdmin={!!session}
+        tipsEnabled={tournament?.tips_enabled ?? false}
       />
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} goals={goals} announcements={announcements} onTab={navigateTab} />}
@@ -151,6 +153,7 @@ export default function App() {
         {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} players={players} teams={teams} />}
         {tab === 'bracket'   && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
+        {tab === 'tips'      && <Tips matches={matches} teams={teams} showToast={showToast} />}
       </main>
       {scoreboard && (
         <Scoreboard
@@ -177,7 +180,7 @@ export default function App() {
           onClose={() => setAdminOpen(false)}
         />
       )}
-      <BottomNav tab={tab} onTab={navigateTab} />
+      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} />
       <Toast message={toast} show={toastShow} />
     </div>
   )

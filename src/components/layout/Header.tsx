@@ -9,9 +9,10 @@ interface Props {
   onKiosk: () => void
   onScoreboard: () => void
   isAdmin: boolean
+  tipsEnabled?: boolean
 }
 
-const TABS: [Tab, string][] = [
+const BASE_TABS: [Tab, string][] = [
   ['overview',  'Přehled'],
   ['teams',     'Týmy'],
   ['results',   'Výsledky'],
@@ -20,7 +21,8 @@ const TABS: [Tab, string][] = [
   ['bracket',   'Pavouk'],
 ]
 
-export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, isAdmin }: Props) {
+export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, isAdmin, tipsEnabled }: Props) {
+  const TABS: [Tab, string][] = tipsEnabled ? [...BASE_TABS, ['tips', 'Tipy']] : BASE_TABS
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
 
   return (

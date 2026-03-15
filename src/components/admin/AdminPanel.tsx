@@ -18,8 +18,9 @@ import MatchesTab from './tabs/MatchesTab'
 import ScorersTab from './tabs/ScorersTab'
 import BracketTab from './tabs/BracketTab'
 import SettingsTab from './tabs/SettingsTab'
+import TipsAdminTab from './tabs/TipsAdminTab'
 
-type ATab = 'info' | 'announcements' | 'teams' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'settings'
+type ATab = 'info' | 'announcements' | 'teams' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'settings'
 
 const ADMIN_TABS: [ATab, string][] = [
   ['info',          'Info'],
@@ -29,6 +30,7 @@ const ADMIN_TABS: [ATab, string][] = [
   ['matches',       'Zápasy'],
   ['scorers',       'Střelci'],
   ['bracket',       'Pavouk'],
+  ['tips',          'Tipovačka'],
   ['settings',      'Nastavení'],
 ]
 
@@ -197,6 +199,7 @@ export default function AdminPanel(props: Props) {
               {aTab === 'matches'       && <MatchesTab {...tabProps} />}
               {aTab === 'scorers'       && <ScorersTab {...tabProps} />}
               {aTab === 'bracket'       && <BracketTab {...tabProps} />}
+              {aTab === 'tips'          && <TipsAdminTab showToast={showToast} />}
               {aTab === 'settings'      && <SettingsTab {...tabProps} />}
             </div>
           </>
