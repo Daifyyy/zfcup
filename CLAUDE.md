@@ -60,6 +60,8 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - **Trigger `after_match_result` na matches**: volá `evaluate_tips()` při UPDATE. Viz sekci Tipovačka pro správnou verzi funkce. Časté chyby: chybějící WHERE clause na UPDATE tipsters, nebo podmínka `AND evaluated = false` která blokuje re-evaluaci při změně výsledku.
 - **Android touch na disabled tlačítkách**: tlačítka s `disabled` atributem na Androidu nespustí onClick handler. Řešení: odstranit `disabled`, kontrolu provést uvnitř handleru + toast.
 - **Android zoom inputů**: `@media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }` — prohlížeč nezoomuje když font-size ≥ 16px
+- **Tipy — NEvymazávat `dirty` po save**: `setDirty(new Set())` po `saveAll()` způsobuje, že při příchodu realtime odpovědi z DB `useEffect` přepíše inputy před aktualizací `myTips` → zápas vizuálně zmizí. `dirty` se čistí pouze na unmount (přepnutí záložky), nikdy manuálně po save.
+- **Tipy — loading stav**: `useTips` a `useBracketTips` vrací `loading: boolean` — při remountu komponenty (přepnutí záložky a návrat) zobrazit spinner místo prázdných inputů, aby uživatel věděl že data se načítají.
 
 ## Styl a UX
 - Světlé téma: pozadí `#f8fafc`, karty bílé se shadow, akcent `#2563eb` (modrá)
@@ -260,10 +262,12 @@ $$ LANGUAGE plpgsql;
     - State pattern: `selected` (dropdowny) + `savedSelections` (potvrzené v DB) — `savedSelections` se aktualizuje okamžitě po save bez čekání na realtime; `changed = selected !== savedSelections`
     - **Nesmí být definována jako nested komponenta** — způsobuje unmount/remount na každý re-render a reset state
   - `GroupTipsSection` — skupinové zápasy seřazené dle kola, score inputy, hromadný save
-    - Dirty tracking: user-edited inputy se nepřepisují realtime updatem
+    - Dirty tracking: user-edited inputy se nepřepisují realtime updatem; **dirty se nečistí po save** (viz known issues)
+    - `loading` prop z `useTips` — zobrazí "Načítám tipy…" spinner místo prázdných inputů
+    - `saveAll` má error handling — chyba z DB se zobrazí jako toast, ne tichá chyba
     - Po odehrání: zobrazuje skóre + "tip: X:Y" + body badge (`+N b. ✓` / `0 b.` / `čeká…`)
   - `BracketTipsSection` — playoff sloty; TBD sloty nelze tipovat; po odehrání read-only s body
-    - Stejný dirty tracking jako GroupTipsSection
+    - Stejný dirty tracking + loading + error handling jako GroupTipsSection
 - `src/components/admin/tabs/TipsAdminTab.tsx` — admin záložka
   - Přehled tipérů s body + mazání
   - Vyhodnocení speciálních tipů (výběr správného týmu per tip_type)
@@ -307,8 +311,25 @@ Velikosti dle kontextu:
 | Results, Bracket, Tips | 28px (20px v Tips) |
 | Scorers | 24px |
 | Standings | 20px |
-| Scoreboard (TV) | 14px |
+| Scoreboard (TV) | 12px |
 | Teams karta (hlavička) | 38px |
+
+## Vlastní ikony v Přehledu (Overview)
+`src/components/public/Overview.tsx` — komponenta `TileIcon`:
+- Zkusí načíst `<img src="/icons/{file}">` z veřejné složky `public/icons/`
+- `onError` fallback na emoji (původní chování)
+- Soubory PNG se umístí do `public/icons/`:
+
+| Soubor | Dlaždice |
+|--------|---------|
+| `info.png` | Informace |
+| `teams.png` | Týmy |
+| `matches.png` | Zápasy |
+| `standings.png` | Tabulka |
+| `scorers.png` | Střelci |
+| `playoff.png` | Play-off |
+
+- Chybějící soubor = fallback emoji, funguje per-soubor (lze mít jen část ikon vlastních)
 
 ## Mobilní tabulka skupin (Standings, ≤600px)
 CSS třída `.standings-table` na `<table>` + `.standings-name` na span s názvem týmu:
@@ -317,19 +338,25 @@ CSS třída `.standings-table` na `<table>` + `.standings-name` na span s názve
 - Název týmu: `-webkit-line-clamp: 2` — wrapuje max na 2 řádky, nepřetéká do strany
 - Všech 9 sloupců zůstává viditelných (žádné skrývání)
 
-## Mobilní layout zápasů (Results tab, ≤500px)
-CSS v `src/index.css` — třídy `.match-grid`, `.match-col-home`, `.match-col-score`, `.match-col-away`, `.match-col-meta`, `.match-score-side`, `.match-team-name`:
-- Desktop (>500px): CSS grid `1fr auto 1fr`, home team s `flex-direction: row-reverse`
-- Mobil (≤500px): flex column, home/away jsou řádky s `justify-content: flex-start`, `.match-col-score` skryt, `.match-score-side` viditelný (score vpravo v každém řádku)
-- Přepis vyžaduje `!important` a `grid-area: unset !important` kvůli specificitě grid-area vlastností
+## Layout zápasů — Results tab a Scoreboard
+
+### CSS match-grid (čas doleva)
+CSS v `src/index.css` — třídy `.match-grid`, `.match-col-time`, `.match-col-home`, `.match-col-score`, `.match-col-away`, `.match-col-badge`, `.match-score-side`, `.match-team-name`:
+- **Desktop (>500px)**: CSS grid `46px 1fr auto 1fr auto`, areas: `"time home score away badge"` — jeden řádek, nižší výška karet
+- **Mobil (≤500px)**: CSS grid `36px 1fr`, areas: `"time home" / "time away" / ". badge"` — čas vlevo přes oba řádky týmů, score vpravo v každém řádku (`.match-score-side`)
+- `match-col-meta` **odstraněno** — nahrazeno `match-col-time` (vlevo) + `match-col-badge` (vpravo)
+- Přepis vyžaduje `!important` kvůli specificitě; grid-area `time` automaticky span přes 2 řádky na mobilu (stejný název v obou řádcích grid-template-areas)
 
 ## TV Scoreboard (Tabule) — architektura
-3 sloupce, `overflow: hidden` všude (žádný scroll), fluid fonty přes `clamp()`:
-- **Levý (27%)**: skupinové tabulky + top-5 střelců dole (`marginTop: auto`)
-- **Prostřední (46%)**: skupinové zápasy abecedně dle kola, VS i skóre stejná velikost fontu (`S.score`), kompaktní karty; `scheduled_time` zobrazen u všech zápasů (odehrané: muted, neodrané: accent bold)
-- **Pravý (27%)**: flat list playoff kol oddělených nadpisy; detekce finále (`/finále/i` bez "3") → zlatá + 🏆, o 3. místo (`/3/i` nebo `/třet/i` nebo `/bronze/i`) → bronzová + 🥉
+3 sloupce `27% | 51% | 22%`, `overflow: hidden` všude (žádný scroll), fluid fonty přes `clamp()`:
+- **Levý (27%)**: skupinové tabulky + top-5 střelců; střelci jsou `flex-shrink: 0` sekce dole → vždy viditelní bez ohledu na výšku tabulek
+- **Prostřední (51%)**: dynamický obsah dle fáze turnaje:
+  - **Skupinová fáze**: 2 sub-sloupce side-by-side (`repeat(N, 1fr)`) — každá skupina má svůj sloupec s názvem a zápasy; čas vlevo každého řádku (`gridTemplateColumns: 'auto 1fr auto 1fr'`)
+  - **Po odehrání skupin** (`allGroupMatchesPlayed`): `PlayoffMatchesSubCol` — flat list playoff slotů per kolo s detekci finále/3.místa
+- **Pravý (22%)**: `FlatBracketCol` — flat list playoff kol oddělených nadpisy; detekce finále (`/finále/i` bez "3") → zlatá + 🏆, o 3. místo → bronzová + 🥉
 - **Střelci (levý sloupec)**: jméno hráče + pod ním název týmu menším fontem (`S.label`, muted barva)
 - Props: `tournament, teams, players, groups, matches, goals, bracketRounds, bracketSlots, onExit`
+- `MatchesCol` přijímá: `matches, teams, groups, bracketRounds, bracketSlots`
 
 ## Barvy týmů (TEAM_COLORS v src/lib/constants.ts)
 20 barev: červená, modrá, zelená, žlutá, oranžová, fialová, růžová, tmavě červená, tmavě zelená, šedá, tyrkysová, jantarová, indigo, malinová, limetková, teplá šedá, tmavě modrá, purpurová, hnědá, smaragdová.
