@@ -157,6 +157,8 @@ export default function TeamsTab({ teams, players, showToast }: Props) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(TEAM_COLORS[0])
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
 
   const addTeam = async () => {
     if (!name.trim()) { showToast('Zadej název'); return }
@@ -171,6 +173,19 @@ export default function TeamsTab({ teams, players, showToast }: Props) {
     const { error } = await supabase.from('teams').delete().eq('id', id)
     if (error) showToast('Chyba: ' + error.message)
     else showToast('Tým smazán')
+  }
+
+  const startEdit = (t: Team) => {
+    setEditingId(t.id)
+    setEditingName(t.name)
+  }
+
+  const saveEdit = async (id: string) => {
+    if (!editingName.trim()) { showToast('Název nesmí být prázdný'); return }
+    const { error } = await supabase.from('teams').update({ name: editingName.trim() }).eq('id', id)
+    if (error) { showToast('Chyba: ' + error.message); return }
+    setEditingId(null)
+    showToast('Název uložen ✓')
   }
 
   return (
@@ -200,25 +215,47 @@ export default function TeamsTab({ teams, players, showToast }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
           {teams.map(t => {
             const expanded = expandedId === t.id
+            const isEditing = editingId === t.id
             const playerCount = players.filter(p => p.team_id === t.id).length
             return (
-              <div key={t.id} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden' }}>
+              <div key={t.id} style={{ background: '#f8fafc', border: `1px solid ${isEditing ? 'rgba(37,99,235,.35)' : 'var(--border)'}`, borderRadius: 9, overflow: 'hidden' }}>
                 <div style={{ padding: '.55rem .9rem', display: 'flex', alignItems: 'center', gap: '.65rem' }}>
                   {t.logo_url ? (
                     <img src={t.logo_url} style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'contain', flexShrink: 0 }} />
                   ) : (
                     <div className="team-dot" style={{ background: t.color, width: 11, height: 11 }} />
                   )}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: '.85rem' }}>{t.name}</div>
-                    <div style={{ fontSize: '.68rem', color: 'var(--muted)' }}>{playerCount} hráčů</div>
-                  </div>
-                  <button type="button" className="btn btn-s btn-sm" onClick={() => setExpandedId(expanded ? null : t.id)}>
-                    {expanded ? '↑ Zavřít' : '⊕ Soupiska'}
-                  </button>
-                  <button type="button" className="btn btn-d btn-sm" onClick={() => removeTeam(t.id)}>Smazat</button>
+                  {isEditing ? (
+                    <input
+                      className="field-input"
+                      value={editingName}
+                      onChange={e => setEditingName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveEdit(t.id); if (e.key === 'Escape') setEditingId(null) }}
+                      style={{ flex: 1, fontSize: '.85rem', padding: '.28rem .5rem' }}
+                      autoFocus
+                    />
+                  ) : (
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '.85rem' }}>{t.name}</div>
+                      <div style={{ fontSize: '.68rem', color: 'var(--muted)' }}>{playerCount} hráčů</div>
+                    </div>
+                  )}
+                  {isEditing ? (
+                    <>
+                      <button type="button" className="btn btn-p btn-sm" onClick={() => saveEdit(t.id)}>✓</button>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => setEditingId(null)}>✕</button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => startEdit(t)}>✎</button>
+                      <button type="button" className="btn btn-s btn-sm" onClick={() => setExpandedId(expanded ? null : t.id)}>
+                        {expanded ? '↑ Zavřít' : '⊕ Soupiska'}
+                      </button>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => removeTeam(t.id)}>Smazat</button>
+                    </>
+                  )}
                 </div>
-                {expanded && (
+                {expanded && !isEditing && (
                   <div style={{ padding: '0 .9rem .75rem' }}>
                     <LogoSection team={t} showToast={showToast} />
                     <RosterSection team={t} players={players} showToast={showToast} />

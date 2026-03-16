@@ -116,6 +116,9 @@ export default function GroupsTab({ teams, groups, matches, showToast }: Props) 
 
   const preview = previewEnd()
 
+  // Týmy které jsou již zařazeny do nějaké skupiny
+  const assignedTeamIds = new Set(groups.flatMap(g => g.team_ids))
+
   return (
     <div>
       {!teams.length && (
@@ -131,12 +134,25 @@ export default function GroupsTab({ teams, groups, matches, showToast }: Props) 
         <label className="field-label">Týmy ve skupině</label>
         <div className="chk-list">
           {!teams.length ? <span style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Nejsou týmy.</span>
-            : teams.map(t => (
-              <div key={t.id} className="chk-item" onClick={() => toggle(t.id)}>
-                <input type="checkbox" readOnly checked={form.teamIds.includes(t.id)} />
-                <label><span className="team-dot" style={{ background: t.color }} />{t.name}</label>
-              </div>
-            ))}
+            : teams.map(t => {
+              const assigned = assignedTeamIds.has(t.id)
+              const groupName = assigned ? groups.find(g => g.team_ids.includes(t.id))?.name : undefined
+              return (
+                <div
+                  key={t.id}
+                  className="chk-item"
+                  onClick={() => !assigned && toggle(t.id)}
+                  style={{ opacity: assigned ? .45 : 1, cursor: assigned ? 'not-allowed' : 'pointer' }}
+                >
+                  <input type="checkbox" readOnly checked={form.teamIds.includes(t.id)} disabled={assigned} />
+                  <label style={{ cursor: assigned ? 'not-allowed' : 'pointer' }}>
+                    <span className="team-dot" style={{ background: t.color }} />
+                    {t.name}
+                    {assigned && <span style={{ fontSize: '.65rem', color: 'var(--muted)', marginLeft: 4 }}>({groupName})</span>}
+                  </label>
+                </div>
+              )
+            })}
         </div>
         {form.teamIds.length >= 2 && (
           <div className="gen-preview">
