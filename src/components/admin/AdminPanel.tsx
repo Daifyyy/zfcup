@@ -27,12 +27,15 @@ const ADMIN_TABS: [ATab, string][] = [
   ['announcements', 'Informace'],
   ['teams',         'Týmy'],
   ['groups',        'Skupiny'],
-  ['matches',       'Zápasy'],
   ['scorers',       'Střelci'],
-  ['bracket',       'Pavouk'],
+  ['matches',       'Zápasy'],
+  ['bracket',       'Play-off'],
   ['tips',          'Tipovačka'],
   ['settings',      'Nastavení'],
 ]
+
+// Záložky aktivně používané při turnaji — zvýraznit
+const ACTION_TABS: ATab[] = ['matches', 'bracket', 'tips']
 
 interface Props {
   session: Session | null
@@ -168,26 +171,31 @@ export default function AdminPanel(props: Props) {
               overflowX: 'auto',
               flexShrink: 0,
             }}>
-              {ADMIN_TABS.map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setATab(key)}
-                  style={{
-                    background: 'none', border: 'none',
-                    color: aTab === key ? 'var(--accent)' : 'var(--muted)',
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontSize: '.67rem', fontWeight: 600,
-                    textTransform: 'uppercase', letterSpacing: '.09em',
-                    padding: '.62rem .6rem', cursor: 'pointer',
-                    whiteSpace: 'nowrap', position: 'relative',
-                    transition: 'color .2s',
-                    borderBottom: aTab === key ? '2px solid var(--accent)' : '2px solid transparent',
-                    marginBottom: -1,
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+              {ADMIN_TABS.map(([key, label]) => {
+                const isActive = aTab === key
+                const isAction = ACTION_TABS.includes(key)
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setATab(key)}
+                    style={{
+                      border: 'none',
+                      background: isActive ? 'none' : isAction ? 'rgba(22,163,74,.08)' : 'none',
+                      color: isActive ? 'var(--accent)' : isAction ? '#15803d' : 'var(--muted)',
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: '.67rem', fontWeight: isAction ? 700 : 600,
+                      textTransform: 'uppercase', letterSpacing: '.09em',
+                      padding: '.62rem .6rem', cursor: 'pointer',
+                      whiteSpace: 'nowrap', position: 'relative',
+                      transition: 'color .2s',
+                      borderBottom: isActive ? '2px solid var(--accent)' : isAction ? '2px solid rgba(22,163,74,.3)' : '2px solid transparent',
+                      marginBottom: -1,
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Tab body */}
@@ -199,7 +207,7 @@ export default function AdminPanel(props: Props) {
               {aTab === 'matches'       && <MatchesTab {...tabProps} />}
               {aTab === 'scorers'       && <ScorersTab {...tabProps} />}
               {aTab === 'bracket'       && <BracketTab {...tabProps} />}
-              {aTab === 'tips'          && <TipsAdminTab showToast={showToast} teams={props.teams} groups={props.groups} />}
+              {aTab === 'tips'          && <TipsAdminTab showToast={showToast} teams={props.teams} groups={props.groups} matches={props.matches} />}
               {aTab === 'settings'      && <SettingsTab {...tabProps} />}
             </div>
           </>

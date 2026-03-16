@@ -78,21 +78,25 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `teams` — Týmy + soupisky; hráči seřazeni abecedně; zobrazení: Jméno | RoleBadge (C/B/CB) | ⚽N (jen pokud > 0)
 - `results` — Zápasy skupinových zápasů (řazené abecedně dle skupiny), zvýraznění vítěze; mobilní layout: týmy vlevo + skóre vpravo (CSS grid/flex s !important override na ≤500px)
   - **Poznámka**: záložka se jmenuje `results` (key), ale label v BottomNav i Header je **"Zápasy"** (sjednoceno s dlaždičkou na Přehledu)
-- `standings` — Tabulky skupin (tiebreaker A/B + H2H)
+- `standings` — Tabulky skupin; **používá tiebreaker B (h2h_first)**: body → vzájemný zápas → gólový rozdíl → vstřelené góly
 - `scorers` — Střelci (agregováno z goals + bracket_goals)
 - `bracket` — Play-off jako flat list zápasů oddělených koly (ne pavouk), finále zlatě
 - `info` — Info o turnaji + oznámení
 - `tips` — Tipovačka; viditelná jen pokud `tournament.tips_enabled === true`
 
 ### Admin záložky (AdminPanel slide-in)
+Pořadí záložek: **Info → Informace → Týmy → Skupiny → Střelci → Zápasy → Play-off → Tipovačka → Nastavení**
+
+Záložky aktivně používané při turnaji (**Zápasy, Play-off, Tipovačka**) jsou vizuálně zvýrazněny: světle zelené pozadí + tmavě zelený text + zelená spodní čára (`ACTION_TABS` konstanta v AdminPanel.tsx).
+
 - `info` — Metadata turnaje
 - `announcements` — CRUD oznámení
 - `teams` — Týmy + soupisky; hráči mají pole role (Kapitán/Brankář/Kapitán+Brankář/žádná); dres# odebrán z UI
 - `groups` — Skupiny + generování zápasů (circle-method)
-- `matches` — Zápasy + inline GoalEditor (±1 góly per hráč); po save okamžitý refetch přes `refetchMatches()`/`refetchGoals()`
 - `scorers` — Read-only přehled střelců
-- `bracket` — 2-krokový flow: Step 1 = vygenerovat strukturu (vždy dostupné), Step 2 = nasadit týmy (jen pokud jsou všechny skupinové zápasy odehrané); SlotEditor má ±stepery skóre + BracketGoalEditor per hráč
-- `tips` — Tipovačka admin: přehled tipérů, vyhodnocení speciálních tipů, **přepočet bodů ze zápasů** (tlačítko "🔄 Přepočítat tipy ze zápasů"), reset/mazání
+- `matches` — **Sjednocený inline editor**: tlačítko "✎ Upravit" rozbalí panel přímo pod zápasem se skóre (±stepery) + soupiskou obou týmů (±góly per hráč) + "💾 Uložit vše" (ukládá skóre i góly najednou). Horní formulář slouží pouze pro přidání nového zápasu.
+- `bracket` — 2-krokový flow: Step 1 = vygenerovat strukturu (vždy dostupné), Step 2 = nasadit týmy (jen pokud jsou všechny skupinové zápasy odehrané); SlotEditor má ±stepery skóre + BracketGoalEditor per hráč; záložka přejmenována z "Pavouk" na "Play-off"
+- `tips` — Tipovačka admin: pořadí sekcí: 1) Vyhodnocení speciálních tipů (skupiny auto, turnajový vítěz ručně), 2) Přepočet bodů, 3) Nebezpečná zóna, 4) Tipéři
 - `settings` — Nastavení (včetně toggle `tips_enabled`)
 
 ## Bracket (Play-off) — architektura
@@ -213,7 +217,8 @@ CREATE POLICY "admin_write" ON special_tips FOR ALL TO authenticated USING (true
 |-----|-----|-------------|
 | Skupiny (`tips`) | Automaticky | DB trigger `after_match_result` → `evaluate_tips()` při UPDATE matches |
 | Playoff (`bracket_tips`) | Automaticky | DB trigger `after_bracket_slot_result` při UPDATE bracket_slots |
-| Speciální (`special_tips`) | Ručně | Admin v záložce Tipovačka → Vyhodnocení speciálních tipů |
+| Speciální skupinové (`group_winner`, `group_last`) | **Automaticky při načtení TipsAdminTab** | `useEffect` v TipsAdminTab — detekuje dokončené skupiny přes `calcGroupStandings`, vyhodnotí bez kliknutí |
+| Speciální — vítěz turnaje (`tournament_winner`) | Ručně | Admin v záložce Tipovačka → výběr týmu + tlačítko Vyhodnotit |
 
 **Trigger `evaluate_tips()` — kritické požadavky:**
 - Musí mít `WHERE id IN (SELECT tipster_id FROM tips WHERE match_id = NEW.id)` na UPDATE tipsters — bez toho Supabase hodí "UPDATE requires a WHERE clause" a rollbackne i původní UPDATE matches.
@@ -269,10 +274,12 @@ $$ LANGUAGE plpgsql;
   - `BracketTipsSection` — playoff sloty; TBD sloty nelze tipovat; po odehrání read-only s body
     - Stejný dirty tracking + loading + error handling jako GroupTipsSection
 - `src/components/admin/tabs/TipsAdminTab.tsx` — admin záložka
-  - Přehled tipérů s body + mazání
-  - Vyhodnocení speciálních tipů (výběr správného týmu per tip_type)
+  - **Auto-vyhodnocení skupin**: `useEffect` při načtení zkontroluje každou skupinu; pokud jsou všechny zápasy odehrány → `calcGroupStandings` → automaticky uloží `group_winner` a `group_last` do `special_tips` → zobrazí `✓ 🥇 [tým] / ✓ ⬇️ [tým]`; pokud skupina není hotová → "Čeká na dokončení skupiny…"
+  - Vítěz turnaje: ruční výběr (EvalRow s dropdownem)
   - **Přepočet bodů**: tlačítko "🔄 Přepočítat tipy ze zápasů" — volá `recalcAllTips()` pro re-evaluaci ze skutečných výsledků
   - Reset všech tipů (tips + bracket_tips + special_tips + vynulování bodů)
+  - Přehled tipérů s body + mazání (sekce je **dole** — méně důležitá při turnaji)
+  - Přijímá prop `matches: Match[]` (nutné pro auto-detekci skupin)
 - `src/hooks/useTipsters.ts` — seznam tipérů seřazených dle bodů
 - `src/hooks/useTips.ts` — skupinové tipy konkrétního tipéra
 - `src/hooks/useBracketTips.ts` — playoff tipy konkrétního tipéra
@@ -308,10 +315,12 @@ CREATE POLICY "admin_delete_logos" ON storage.objects FOR DELETE TO authenticate
 Velikosti dle kontextu:
 | Místo | size |
 |-------|------|
-| Results, Bracket, Tips | 28px (20px v Tips) |
-| Scorers | 24px |
-| Standings | 20px |
-| Scoreboard (TV) | 12px |
+| Results, Bracket | 32px |
+| Tips | 24px |
+| Scorers | 28px |
+| Standings | 24px |
+| Scoreboard (TV) — tabulky, zápasy, playoff | 16px |
+| Scoreboard (TV) — bracket (FlatBracketCol) | 18px |
 | Teams karta (hlavička) | 38px |
 
 ## Vlastní ikony v Přehledu (Overview)

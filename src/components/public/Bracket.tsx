@@ -87,7 +87,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
                       }}>
                         {hT ? hT.name : 'TBD'}
                       </span>
-                      {hT && <TeamLogo team={hT} size={28} />}
+                      {hT && <TeamLogo team={hT} size={32} />}
                     </div>
 
                     {/* Score */}
@@ -119,7 +119,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
 
                     {/* Away team */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem' }}>
-                      {aT && <TeamLogo team={aT} size={28} />}
+                      {aT && <TeamLogo team={aT} size={32} />}
                       <span style={{
                         fontWeight: aw ? 700 : 500,
                         fontSize: 'var(--fs-body)',

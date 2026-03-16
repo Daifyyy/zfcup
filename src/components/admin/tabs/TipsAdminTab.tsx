@@ -1,16 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useTipsters } from '../../../hooks/useTipsters'
+import { calcGroupStandings } from '../../../lib/standings'
 import type { Team } from '../../../hooks/useTeams'
 import type { Group } from '../../../hooks/useGroups'
+import type { Match } from '../../../hooks/useMatches'
 
 interface Props {
   showToast: (msg: string) => void
   teams: Team[]
   groups: Group[]
+  matches: Match[]
 }
 
-// Points per special tip type
 const SPECIAL_POINTS: Record<string, number> = {
   tournament_winner: 10,
   group_winner: 5,
@@ -41,9 +43,7 @@ async function recalcTipsterPoints() {
   }
 }
 
-// Re-evaluate all tips from scratch based on current match/slot results
 async function recalcAllTips() {
-  // --- Group match tips (3 exact / 1 correct outcome) ---
   const { data: playedMatches } = await supabase
     .from('matches').select('id, home_score, away_score').eq('played', true)
   if (playedMatches?.length) {
@@ -54,16 +54,12 @@ async function recalcAllTips() {
       const m = playedMatches.find(m => m.id === tip.match_id)
       if (!m) continue
       let pts = 0
-      if (tip.predicted_home === m.home_score && tip.predicted_away === m.away_score) {
-        pts = 3
-      } else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(m.home_score - m.away_score)) {
-        pts = 1
-      }
+      if (tip.predicted_home === m.home_score && tip.predicted_away === m.away_score) pts = 3
+      else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(m.home_score - m.away_score)) pts = 1
       await supabase.from('tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
     }
   }
 
-  // --- Bracket tips (final: 8 exact / 3 correct, other: 5 exact / 2 correct) ---
   const { data: playedSlots } = await supabase
     .from('bracket_slots').select('id, round_id, home_score, away_score').eq('played', true)
   if (playedSlots?.length) {
@@ -83,11 +79,8 @@ async function recalcAllTips() {
       if (!s) continue
       const fin = isFinal(s.round_id)
       let pts = 0
-      if (tip.predicted_home === s.home_score && tip.predicted_away === s.away_score) {
-        pts = fin ? 8 : 5
-      } else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(s.home_score - s.away_score)) {
-        pts = fin ? 3 : 2
-      }
+      if (tip.predicted_home === s.home_score && tip.predicted_away === s.away_score) pts = fin ? 8 : 5
+      else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(s.home_score - s.away_score)) pts = fin ? 3 : 2
       await supabase.from('bracket_tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
     }
   }
@@ -95,8 +88,21 @@ async function recalcAllTips() {
   await recalcTipsterPoints()
 }
 
-// ── Special tip evaluation row ─────────────────────────────────────────────────
+// Vyhodnotí jeden tip_type s daným správným týmem
+async function evaluateSpecialTip(tipType: string, correctTeamId: string) {
+  const pts = getPoints(tipType)
+  const { data: allTips } = await supabase
+    .from('special_tips').select('id, predicted_team_id').eq('tip_type', tipType)
+  if (!allTips?.length) return
+  for (const t of allTips) {
+    const earned = t.predicted_team_id === correctTeamId ? pts : 0
+    await supabase.from('special_tips')
+      .update({ evaluated: true, points_earned: earned })
+      .eq('id', t.id)
+  }
+}
 
+// ── EvalRow: pouze pro ruční tipy (turnajový vítěz) ───────────────────────────
 function EvalRow({ tipType, label, teamPool, showToast }: {
   tipType: string
   label: string
@@ -111,20 +117,7 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
   const evaluate = async () => {
     if (!selected) { showToast('Vyber tým'); return }
     setEvaluating(true)
-
-    // Fetch all special_tips of this type
-    const { data: allTips } = await supabase
-      .from('special_tips').select('id, predicted_team_id').eq('tip_type', tipType)
-
-    if (allTips && allTips.length > 0) {
-      for (const t of allTips) {
-        const earned = t.predicted_team_id === selected ? pts : 0
-        await supabase.from('special_tips')
-          .update({ evaluated: true, points_earned: earned })
-          .eq('id', t.id)
-      }
-    }
-
+    await evaluateSpecialTip(tipType, selected)
     await recalcTipsterPoints()
     setEvaluating(false)
     setDone(true)
@@ -142,9 +135,7 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
         <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{pts} b. za správný tip</div>
       </div>
       {done ? (
-        <span style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}>
-          ✓ Vyhodnoceno
-        </span>
+        <span style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}>✓ Vyhodnoceno</span>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
           <select
@@ -154,16 +145,10 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
             onChange={e => setSelected(e.target.value)}
           >
             <option value="">— správný tým —</option>
-            {teamPool.map(t => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
+            {teamPool.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
-          <button
-            type="button"
-            className="btn btn-s btn-sm"
-            onClick={evaluate}
-            style={{ opacity: evaluating ? .6 : 1, whiteSpace: 'nowrap' }}
-          >
+          <button type="button" className="btn btn-s btn-sm" onClick={evaluate}
+            style={{ opacity: evaluating ? .6 : 1, whiteSpace: 'nowrap' }}>
             {evaluating ? '…' : 'Vyhodnotit'}
           </button>
         </div>
@@ -172,10 +157,63 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
   )
 }
 
-export default function TipsAdminTab({ showToast, teams, groups }: Props) {
+// ── Stav auto-vyhodnocení skupiny ─────────────────────────────────────────────
+type GroupEvalStatus = 'pending' | 'running' | 'done' | 'incomplete'
+
+export default function TipsAdminTab({ showToast, teams, groups, matches }: Props) {
   const { tipsters } = useTipsters()
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const [recalcing, setRecalcing] = useState(false)
+  // stav vyhodnocení per-skupina: 'incomplete' | 'pending' | 'running' | 'done'
+  const [groupStatus, setGroupStatus] = useState<Record<string, GroupEvalStatus>>({})
+  const [groupWinners, setGroupWinners] = useState<Record<string, { winner: string; last: string }>>({})
+  const autoRunRef = useRef(false)
+
+  // Auto-vyhodnocení skupin při načtení / změně dat
+  useEffect(() => {
+    if (!groups.length || !matches.length) return
+    if (autoRunRef.current) return
+    autoRunRef.current = true
+
+    const runAutoEval = async () => {
+      let anyEvaluated = false
+
+      for (const group of sortedGroups) {
+        const groupMatches = matches.filter(m => m.group_id === group.id)
+        if (!groupMatches.length || !groupMatches.every(m => m.played)) {
+          setGroupStatus(s => ({ ...s, [group.id]: 'incomplete' }))
+          continue
+        }
+
+        const rows = calcGroupStandings(group, matches)
+        if (rows.length < 2) {
+          setGroupStatus(s => ({ ...s, [group.id]: 'incomplete' }))
+          continue
+        }
+
+        const winnerId = rows[0].id
+        const lastId = rows[rows.length - 1].id
+        const winnerName = teams.find(t => t.id === winnerId)?.name ?? '—'
+        const lastName = teams.find(t => t.id === lastId)?.name ?? '—'
+
+        setGroupStatus(s => ({ ...s, [group.id]: 'running' }))
+        setGroupWinners(w => ({ ...w, [group.id]: { winner: winnerName, last: lastName } }))
+
+        await evaluateSpecialTip(`group_winner:${group.id}`, winnerId)
+        await evaluateSpecialTip(`group_last:${group.id}`, lastId)
+
+        setGroupStatus(s => ({ ...s, [group.id]: 'done' }))
+        anyEvaluated = true
+      }
+
+      if (anyEvaluated) {
+        await recalcTipsterPoints()
+        showToast('Skupinové tipy auto-vyhodnoceny ✓')
+      }
+    }
+
+    runAutoEval()
+  }, [groups.length, matches.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRecalcAll = async () => {
     setRecalcing(true)
@@ -204,13 +242,85 @@ export default function TipsAdminTab({ showToast, teams, groups }: Props) {
 
   return (
     <div>
-      {/* Tipsters list */}
-      <div className="sub-title">Tipéři ({tipsters.length})</div>
+      {/* Vyhodnocení speciálních tipů */}
+      <div className="sub-title">Vyhodnocení speciálních tipů</div>
+      <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.8rem' }}>
+        Skupiny se vyhodnotí automaticky jakmile jsou dohráné. Vítěz turnaje se zadá ručně.
+      </p>
 
+      <div className="card" style={{ overflow: 'hidden', marginBottom: '1.4rem' }}>
+        {/* Vítěz turnaje — ručně */}
+        <EvalRow tipType="tournament_winner" label="🏆 Vítěz turnaje" teamPool={teams} showToast={showToast} />
+
+        {/* Skupiny — automaticky */}
+        {sortedGroups.map(g => {
+          const status = groupStatus[g.id] ?? 'pending'
+          const info = groupWinners[g.id]
+          return (
+            <div key={g.id} style={{
+              display: 'flex', alignItems: 'center', gap: '.6rem',
+              padding: '.6rem .9rem', borderBottom: '1px solid var(--border)',
+              background: status === 'done' ? 'rgba(22,163,74,.04)' : 'transparent',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '.8rem', fontWeight: 600 }}>Skupina {g.name}</div>
+                <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>
+                  🥇 vítěz 5 b. &nbsp;·&nbsp; ⬇️ poslední 3 b.
+                </div>
+              </div>
+              {status === 'incomplete' && (
+                <span style={{ fontSize: '.73rem', color: 'var(--muted)', fontStyle: 'italic' }}>
+                  Čeká na dokončení skupiny…
+                </span>
+              )}
+              {status === 'pending' && (
+                <span style={{ fontSize: '.73rem', color: 'var(--muted)' }}>…</span>
+              )}
+              {status === 'running' && (
+                <span style={{ fontSize: '.73rem', color: 'var(--accent)' }}>Vyhodnocuji…</span>
+              )}
+              {status === 'done' && info && (
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: '.75rem', color: '#15803d', fontWeight: 600 }}>
+                    ✓ 🥇 {info.winner}
+                  </div>
+                  <div style={{ fontSize: '.75rem', color: '#15803d', fontWeight: 600 }}>
+                    ✓ ⬇️ {info.last}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Přepočet bodů */}
+      <hr className="divider" />
+      <div className="sub-title">Přepočet bodů</div>
+      <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
+        Přepočítá body za všechny skupinové i playoff tipy podle aktuálních výsledků zápasů. Použij po opravě chybného výsledku.
+      </p>
+      <button type="button" className="btn btn-s" onClick={handleRecalcAll} style={{ opacity: recalcing ? .6 : 1 }}>
+        {recalcing ? 'Přepočítávám…' : '🔄 Přepočítat tipy ze zápasů'}
+      </button>
+
+      {/* Nebezpečná zóna */}
+      <hr className="divider" />
+      <div className="sub-title">Nebezpečná zóna</div>
+      <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
+        Smaže všechny tipy (skupiny, playoff, speciální) a vynuluje body všem tipérům. Účty tipérů zůstanou.
+      </p>
+      <button type="button" className="btn btn-d" onClick={resetAll}>
+        🗑 Resetovat tipy
+      </button>
+
+      {/* Tipéři — až dole */}
+      <hr className="divider" />
+      <div className="sub-title">Tipéři ({tipsters.length})</div>
       {!tipsters.length ? (
         <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '1rem' }}>Zatím žádní tipéři.</p>
       ) : (
-        <div className="a-list" style={{ marginBottom: '1.4rem' }}>
+        <div className="a-list" style={{ marginBottom: '1rem' }}>
           {tipsters.map((t, i) => (
             <div key={t.id} className="a-item">
               <span style={{ fontSize: '.72rem', color: 'var(--muted)', width: 20, flexShrink: 0, textAlign: 'center' }}>{i + 1}</span>
@@ -224,61 +334,6 @@ export default function TipsAdminTab({ showToast, teams, groups }: Props) {
           ))}
         </div>
       )}
-
-      {/* Special tips evaluation */}
-      <hr className="divider" />
-      <div className="sub-title">Vyhodnocení speciálních tipů</div>
-      <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.8rem' }}>
-        Vyber správný tým pro každý speciální tip. Body se automaticky přidělí tipérům a aktualizuje se žebříček.
-      </p>
-
-      <div className="card" style={{ overflow: 'hidden', marginBottom: '1.4rem' }}>
-        <EvalRow
-          tipType="tournament_winner"
-          label="🏆 Vítěz turnaje"
-          teamPool={teams}
-          showToast={showToast}
-        />
-        {sortedGroups.map(g => {
-          const groupTeams = teams.filter(t => g.team_ids.includes(t.id))
-          return (
-            <div key={g.id}>
-              <EvalRow
-                tipType={`group_winner:${g.id}`}
-                label={`🥇 Vítěz skupiny ${g.name}`}
-                teamPool={groupTeams}
-                showToast={showToast}
-              />
-              <EvalRow
-                tipType={`group_last:${g.id}`}
-                label={`⬇️ Poslední skupiny ${g.name}`}
-                teamPool={groupTeams}
-                showToast={showToast}
-              />
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Manual recalc */}
-      <hr className="divider" />
-      <div className="sub-title">Přepočet bodů</div>
-      <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
-        Přepočítá body za všechny skupinové i playoff tipy podle aktuálních výsledků zápasů. Použij po opravě chybného výsledku.
-      </p>
-      <button type="button" className="btn btn-s" onClick={handleRecalcAll} style={{ opacity: recalcing ? .6 : 1 }}>
-        {recalcing ? 'Přepočítávám…' : '🔄 Přepočítat tipy ze zápasů'}
-      </button>
-
-      {/* Danger zone */}
-      <hr className="divider" />
-      <div className="sub-title">Nebezpečná zóna</div>
-      <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
-        Smaže všechny tipy (skupiny, playoff, speciální) a vynuluje body všem tipérům. Účty tipérů zůstanou.
-      </p>
-      <button type="button" className="btn btn-d" onClick={resetAll}>
-        🗑 Resetovat tipy
-      </button>
     </div>
   )
 }

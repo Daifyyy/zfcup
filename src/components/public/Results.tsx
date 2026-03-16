@@ -61,7 +61,7 @@ export default function Results({ matches, teams }: Props) {
 
                   {/* Home — dot before name in DOM; CSS row-reverse shows [name][dot] on desktop */}
                   <div className="match-col-home">
-                    <TeamLogo team={tt(m.home_id)} size={28} />
+                    <TeamLogo team={tt(m.home_id)} size={32} />
                     <span className="match-team-name" style={{
                       fontWeight: hw ? 700 : 500,
                       fontSize: 'var(--fs-body)',
@@ -91,7 +91,7 @@ export default function Results({ matches, teams }: Props) {
 
                   {/* Away */}
                   <div className="match-col-away">
-                    <TeamLogo team={tt(m.away_id)} size={28} />
+                    <TeamLogo team={tt(m.away_id)} size={32} />
                     <span className="match-team-name" style={{
                       fontWeight: aw ? 700 : 500,
                       fontSize: 'var(--fs-body)',

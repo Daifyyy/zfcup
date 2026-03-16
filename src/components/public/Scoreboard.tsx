@@ -123,7 +123,7 @@ function StandingsCol({ groups, matches, teams, players, goals }: {
                           <td style={{ padding: '.12rem .22rem', textAlign: 'center', color: C.muted, fontSize: S.label }}>{i + 1}</td>
                           <td style={{ padding: '.12rem .22rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              {team && <TeamLogo team={team} size={12} />}
+                              {team && <TeamLogo team={team} size={16} />}
                               <span style={{ fontSize: S.body, fontWeight: isTop ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {team?.name ?? row.id}
                               </span>
@@ -167,7 +167,7 @@ function StandingsCol({ groups, matches, teams, players, goals }: {
                 <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: i === 0 ? C.gold : C.muted, width: 16, textAlign: 'center', flexShrink: 0 }}>
                   {i + 1}
                 </span>
-                {s.team && <TeamLogo team={s.team} size={12} />}
+                {s.team && <TeamLogo team={s.team} size={16} />}
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: S.body, fontWeight: i === 0 ? 700 : 500, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.name}
@@ -232,7 +232,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
               <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tn(m.home_id)}
               </span>
-              <TeamLogo team={tt(m.home_id)} size={12} />
+              <TeamLogo team={tt(m.home_id)} size={16} />
             </div>
             {/* Skóre */}
             <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
@@ -246,7 +246,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
             </div>
             {/* Away */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
-              <TeamLogo team={tt(m.away_id)} size={12} />
+              <TeamLogo team={tt(m.away_id)} size={16} />
               <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tn(m.away_id)}
               </span>
@@ -312,7 +312,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                       <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? accentColor : hT ? C.muted : C.muted, fontStyle: hT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {tn(s.home_id)}
                       </span>
-                      {hT && <TeamLogo team={hT} size={12} />}
+                      {hT && <TeamLogo team={hT} size={16} />}
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
                       {s.played ? (
@@ -324,7 +324,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
-                      {aT && <TeamLogo team={aT} size={12} />}
+                      {aT && <TeamLogo team={aT} size={16} />}
                       <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? accentColor : aT ? C.muted : C.muted, fontStyle: aT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {tn(s.away_id)}
                       </span>
@@ -442,7 +442,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                       background: hw ? (isFinal ? 'rgba(217,119,6,.1)' : isThird ? 'rgba(146,64,14,.07)' : 'rgba(37,99,235,.08)') : 'transparent',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {hT && <TeamLogo team={hT} size={14} />}
+                        {hT && <TeamLogo team={hT} size={18} />}
                         <span style={{
                           fontSize: S.body,
                           fontWeight: hw ? 700 : 400,
@@ -466,7 +466,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                       background: aw ? (isFinal ? 'rgba(217,119,6,.1)' : isThird ? 'rgba(146,64,14,.07)' : 'rgba(37,99,235,.08)') : 'transparent',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {aT && <TeamLogo team={aT} size={14} />}
+                        {aT && <TeamLogo team={aT} size={18} />}
                         <span style={{
                           fontSize: S.body,
                           fontWeight: aw ? 700 : 400,
@@ -583,7 +583,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
       {/* ── column sub-headers ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '27% 46% 27%',
+        gridTemplateColumns: '27% 51% 22%',
         borderBottom: `2px solid ${C.border}`,
         background: '#eff6ff',
         flexShrink: 0,
@@ -607,7 +607,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
       <div style={{
         flex: 1,
         display: 'grid',
-        gridTemplateColumns: '27% 46% 27%',
+        gridTemplateColumns: '27% 51% 22%',
         overflow: 'hidden',
         minHeight: 0,
       }}>

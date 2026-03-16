@@ -425,7 +425,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.4rem', minWidth: 0 }}>
                     <span style={{ fontSize: '.82rem', fontWeight: hw ? 700 : 500, textAlign: 'right', color: hw ? 'var(--accent)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tn(m.home_id)}</span>
-                    <TeamLogo team={tt(m.home_id)} size={20} />
+                    <TeamLogo team={tt(m.home_id)} size={24} />
                   </div>
                   <div style={{ textAlign: 'center', flexShrink: 0 }}>
                     {m.played ? (
@@ -463,7 +463,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                    <TeamLogo team={tt(m.away_id)} size={20} />
+                    <TeamLogo team={tt(m.away_id)} size={24} />
                     <span style={{ fontSize: '.82rem', fontWeight: aw ? 700 : 500, color: aw ? 'var(--accent)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tn(m.away_id)}</span>
                   </div>
                 </div>
@@ -578,7 +578,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                       <span style={{ fontSize: '.82rem', fontWeight: hw ? 700 : 500, textAlign: 'right', color: hT ? (hw ? 'var(--accent)' : 'var(--text)') : 'var(--muted)', fontStyle: hT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {hT ? hT.name : 'TBD'}
                       </span>
-                      {hT && <TeamLogo team={hT} size={20} />}
+                      {hT && <TeamLogo team={hT} size={24} />}
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0 }}>
                       {s.played ? (
@@ -618,7 +618,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                      {aT && <TeamLogo team={aT} size={20} />}
+                      {aT && <TeamLogo team={aT} size={24} />}
                       <span style={{ fontSize: '.82rem', fontWeight: aw ? 700 : 500, color: aT ? (aw ? 'var(--accent)' : 'var(--text)') : 'var(--muted)', fontStyle: aT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {aT ? aT.name : 'TBD'}
                       </span>
