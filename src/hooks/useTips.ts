@@ -34,7 +34,8 @@ export function useTips(tipsterId: string | null) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tips' }, fetch)
       .subscribe()
 
-    return () => { supabase.removeChannel(sub) }
+    const poll = setInterval(fetch, 10_000)
+    return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [tipsterId])
 
   return { tips, loading }

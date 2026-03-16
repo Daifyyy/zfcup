@@ -25,7 +25,7 @@ export function useAnnouncements() {
       .channel('announcements')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, fetch)
       .subscribe()
-    const poll = setInterval(fetch, 10_000)
+    const poll = setInterval(fetch, 30_000)
 
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])

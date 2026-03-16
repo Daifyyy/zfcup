@@ -124,6 +124,7 @@ export default function App() {
             groups={groups}
             matches={matches}
             goals={goals}
+            bracketGoals={bracketGoals}
             bracketRounds={bracketRounds}
             bracketSlots={bracketSlots}
             onExit={() => setScoreboard(false)}
@@ -163,6 +164,7 @@ export default function App() {
           groups={groups}
           matches={matches}
           goals={goals}
+          bracketGoals={bracketGoals}
           bracketRounds={bracketRounds}
           bracketSlots={bracketSlots}
           onExit={() => setScoreboard(false)}

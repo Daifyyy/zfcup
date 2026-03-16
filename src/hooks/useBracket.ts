@@ -16,6 +16,7 @@ export interface BracketSlot {
   home_score: number
   away_score: number
   played: boolean
+  scheduled_time?: string | null
 }
 
 export function useBracket() {

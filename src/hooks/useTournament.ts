@@ -27,7 +27,7 @@ export function useTournament() {
       .channel('tournament')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, fetch)
       .subscribe()
-    const poll = setInterval(fetch, 10_000)
+    const poll = setInterval(fetch, 60_000)
 
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])

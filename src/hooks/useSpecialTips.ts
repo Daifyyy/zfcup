@@ -30,7 +30,8 @@ export function useSpecialTips(tipsterId: string | null) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'special_tips' }, fetch)
       .subscribe()
 
-    return () => { supabase.removeChannel(sub) }
+    const poll = setInterval(fetch, 10_000)
+    return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [tipsterId])
 
   return { specialTips }

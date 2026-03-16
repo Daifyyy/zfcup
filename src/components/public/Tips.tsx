@@ -334,6 +334,16 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
   )
 }
 
+// ── Time-lock helper ──────────────────────────────────────────────────────────
+
+function isMatchTimePassed(scheduledTime: string | null | undefined): boolean {
+  if (!scheduledTime) return false
+  const now = new Date()
+  const [hh, mm] = scheduledTime.split(':').map(Number)
+  if (isNaN(hh) || isNaN(mm)) return false
+  return now.getHours() * 60 + now.getMinutes() >= hh * 60 + mm
+}
+
 // ── Group match tips ───────────────────────────────────────────────────────────
 
 function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToast }: {
@@ -347,6 +357,12 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
   const [inputs, setInputs] = useState<Record<string, { home: string; away: string }>>({})
   const [dirty, setDirty] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
+  // Rerender každou minutu aby se časové zámky aktualizovaly bez refreshe
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     setInputs(prev => {
@@ -369,19 +385,18 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
     setSaving(true)
     let saved = 0, failed = 0
     for (const m of matches) {
-      if (m.played) continue
+      // Zamknout odehrané i časově uzavřené zápasy
+      if (m.played || isMatchTimePassed(m.scheduled_time)) continue
       const inp = inputs[m.id]
       if (!inp || inp.home === '' || inp.away === '') continue
       const h = parseInt(inp.home), a = parseInt(inp.away)
       if (isNaN(h) || isNaN(a)) continue
-      const existing = myTips.find(t => t.match_id === m.id)
-      if (existing) {
-        const { error } = await supabase.from('tips').update({ predicted_home: h, predicted_away: a }).eq('id', existing.id)
-        if (error) { failed++; continue }
-      } else {
-        const { error } = await supabase.from('tips').insert({ tipster_id: tipsterId, match_id: m.id, predicted_home: h, predicted_away: a, points_earned: 0, evaluated: false })
-        if (error) { failed++; continue }
-      }
+      // Upsert — spolehlivé i při race condition (stale myTips po předchozím save)
+      const { error } = await supabase.from('tips').upsert(
+        { tipster_id: tipsterId, match_id: m.id, predicted_home: h, predicted_away: a },
+        { onConflict: 'tipster_id,match_id' }
+      )
+      if (error) { failed++; continue }
       saved++
     }
     setSaving(false)
@@ -416,12 +431,14 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
               const tip = myTips.find(t => t.match_id === m.id)
               const hw = m.played && m.home_score > m.away_score
               const aw = m.played && m.away_score > m.home_score
+              const timeLocked = !m.played && isMatchTimePassed(m.scheduled_time)
+              const isLocked = m.played || timeLocked
               return (
                 <div key={m.id} style={{
                   display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
                   gap: '.5rem', padding: '.6rem .9rem',
                   borderBottom: i < ms.length - 1 ? '1px solid var(--border)' : 'none',
-                  background: m.played ? 'rgba(0,0,0,.015)' : 'transparent',
+                  background: isLocked ? 'rgba(0,0,0,.015)' : 'transparent',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.4rem', minWidth: 0 }}>
                     <span style={{ fontSize: '.82rem', fontWeight: hw ? 700 : 500, textAlign: 'right', color: hw ? 'var(--accent)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tn(m.home_id)}</span>
@@ -441,6 +458,16 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
                         ) : (
                           <span style={{ fontSize: '.6rem', color: 'var(--muted)', fontStyle: 'italic' }}>čeká…</span>
                         ))}
+                      </div>
+                    ) : timeLocked ? (
+                      // Zámek po čase výkopu
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <span style={{ fontSize: '.7rem' }}>🔒</span>
+                        {tip ? (
+                          <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>tip: {tip.predicted_home}:{tip.predicted_away}</span>
+                        ) : (
+                          <span style={{ fontSize: '.62rem', color: 'var(--muted)', fontStyle: 'italic' }}>nezadáno</span>
+                        )}
                       </div>
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -516,18 +543,18 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
     let saved = 0, failed = 0
     for (const s of bracketSlots) {
       if (s.played || !s.home_id || !s.away_id) continue
+      // Zamknout i časově uzavřené playoff sloty
+      if (isMatchTimePassed(s.scheduled_time)) continue
       const inp = inputs[s.id]
       if (!inp || inp.home === '' || inp.away === '') continue
       const h = parseInt(inp.home), a = parseInt(inp.away)
       if (isNaN(h) || isNaN(a)) continue
-      const existing = bracketTips.find(t => t.slot_id === s.id)
-      if (existing) {
-        const { error } = await supabase.from('bracket_tips').update({ predicted_home: h, predicted_away: a }).eq('id', existing.id)
-        if (error) { failed++; continue }
-      } else {
-        const { error } = await supabase.from('bracket_tips').insert({ tipster_id: tipsterId, slot_id: s.id, predicted_home: h, predicted_away: a, points_earned: 0, evaluated: false })
-        if (error) { failed++; continue }
-      }
+      // Upsert — spolehlivé i při race condition
+      const { error } = await supabase.from('bracket_tips').upsert(
+        { tipster_id: tipsterId, slot_id: s.id, predicted_home: h, predicted_away: a },
+        { onConflict: 'tipster_id,slot_id' }
+      )
+      if (error) { failed++; continue }
       saved++
     }
     setSaving(false)
@@ -565,14 +592,15 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                 const tip = bracketTips.find(t => t.slot_id === s.id)
                 const hw = s.played && s.home_score > s.away_score
                 const aw = s.played && s.away_score > s.home_score
-                const canTip = !!s.home_id && !!s.away_id && !s.played
+                const timeLocked = !!s.home_id && !!s.away_id && !s.played && isMatchTimePassed(s.scheduled_time)
+                const canTip = !!s.home_id && !!s.away_id && !s.played && !timeLocked
 
                 return (
                   <div key={s.id} style={{
                     display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
                     gap: '.5rem', padding: '.6rem .9rem',
                     borderBottom: i < slots.length - 1 ? '1px solid var(--border)' : 'none',
-                    background: s.played ? 'rgba(0,0,0,.015)' : !canTip ? 'rgba(0,0,0,.02)' : 'transparent',
+                    background: s.played || timeLocked ? 'rgba(0,0,0,.015)' : !canTip ? 'rgba(0,0,0,.02)' : 'transparent',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.4rem', minWidth: 0 }}>
                       <span style={{ fontSize: '.82rem', fontWeight: hw ? 700 : 500, textAlign: 'right', color: hT ? (hw ? 'var(--accent)' : 'var(--text)') : 'var(--muted)', fontStyle: hT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -594,6 +622,15 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                           ) : (
                             <span style={{ fontSize: '.6rem', color: 'var(--muted)', fontStyle: 'italic' }}>čeká…</span>
                           ))}
+                        </div>
+                      ) : timeLocked ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <span style={{ fontSize: '.7rem' }}>🔒</span>
+                          {tip ? (
+                            <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>tip: {tip.predicted_home}:{tip.predicted_away}</span>
+                          ) : (
+                            <span style={{ fontSize: '.62rem', color: 'var(--muted)', fontStyle: 'italic' }}>nezadáno</span>
+                          )}
                         </div>
                       ) : canTip ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

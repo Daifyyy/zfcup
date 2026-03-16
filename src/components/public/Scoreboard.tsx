@@ -8,6 +8,7 @@ import type { Player } from '../../hooks/usePlayers'
 import type { Group } from '../../hooks/useGroups'
 import type { Match } from '../../hooks/useMatches'
 import type { Goal } from '../../hooks/useGoals'
+import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
   groups: Group[]
   matches: Match[]
   goals: Goal[]
+  bracketGoals: BracketGoal[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   onExit: () => void
@@ -61,17 +63,19 @@ function useClock() {
 }
 
 // ── Standings + Scorers column ────────────────────────────────────────────────
-function StandingsCol({ groups, matches, teams, players, goals }: {
-  groups: Group[]; matches: Match[]; teams: Team[]; players: Player[]; goals: Goal[]
+function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: {
+  groups: Group[]; matches: Match[]; teams: Team[]; players: Player[]; goals: Goal[]; bracketGoals: BracketGoal[]
 }) {
   const gt = (id: string) => teams.find(t => t.id === id)
 
-  // Top 5 scorers
+  // Top 5 scorers — aggregate group goals + bracket_goals
   const scorers = players
     .map(p => ({
       name: p.name,
       team: teams.find(t => t.id === p.team_id),
-      total: goals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0),
+      total:
+        goals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0) +
+        bracketGoals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0),
     }))
     .filter(r => r.total > 0)
     .sort((a, b) => b.total - a.total)
@@ -495,7 +499,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
 }
 
 // ── Main Scoreboard ───────────────────────────────────────────────────────────
-export default function Scoreboard({ tournament, teams, players, groups, matches, goals, bracketRounds, bracketSlots, onExit }: Props) {
+export default function Scoreboard({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit }: Props) {
   const clock = useClock()
 
   useEffect(() => {
@@ -507,7 +511,6 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
   const cols = [
     { icon: '📊', label: 'Skupiny — tabulky & střelci' },
     { icon: '⚽', label: 'Zápasy — výsledky' },
-    { icon: '🏆', label: 'Play-off' },
   ]
 
   return (
@@ -583,7 +586,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
       {/* ── column sub-headers ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '27% 51% 22%',
+        gridTemplateColumns: '30% 70%',
         borderBottom: `2px solid ${C.border}`,
         background: '#eff6ff',
         flexShrink: 0,
@@ -603,22 +606,19 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
         ))}
       </div>
 
-      {/* ── 3-column content ── */}
+      {/* ── 2-column content ── */}
       <div style={{
         flex: 1,
         display: 'grid',
-        gridTemplateColumns: '27% 51% 22%',
+        gridTemplateColumns: '30% 70%',
         overflow: 'hidden',
         minHeight: 0,
       }}>
         <div style={{ background: C.col, borderRight: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '2px 0 8px rgba(37,99,235,.06)' }}>
-          <StandingsCol groups={groups} matches={matches} teams={teams} players={players} goals={goals} />
+          <StandingsCol groups={groups} matches={matches} teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} />
         </div>
         <div style={{ background: '#f8faff', overflow: 'hidden' }}>
           <MatchesCol matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} />
-        </div>
-        <div style={{ background: C.col, borderLeft: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '-2px 0 8px rgba(37,99,235,.06)' }}>
-          <FlatBracketCol rounds={bracketRounds} slots={bracketSlots} teams={teams} />
         </div>
       </div>
     </div>

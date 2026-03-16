@@ -130,23 +130,30 @@ function SlotEditor({
   showToast: (m: string) => void
   onSave: (data: Partial<BracketSlot>) => void
 }) {
-  const [s, setS] = useState({ ...slot })
+  const [s, setS] = useState({ ...slot, scheduled_time: slot.scheduled_time ?? '' })
   const [goalOpen, setGoalOpen] = useState(false)
 
-  const changeScore = (k: 'home_score' | 'away_score', delta: number) =>
-    setS(x => ({ ...x, [k]: Math.max(0, x[k] + delta) }))
+  const changeScore = (k: 'home_score' | 'away_score', delta: number) => {
+    setS(x => {
+      const next = Math.max(0, x[k] + delta)
+      return { ...x, [k]: next, played: next > 0 ? true : x.played }
+    })
+  }
 
-  const btnMinus = { width: 30, height: 30, borderRadius: 7, border: '1px solid var(--border)', background: '#f8fafc', fontSize: '1rem', fontWeight: 700, color: 'var(--muted)', cursor: 'pointer' } as const
-  const btnPlus  = { width: 30, height: 30, borderRadius: 7, border: '1px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '1rem', fontWeight: 700, color: 'var(--accent)', cursor: 'pointer' } as const
+  const ht = teams.find(t => t.id === s.home_id)
+  const at = teams.find(t => t.id === s.away_id)
+
+  const btnMinus = { width: 32, height: 32, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', fontSize: '1rem', fontWeight: 700, color: 'var(--muted)', cursor: 'pointer' } as const
+  const btnPlus  = { width: 32, height: 32, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '1rem', fontWeight: 700, color: 'var(--accent)', cursor: 'pointer' } as const
 
   return (
-    <div style={{ paddingTop: '.55rem', marginTop: '.55rem', borderTop: '1px solid var(--border)' }}>
-      <div style={{ fontSize: '.63rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: '.38rem' }}>
-        Zápas {slot.position + 1}
-      </div>
+    <div style={{ padding: '.75rem .85rem .85rem', marginTop: '.55rem', borderTop: '2px solid rgba(37,99,235,.15)', background: 'var(--accent-dim)', borderRadius: '0 0 8px 8px' }}>
 
-      {/* Team selects */}
-      <div className="field-row" style={{ marginBottom: '.32rem' }}>
+      {/* Tým selects */}
+      <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem' }}>
+        🏟️ Týmy (Zápas {slot.position + 1})
+      </div>
+      <div className="field-row" style={{ marginBottom: '.65rem' }}>
         <select className="field-input field-select" style={{ fontSize: '.78rem' }} value={s.home_id ?? ''}
           onChange={e => setS(x => ({ ...x, home_id: e.target.value || null }))}>
           <option value="">TBD</option>
@@ -159,35 +166,48 @@ function SlotEditor({
         </select>
       </div>
 
-      {/* Score steppers */}
-      <div className="field-row3" style={{ marginBottom: '.32rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {/* Skóre — stejný layout jako InlineMatchEditor */}
+      <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem' }}>
+        📝 Skóre zápasu
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '.65rem', flexWrap: 'wrap' }}>
+        {/* Domácí */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+          <span style={{ fontSize: '.75rem', color: 'var(--muted)', minWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {ht?.name ?? 'TBD'}
+          </span>
           <button type="button" onClick={() => changeScore('home_score', -1)} style={btnMinus}>−</button>
-          <input className="field-input" type="number" min="0"
-            style={{ width: 52, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem' }}
-            value={s.home_score} onChange={e => setS(x => ({ ...x, home_score: parseInt(e.target.value) || 0 }))} />
+          <span style={{ width: 36, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', color: 'var(--accent)' }}>{s.home_score}</span>
           <button type="button" onClick={() => changeScore('home_score', +1)} style={btnPlus}>+</button>
         </div>
-        <div className="field-sep">:</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', color: 'var(--muted)' }}>:</span>
+        {/* Hostující */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
           <button type="button" onClick={() => changeScore('away_score', -1)} style={btnMinus}>−</button>
-          <input className="field-input" type="number" min="0"
-            style={{ width: 52, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem' }}
-            value={s.away_score} onChange={e => setS(x => ({ ...x, away_score: parseInt(e.target.value) || 0 }))} />
+          <span style={{ width: 36, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', color: 'var(--accent)' }}>{s.away_score}</span>
           <button type="button" onClick={() => changeScore('away_score', +1)} style={btnPlus}>+</button>
+          <span style={{ fontSize: '.75rem', color: 'var(--muted)', minWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {at?.name ?? 'TBD'}
+          </span>
+        </div>
+        {/* Odehrán + čas */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.8rem', marginLeft: '.2rem' }}>
+          <input type="checkbox" checked={s.played} onChange={e => setS(x => ({ ...x, played: e.target.checked }))}
+            style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
+          Odehrán {s.played && <span style={{ color: 'var(--success)' }}>✓</span>}
+        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>Čas:</span>
+          <input type="time" value={s.scheduled_time} onChange={e => setS(x => ({ ...x, scheduled_time: e.target.value }))}
+            style={{ fontSize: '.8rem', padding: '.22rem .4rem', border: '1px solid var(--border)', borderRadius: 5 }} />
         </div>
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: '.42rem', marginBottom: '.5rem', cursor: 'pointer', fontSize: '.78rem' }}>
-        <input type="checkbox" checked={s.played} onChange={e => setS(x => ({ ...x, played: e.target.checked }))}
-          style={{ accentColor: 'var(--accent)' }} />
-        Odehráno
-      </label>
-
-      <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap' }}>
-        <button type="button" className="btn btn-s btn-sm" onClick={() => onSave({
+      <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginBottom: '.3rem' }}>
+        <button type="button" className="btn btn-p btn-sm" onClick={() => onSave({
           home_id: s.home_id, away_id: s.away_id,
           home_score: s.home_score, away_score: s.away_score, played: s.played,
+          scheduled_time: s.scheduled_time || null,
         })}>💾 Uložit</button>
         <button type="button" className="btn btn-s btn-sm" onClick={() => setGoalOpen(o => !o)}>
           {goalOpen ? '✕ Zavřít góly' : '⚽ Góly'}
@@ -351,7 +371,8 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
   }
 
   const saveSlot = async (slotId: string, data: Partial<BracketSlot>) => {
-    const { error } = await supabase.from('bracket_slots').update(data).eq('id', slotId)
+    const payload = { ...data, scheduled_time: data.scheduled_time ?? null }
+    const { error } = await supabase.from('bracket_slots').update(payload).eq('id', slotId)
     if (error) { showToast('Chyba: ' + error.message); return }
 
     // ── Auto-advance winner to next round ──────────────────────────────
