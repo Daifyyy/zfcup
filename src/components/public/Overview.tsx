@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Team } from '../../hooks/useTeams'
 import type { Match } from '../../hooks/useMatches'
@@ -17,8 +18,27 @@ interface Props {
   onTab?: (t: Tab) => void
 }
 
-function StatCard({ label, value, accent, icon, onClick }: {
-  label: string; value: number | string; accent?: boolean; icon?: string; onClick?: () => void
+// Pokusí se načíst PNG z /icons/{file}, fallback na emoji
+function TileIcon({ emoji, file }: { emoji?: string; file?: string }) {
+  const [failed, setFailed] = useState(false)
+  if (file && !failed) {
+    return (
+      <img
+        src={`/icons/${file}`}
+        alt=""
+        width={32}
+        height={32}
+        style={{ objectFit: 'contain', opacity: .8, display: 'block' }}
+        onError={() => setFailed(true)}
+      />
+    )
+  }
+  if (emoji) return <span style={{ fontSize: '1.5rem', opacity: .7 }}>{emoji}</span>
+  return null
+}
+
+function StatCard({ label, value, accent, icon, iconFile, onClick }: {
+  label: string; value: number | string; accent?: boolean; icon?: string; iconFile?: string; onClick?: () => void
 }) {
   const hasValue = value !== '' && value !== null && value !== undefined
   return (
@@ -39,7 +59,11 @@ function StatCard({ label, value, accent, icon, onClick }: {
         ;(e.currentTarget as HTMLElement).style.boxShadow = ''
       } : undefined}
     >
-      {icon && <div style={{ fontSize: '1.5rem', marginBottom: '.4rem', opacity: .7 }}>{icon}</div>}
+      {(icon || iconFile) && (
+        <div style={{ marginBottom: '.4rem', display: 'flex', justifyContent: 'center' }}>
+          <TileIcon emoji={icon} file={iconFile} />
+        </div>
+      )}
       {hasValue && (
         <div style={{
           fontFamily: "'Bebas Neue', sans-serif",
@@ -96,12 +120,12 @@ export default function Overview({ tournament, teams, matches, groups, goals, an
         gap: '.9rem',
         marginBottom: '1.4rem',
       }}>
-        <StatCard icon="ℹ️"  label="Informace" value={announcements.length} onClick={onTab ? () => onTab('info')      : undefined} />
-        <StatCard icon="👥" label="Týmy"     value={teams.length}   accent onClick={onTab ? () => onTab('teams')     : undefined} />
-        <StatCard icon="📋" label="Zápasy"   value={matches.length}        onClick={onTab ? () => onTab('results')   : undefined} />
-        <StatCard icon="📊" label="Tabulka"  value={groups.length}  accent onClick={onTab ? () => onTab('standings') : undefined} />
-        <StatCard icon="⚽" label="Střelci"  value={scorerCount}           onClick={onTab ? () => onTab('scorers')   : undefined} />
-        <StatCard icon="🏆" label="Play-off" value=""                      onClick={onTab ? () => onTab('bracket')   : undefined} />
+        <StatCard icon="ℹ️"  iconFile="info.png"      label="Informace" value={announcements.length} onClick={onTab ? () => onTab('info')      : undefined} />
+        <StatCard icon="👥" iconFile="teams.png"     label="Týmy"     value={teams.length}   accent onClick={onTab ? () => onTab('teams')     : undefined} />
+        <StatCard icon="📋" iconFile="matches.png"   label="Zápasy"   value={matches.length}        onClick={onTab ? () => onTab('results')   : undefined} />
+        <StatCard icon="📊" iconFile="standings.png" label="Tabulka"  value={groups.length}  accent onClick={onTab ? () => onTab('standings') : undefined} />
+        <StatCard icon="⚽" iconFile="scorers.png"   label="Střelci"  value={scorerCount}           onClick={onTab ? () => onTab('scorers')   : undefined} />
+        <StatCard icon="🏆" iconFile="playoff.png"   label="Play-off" value=""                      onClick={onTab ? () => onTab('bracket')   : undefined} />
       </div>
 
       {/* Description */}

@@ -13,16 +13,19 @@ export interface Tip {
 
 export function useTips(tipsterId: string | null) {
   const [tips, setTips] = useState<Tip[]>([])
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!tipsterId) { setTips([]); return }
+    if (!tipsterId) { setTips([]); setLoading(false); return }
 
+    setLoading(true)
     async function fetch() {
       const { data } = await supabase
         .from('tips')
         .select('*')
         .eq('tipster_id', tipsterId)
       setTips(data ?? [])
+      setLoading(false)
     }
     fetch()
 
@@ -34,5 +37,5 @@ export function useTips(tipsterId: string | null) {
     return () => { supabase.removeChannel(sub) }
   }, [tipsterId])
 
-  return { tips }
+  return { tips, loading }
 }

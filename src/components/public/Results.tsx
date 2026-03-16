@@ -54,6 +54,11 @@ export default function Results({ matches, teams }: Props) {
               const aw = m.played && m.away_score > m.home_score
               return (
                 <div key={m.id} className="card match-grid">
+                  {/* Čas — vlevo */}
+                  <div className="match-col-time">
+                    {m.scheduled_time || ''}
+                  </div>
+
                   {/* Home — dot before name in DOM; CSS row-reverse shows [name][dot] on desktop */}
                   <div className="match-col-home">
                     <TeamLogo team={tt(m.home_id)} size={28} />
@@ -101,19 +106,17 @@ export default function Results({ matches, teams }: Props) {
                     </span>
                   </div>
 
-                  {/* Meta row: time + badge */}
-                  <div className="match-col-meta">
-                    {m.scheduled_time && (
-                      <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{m.scheduled_time}</span>
-                    )}
+                  {/* Badge stav */}
+                  <div className="match-col-badge">
                     <span style={{
-                      fontSize: '.62rem', fontWeight: 600,
-                      textTransform: 'uppercase', letterSpacing: '.1em',
-                      padding: '2px 7px', borderRadius: 20,
+                      fontSize: '.6rem', fontWeight: 600,
+                      textTransform: 'uppercase', letterSpacing: '.08em',
+                      padding: '2px 6px', borderRadius: 20,
                       background: m.played ? 'rgba(22,163,74,.1)' : 'var(--border)',
                       color: m.played ? 'var(--success)' : 'var(--muted)',
+                      whiteSpace: 'nowrap',
                     }}>
-                      {m.played ? '✓ Odehráno' : 'Plánováno'}
+                      {m.played ? '✓' : '—'}
                     </span>
                   </div>
                 </div>

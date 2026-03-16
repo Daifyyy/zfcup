@@ -336,11 +336,12 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
 
 // ── Group match tips ───────────────────────────────────────────────────────────
 
-function GroupTipsSection({ matches, teams, myTips, tipsterId, showToast }: {
+function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToast }: {
   matches: Match[]
   teams: Team[]
   myTips: ReturnType<typeof useTips>['tips']
   tipsterId: string
+  loading: boolean
   showToast: (m: string) => void
 }) {
   const [inputs, setInputs] = useState<Record<string, { home: string; away: string }>>({})
@@ -366,7 +367,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, showToast }: {
 
   const saveAll = async () => {
     setSaving(true)
-    let saved = 0
+    let saved = 0, failed = 0
     for (const m of matches) {
       if (m.played) continue
       const inp = inputs[m.id]
@@ -375,14 +376,18 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, showToast }: {
       if (isNaN(h) || isNaN(a)) continue
       const existing = myTips.find(t => t.match_id === m.id)
       if (existing) {
-        await supabase.from('tips').update({ predicted_home: h, predicted_away: a }).eq('id', existing.id)
+        const { error } = await supabase.from('tips').update({ predicted_home: h, predicted_away: a }).eq('id', existing.id)
+        if (error) { failed++; continue }
       } else {
-        await supabase.from('tips').insert({ tipster_id: tipsterId, match_id: m.id, predicted_home: h, predicted_away: a, points_earned: 0, evaluated: false })
+        const { error } = await supabase.from('tips').insert({ tipster_id: tipsterId, match_id: m.id, predicted_home: h, predicted_away: a, points_earned: 0, evaluated: false })
+        if (error) { failed++; continue }
       }
       saved++
     }
+    setDirty(new Set())
     setSaving(false)
-    showToast(saved > 0 ? `${saved} tipů uloženo ✓` : 'Žádné nové tipy k uložení')
+    if (failed > 0) showToast(`Chyba: ${failed} tipů se nepodařilo uložit`)
+    else showToast(saved > 0 ? `${saved} tipů uloženo ✓` : 'Žádné nové tipy k uložení')
   }
 
   const roundsMap: Record<string, Match[]> = {}
@@ -394,6 +399,12 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, showToast }: {
   const rounds = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
   const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
+
+  if (loading) return (
+    <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem', fontSize: '.85rem' }}>
+      Načítám tipy…
+    </div>
+  )
 
   return (
     <div style={{ marginBottom: '1.8rem' }}>
@@ -471,12 +482,13 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, showToast }: {
 
 // ── Bracket tips ───────────────────────────────────────────────────────────────
 
-function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, tipsterId, showToast }: {
+function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, tipsterId, loading, showToast }: {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   teams: Team[]
   bracketTips: ReturnType<typeof useBracketTips>['bracketTips']
   tipsterId: string
+  loading: boolean
   showToast: (m: string) => void
 }) {
   const [inputs, setInputs] = useState<Record<string, { home: string; away: string }>>({})
@@ -502,7 +514,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
 
   const saveAll = async () => {
     setSaving(true)
-    let saved = 0
+    let saved = 0, failed = 0
     for (const s of bracketSlots) {
       if (s.played || !s.home_id || !s.away_id) continue
       const inp = inputs[s.id]
@@ -511,15 +523,25 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
       if (isNaN(h) || isNaN(a)) continue
       const existing = bracketTips.find(t => t.slot_id === s.id)
       if (existing) {
-        await supabase.from('bracket_tips').update({ predicted_home: h, predicted_away: a }).eq('id', existing.id)
+        const { error } = await supabase.from('bracket_tips').update({ predicted_home: h, predicted_away: a }).eq('id', existing.id)
+        if (error) { failed++; continue }
       } else {
-        await supabase.from('bracket_tips').insert({ tipster_id: tipsterId, slot_id: s.id, predicted_home: h, predicted_away: a, points_earned: 0, evaluated: false })
+        const { error } = await supabase.from('bracket_tips').insert({ tipster_id: tipsterId, slot_id: s.id, predicted_home: h, predicted_away: a, points_earned: 0, evaluated: false })
+        if (error) { failed++; continue }
       }
       saved++
     }
+    setDirty(new Set())
     setSaving(false)
-    showToast(saved > 0 ? `${saved} playoff tipů uloženo ✓` : 'Žádné nové tipy k uložení')
+    if (failed > 0) showToast(`Chyba: ${failed} playoff tipů se nepodařilo uložit`)
+    else showToast(saved > 0 ? `${saved} playoff tipů uloženo ✓` : 'Žádné nové tipy k uložení')
   }
+
+  if (loading) return (
+    <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '1.5rem', fontSize: '.85rem' }}>
+      Načítám playoff tipy…
+    </div>
+  )
 
   if (!bracketRounds.length) return null
 
@@ -623,8 +645,8 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
   const [tipsterId, setTipsterId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY))
   const [view, setView] = useState<'tips' | 'leaderboard'>('tips')
   const { tipsters } = useTipsters()
-  const { tips } = useTips(tipsterId)
-  const { bracketTips } = useBracketTips(tipsterId)
+  const { tips, loading: tipsLoading } = useTips(tipsterId)
+  const { bracketTips, loading: bracketTipsLoading } = useBracketTips(tipsterId)
   const { specialTips } = useSpecialTips(tipsterId)
 
   const currentTipster = tipsters.find(t => t.id === tipsterId)
@@ -691,12 +713,12 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
           />
           <GroupTipsSection
             matches={groupMatches} teams={teams} myTips={tips}
-            tipsterId={tipsterId} showToast={showToast}
+            tipsterId={tipsterId} loading={tipsLoading} showToast={showToast}
           />
           {bracketRounds.length > 0 && (
             <BracketTipsSection
               bracketRounds={bracketRounds} bracketSlots={bracketSlots} teams={teams}
-              bracketTips={bracketTips} tipsterId={tipsterId} showToast={showToast}
+              bracketTips={bracketTips} tipsterId={tipsterId} loading={bracketTipsLoading} showToast={showToast}
             />
           )}
         </>

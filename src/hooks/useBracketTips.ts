@@ -13,16 +13,19 @@ export interface BracketTip {
 
 export function useBracketTips(tipsterId: string | null) {
   const [bracketTips, setBracketTips] = useState<BracketTip[]>([])
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!tipsterId) { setBracketTips([]); return }
+    if (!tipsterId) { setBracketTips([]); setLoading(false); return }
 
+    setLoading(true)
     async function fetch() {
       const { data } = await supabase
         .from('bracket_tips')
         .select('*')
         .eq('tipster_id', tipsterId)
       setBracketTips(data ?? [])
+      setLoading(false)
     }
     fetch()
 
@@ -34,5 +37,5 @@ export function useBracketTips(tipsterId: string | null) {
     return () => { supabase.removeChannel(sub) }
   }, [tipsterId])
 
-  return { bracketTips }
+  return { bracketTips, loading }
 }
