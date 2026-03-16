@@ -384,7 +384,6 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
       }
       saved++
     }
-    setDirty(new Set())
     setSaving(false)
     if (failed > 0) showToast(`Chyba: ${failed} tipů se nepodařilo uložit`)
     else showToast(saved > 0 ? `${saved} tipů uloženo ✓` : 'Žádné nové tipy k uložení')
@@ -531,7 +530,6 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
       }
       saved++
     }
-    setDirty(new Set())
     setSaving(false)
     if (failed > 0) showToast(`Chyba: ${failed} playoff tipů se nepodařilo uložit`)
     else showToast(saved > 0 ? `${saved} playoff tipů uloženo ✓` : 'Žádné nové tipy k uložení')
