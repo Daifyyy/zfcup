@@ -368,7 +368,7 @@ CSS v `src/index.css` — třídy `.match-grid`, `.match-col-time`, `.match-col-
 
 ## TV Scoreboard (Tabule) — architektura
 **2 sloupce `30% | 70%`**, `overflow: hidden` všude (žádný scroll), fluid fonty přes `clamp()`:
-- **Levý (30%)**: skupinové tabulky + top-5 střelců; střelci jsou `flex-shrink: 0` sekce dole → vždy viditelní; střelci agregují `goals + bracket_goals` dohromady
+- **Levý (30%)**: skupinové tabulky + top-3 střelců; střelci jsou `flex-shrink: 0` sekce dole → vždy viditelní; střelci agregují `goals + bracket_goals` dohromady; každá skupina má `flex: 1, minHeight: 0` → rovný podíl výšky, žádná skupina není oříznutá
 - **Pravý (70%)**: dynamický obsah dle fáze turnaje:
   - **Skupinová fáze**: 2 sub-sloupce side-by-side (`repeat(N, 1fr)`) — každá skupina má svůj sloupec s názvem a zápasy; čas vlevo každého řádku (`gridTemplateColumns: 'auto 1fr auto 1fr'`)
   - **Po odehrání skupin** (`allGroupMatchesPlayed`): `PlayoffMatchesSubCol` — flat list playoff slotů per kolo s detekcí finále/3.místa

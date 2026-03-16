@@ -68,7 +68,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: 
 }) {
   const gt = (id: string) => teams.find(t => t.id === id)
 
-  // Top 5 scorers — aggregate group goals + bracket_goals
+  // Top 3 scorers — aggregate group goals + bracket_goals
   const scorers = players
     .map(p => ({
       name: p.name,
@@ -79,19 +79,19 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: 
     }))
     .filter(r => r.total > 0)
     .sort((a, b) => b.total - a.total)
-    .slice(0, 5)
+    .slice(0, 3)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-      {/* Group standings — shrinkable */}
-      <div style={{ flex: 1, overflow: 'hidden', padding: '.6rem .8rem .2rem', display: 'flex', flexDirection: 'column', gap: '.7rem' }}>
+      {/* Group standings — each group gets equal share of available height */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '.6rem .8rem .2rem', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
         {groups.length === 0 ? (
           <div style={{ color: C.muted, fontSize: S.body }}>Žádné skupiny</div>
         ) : (
           groups.map(group => {
             const rows = calcGroupStandings(group, matches)
             return (
-              <div key={group.id}>
+              <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <div style={{
                   fontFamily: "'Bebas Neue', sans-serif",
                   fontSize: S.section,
@@ -103,6 +103,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: 
                 }}>
                   {group.name}
                 </div>
+                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
@@ -147,6 +148,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: 
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             )
           })
