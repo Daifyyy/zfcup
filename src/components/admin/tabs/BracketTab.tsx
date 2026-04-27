@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { calcGroupStandings } from '../../../lib/standings'
+import { addMinutes } from '../../../lib/constants'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
@@ -224,6 +225,73 @@ function SlotEditor({
           refetchBracketGoals={refetchBracketGoals}
         />
       )}
+    </div>
+  )
+}
+
+// ── Round Card ────────────────────────────────────────────────────────────────
+function RoundCard({
+  round, rSlots, teams, players, bracketGoals, refetchBracketGoals,
+  showToast, matchDuration, onSave, onRemove, onApplyTimes,
+}: {
+  round: BracketRound
+  rSlots: BracketSlot[]
+  teams: Team[]
+  players: Player[]
+  bracketGoals: BracketGoal[]
+  refetchBracketGoals: () => void
+  showToast: (m: string) => void
+  matchDuration: number
+  onSave: (slotId: string, data: Partial<BracketSlot>) => void
+  onRemove: (id: string) => void
+  onApplyTimes: (r: BracketRound & { _start: string; _break: number }) => void
+}) {
+  const [start, setStart] = useState(round.scheduled_start ?? '')
+  const [brk, setBrk] = useState(String(round.break_after ?? 5))
+
+  const preview = () => {
+    if (!start || rSlots.length === 0) return null
+    const b = parseInt(brk) || 0
+    const last = addMinutes(start, (rSlots.length - 1) * (matchDuration + b) + matchDuration)
+    return `${start} – ${last}`
+  }
+
+  return (
+    <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem .95rem', marginBottom: '.65rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.65rem', marginBottom: '.55rem' }}>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '.06em', flex: 1 }}>{round.name}</span>
+        <span style={{ fontSize: '.68rem', color: 'var(--muted)' }}>{rSlots.length} zápasů</span>
+        <button type="button" className="btn btn-d btn-sm" onClick={() => onRemove(round.id)}>Smazat kolo</button>
+      </div>
+
+      {/* Časování kola */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '.5rem', flexWrap: 'wrap', marginBottom: '.6rem', padding: '.5rem .6rem', background: 'rgba(37,99,235,.04)', border: '1px solid rgba(37,99,235,.12)', borderRadius: 7 }}>
+        <div>
+          <div style={{ fontSize: '.67rem', color: 'var(--accent)', fontWeight: 600, marginBottom: '.2rem' }}>Začátek kola</div>
+          <input type="time" value={start} onChange={e => setStart(e.target.value)}
+            style={{ fontSize: '.8rem', padding: '.22rem .4rem', border: '1px solid var(--border)', borderRadius: 5 }} />
+        </div>
+        <div>
+          <div style={{ fontSize: '.67rem', color: 'var(--accent)', fontWeight: 600, marginBottom: '.2rem' }}>Pauza mezi zápasy (min)</div>
+          <input type="number" min="0" value={brk} onChange={e => setBrk(e.target.value)}
+            style={{ fontSize: '.8rem', padding: '.22rem .4rem', border: '1px solid var(--border)', borderRadius: 5, width: 64 }} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.2rem' }}>
+          <button type="button" className="btn btn-s btn-sm" onClick={() => onApplyTimes({ ...round, _start: start, _break: parseInt(brk) || 0 })}>
+            ⏰ Rozepsat časy
+          </button>
+          {preview() && <span style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{preview()}</span>}
+        </div>
+      </div>
+
+      {rSlots.map(slot => (
+        <SlotEditor
+          key={slot.id} slot={slot} teams={teams} players={players}
+          bracketGoals={bracketGoals} refetchBracketGoals={refetchBracketGoals}
+          showToast={showToast}
+          onSave={data => onSave(slot.id, data)}
+        />
+      ))}
     </div>
   )
 }
@@ -495,6 +563,27 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     }
   }
 
+  const applyRoundTimes = async (round: BracketRound & { _start: string; _break: number }) => {
+    if (!round._start) { showToast('Zadej čas začátku kola'); return }
+    const dur = tournament?.match_duration ?? 20
+    const brk = round._break
+    const rSlots = [...bracketSlots]
+      .filter(s => s.round_id === round.id)
+      .sort((a, b) => a.position - b.position)
+
+    // Uložit čas a pauzu do kola
+    await supabase.from('bracket_rounds')
+      .update({ scheduled_start: round._start, break_after: brk })
+      .eq('id', round.id)
+
+    // Dopočítat scheduled_time pro každý slot
+    for (let i = 0; i < rSlots.length; i++) {
+      const t = addMinutes(round._start, i * (dur + brk))
+      await supabase.from('bracket_slots').update({ scheduled_time: t }).eq('id', rSlots[i].id)
+    }
+    showToast(`Časy rozepsány pro ${rSlots.length} zápasů ✓`)
+  }
+
   const sorted = [...bracketRounds].sort((a, b) => a.position - b.position)
 
   return (
@@ -568,24 +657,20 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
       ) : sorted.map(round => {
         const rSlots = [...bracketSlots].filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
         return (
-          <div key={round.id} style={{
-            background: '#f8fafc', border: '1px solid var(--border)',
-            borderRadius: 9, padding: '.85rem .95rem', marginBottom: '.65rem',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '.65rem', marginBottom: '.3rem' }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '.06em', flex: 1 }}>{round.name}</span>
-              <span style={{ fontSize: '.68rem', color: 'var(--muted)' }}>{rSlots.length} zápasů</span>
-              <button type="button" className="btn btn-d btn-sm" onClick={() => removeRound(round.id)}>Smazat kolo</button>
-            </div>
-            {rSlots.map(slot => (
-              <SlotEditor
-                key={slot.id} slot={slot} teams={teams} players={players}
-                bracketGoals={bracketGoals} refetchBracketGoals={refetchBracketGoals}
-                showToast={showToast}
-                onSave={data => saveSlot(slot.id, data)}
-              />
-            ))}
-          </div>
+          <RoundCard
+            key={round.id}
+            round={round}
+            rSlots={rSlots}
+            teams={teams}
+            players={players}
+            bracketGoals={bracketGoals}
+            refetchBracketGoals={refetchBracketGoals}
+            showToast={showToast}
+            matchDuration={tournament?.match_duration ?? 20}
+            onSave={saveSlot}
+            onRemove={removeRound}
+            onApplyTimes={applyRoundTimes}
+          />
         )
       })}
     </div>

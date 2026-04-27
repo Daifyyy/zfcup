@@ -5,6 +5,8 @@ export interface BracketRound {
   id: string
   name: string
   position: number
+  scheduled_start: string | null
+  break_after: number | null
 }
 
 export interface BracketSlot {
