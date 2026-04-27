@@ -638,11 +638,10 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
     }}>
       {/* ── top header bar ── */}
       <div style={{
-        height: 'clamp(48px, 6vh, 72px)',
         background: C.hdr,
         borderBottom: `1px solid ${C.border}`,
         display: 'flex', alignItems: 'center',
-        padding: '0 1.5rem',
+        padding: '.6rem 1.5rem .75rem',
         gap: '1.5rem',
         flexShrink: 0,
       }}>
