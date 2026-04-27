@@ -111,8 +111,16 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
 }) {
   const [selected, setSelected] = useState('')
   const [evaluating, setEvaluating] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [done, setDone] = useState(false)
   const pts = getPoints(tipType)
+
+  // Load current evaluated state from DB on mount
+  useEffect(() => {
+    supabase.from('special_tips')
+      .select('id').eq('tip_type', tipType).eq('evaluated', true).limit(1)
+      .then(({ data }) => { if (data && data.length > 0) setDone(true) })
+  }, [tipType])
 
   const evaluate = async () => {
     if (!selected) { showToast('Vyber tým'); return }
@@ -122,6 +130,18 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
     setEvaluating(false)
     setDone(true)
     showToast(`${label} vyhodnoceno ✓`)
+  }
+
+  const resetEval = async () => {
+    if (!confirm(`Zrušit vyhodnocení "${label}"? Body za tento tip budou vymazány.`)) return
+    setResetting(true)
+    await supabase.from('special_tips')
+      .update({ evaluated: false, points_earned: 0 })
+      .eq('tip_type', tipType)
+    await recalcTipsterPoints()
+    setResetting(false)
+    setDone(false)
+    showToast('Vyhodnocení zrušeno ✓')
   }
 
   return (
@@ -135,7 +155,13 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
         <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{pts} b. za správný tip</div>
       </div>
       {done ? (
-        <span style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}>✓ Vyhodnoceno</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
+          <span style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}>✓ Vyhodnoceno</span>
+          <button type="button" className="btn btn-d btn-sm" onClick={resetEval}
+            style={{ opacity: resetting ? .6 : 1 }}>
+            {resetting ? '…' : 'Zrušit'}
+          </button>
+        </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
           <select
