@@ -64,10 +64,11 @@ function useClock() {
 }
 
 // ── Standings + Scorers column ────────────────────────────────────────────────
-function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: {
-  groups: Group[]; matches: Match[]; teams: Team[]; players: Player[]; goals: Goal[]; bracketGoals: BracketGoal[]
+function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, tournament }: {
+  groups: Group[]; matches: Match[]; teams: Team[]; players: Player[]; goals: Goal[]; bracketGoals: BracketGoal[]; tournament: Tournament | null
 }) {
   const gt = (id: string) => teams.find(t => t.id === id)
+  const isLeague = tournament?.format === 'league'
 
   // Top 3 scorers — aggregate group goals + bracket_goals
   const scorers = players
@@ -82,6 +83,13 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: 
     .sort((a, b) => b.total - a.total)
     .slice(0, 3)
 
+  // League row highlight: 1-2 = direct SF (green), 3-6 = QF (amber), 7+ = out (none)
+  const leagueRowStyle = (i: number): { bg: string; borderLeft: string; numColor: string } => {
+    if (i < 2)  return { bg: 'rgba(22,163,74,.10)',   borderLeft: '3px solid rgba(22,163,74,.6)',   numColor: '#15803d' }
+    if (i < 6)  return { bg: 'rgba(245,158,11,.10)',  borderLeft: '3px solid rgba(245,158,11,.55)', numColor: '#b45309' }
+    return        { bg: 'transparent',                borderLeft: '3px solid transparent',          numColor: C.muted }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
       {/* Group standings — each group gets equal share of available height */}
@@ -93,16 +101,28 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: 
             const rows = calcGroupStandings(group, matches)
             return (
               <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: S.section,
-                  letterSpacing: '.1em',
-                  color: C.accent,
-                  marginBottom: '.25rem',
-                  paddingBottom: '.15rem',
-                  borderBottom: `1px solid ${C.border}`,
-                }}>
-                  {group.name}
+                {/* Header */}
+                <div style={{ marginBottom: '.25rem', paddingBottom: '.18rem', borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{
+                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontSize: S.section,
+                    letterSpacing: '.1em',
+                    color: C.accent,
+                    lineHeight: 1.15,
+                  }}>
+                    {group.name}
+                    {isLeague && (
+                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: S.label, fontWeight: 400, color: C.muted, letterSpacing: 0, marginLeft: '.4em' }}>
+                        (shoda: vzáj. zápas → gól. rozdíl → vstřelené góly)
+                      </span>
+                    )}
+                  </div>
+                  {isLeague && (
+                    <div style={{ display: 'flex', gap: '.7rem', marginTop: '.18rem' }}>
+                      <span style={{ fontSize: S.label, color: '#15803d', fontWeight: 600 }}>■ 1–2 → Semifinále</span>
+                      <span style={{ fontSize: S.label, color: '#b45309', fontWeight: 600 }}>■ 3–6 → Čtvrtfinále</span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -123,14 +143,19 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: 
                   <tbody>
                     {rows.map((row, i) => {
                       const team = gt(row.id)
-                      const isTop = i === 0
+                      const ls = isLeague ? leagueRowStyle(i) : null
+                      const rowBg = ls ? ls.bg : i === 0 ? 'rgba(59,130,246,.1)' : 'transparent'
+                      const numColor = ls ? ls.numColor : C.muted
+                      const bold = isLeague ? i < 6 : i === 0
                       return (
-                        <tr key={row.id} style={{ background: isTop ? 'rgba(59,130,246,.1)' : 'transparent' }}>
-                          <td style={{ padding: '.12rem .22rem', textAlign: 'center', color: C.muted, fontSize: S.label }}>{i + 1}</td>
+                        <tr key={row.id} style={{ background: rowBg }}>
+                          <td style={{ padding: '.12rem .22rem', paddingLeft: ls ? 0 : '.22rem', textAlign: 'center', fontSize: S.label, borderLeft: ls?.borderLeft }}>
+                            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: numColor, lineHeight: 1 }}>{i + 1}</span>
+                          </td>
                           <td style={{ padding: '.12rem .22rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               {team && <TeamLogo team={team} size={16} />}
-                              <span style={{ fontSize: S.body, fontWeight: isTop ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              <span style={{ fontSize: S.body, fontWeight: bold ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {team?.name ?? row.id}
                               </span>
                             </div>
@@ -140,7 +165,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals }: 
                           ))}
                           <td style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{row.gf}:{row.ga}</td>
                           <td style={{ textAlign: 'center', padding: '.12rem .22rem' }}>
-                            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: isTop ? C.accent : C.text }}>
+                            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: numColor !== C.muted ? numColor : i === 0 ? C.accent : C.text }}>
                               {row.pts}
                             </span>
                           </td>
@@ -705,7 +730,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
         minHeight: 0,
       }}>
         <div style={{ background: C.col, borderRight: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '2px 0 8px rgba(37,99,235,.06)' }}>
-          <StandingsCol groups={groups} matches={matches} teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} />
+          <StandingsCol groups={groups} matches={matches} teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} tournament={tournament} />
         </div>
         <div style={{ background: '#f8faff', overflow: 'hidden' }}>
           <MatchesCol matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} />
