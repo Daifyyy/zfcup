@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export interface Group {
@@ -15,6 +15,7 @@ export interface Group {
 export function useGroups() {
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
+  const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
@@ -22,6 +23,7 @@ export function useGroups() {
       setGroups(data ?? [])
       setLoading(false)
     }
+    fetchRef.current = fetch
     fetch()
 
     const sub = supabase
@@ -33,5 +35,5 @@ export function useGroups() {
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])
 
-  return { groups, loading }
+  return { groups, loading, refetch: () => fetchRef.current() }
 }

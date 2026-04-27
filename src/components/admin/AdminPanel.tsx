@@ -49,6 +49,10 @@ interface Props {
   bracketSlots: BracketSlot[]
   announcements: Announcement[]
   bracketGoals: BracketGoal[]
+  refetchTournament: () => void
+  refetchTeams: () => void
+  refetchPlayers: () => void
+  refetchGroups: () => void
   refetchMatches: () => void
   refetchGoals: () => void
   refetchBracketGoals: () => void

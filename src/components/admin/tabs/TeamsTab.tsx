@@ -7,6 +7,8 @@ import { TEAM_COLORS } from '../../../lib/constants'
 interface Props {
   teams: Team[]
   players: Player[]
+  refetchTeams: () => void
+  refetchPlayers: () => void
   showToast: (msg: string) => void
 }
 
@@ -30,7 +32,7 @@ function RoleBadge({ role }: { role: string | null }) {
   return null
 }
 
-function LogoSection({ team, showToast }: { team: Team; showToast: (m: string) => void }) {
+function LogoSection({ team, showToast, refetchTeams }: { team: Team; showToast: (m: string) => void; refetchTeams: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
@@ -48,7 +50,7 @@ function LogoSection({ team, showToast }: { team: Team; showToast: (m: string) =
     const { error } = await supabase.from('teams').update({ logo_url: urlWithTs }).eq('id', team.id)
     setUploading(false)
     if (error) showToast('Chyba: ' + error.message)
-    else showToast('Logo nahráno ✓')
+    else { showToast('Logo nahráno ✓'); refetchTeams() }
   }
 
   const removeLogo = async () => {
@@ -56,6 +58,7 @@ function LogoSection({ team, showToast }: { team: Team; showToast: (m: string) =
     await supabase.storage.from('team-logos').remove([`${team.id}.png`])
     await supabase.from('teams').update({ logo_url: null }).eq('id', team.id)
     showToast('Logo odstraněno')
+    refetchTeams()
   }
 
   return (
@@ -89,7 +92,7 @@ function LogoSection({ team, showToast }: { team: Team; showToast: (m: string) =
   )
 }
 
-function RosterSection({ team, players, showToast }: { team: Team; players: Player[]; showToast: (m: string) => void }) {
+function RosterSection({ team, players, showToast, refetchPlayers }: { team: Team; players: Player[]; showToast: (m: string) => void; refetchPlayers: () => void }) {
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const roster = players.filter(p => p.team_id === team.id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -105,13 +108,14 @@ function RosterSection({ team, players, showToast }: { team: Team; players: Play
     if (error) { showToast('Chyba: ' + error.message); return }
     setName(''); setRole('')
     showToast('Hráč přidán ✓')
+    refetchPlayers()
   }
 
   const removePlayer = async (id: string) => {
     if (!confirm('Smazat hráče?')) return
     const { error } = await supabase.from('players').delete().eq('id', id)
     if (error) showToast('Chyba: ' + error.message)
-    else showToast('Smazáno')
+    else { showToast('Smazáno'); refetchPlayers() }
   }
 
   return (
@@ -153,7 +157,7 @@ function RosterSection({ team, players, showToast }: { team: Team; players: Play
   )
 }
 
-export default function TeamsTab({ teams, players, showToast }: Props) {
+export default function TeamsTab({ teams, players, refetchTeams, refetchPlayers, showToast }: Props) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(TEAM_COLORS[0])
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -166,13 +170,14 @@ export default function TeamsTab({ teams, players, showToast }: Props) {
     if (error) { showToast('Chyba: ' + error.message); return }
     setName('')
     showToast('Tým přidán ✓')
+    refetchTeams()
   }
 
   const removeTeam = async (id: string) => {
     if (!confirm('Smazat tým? Smaže se i soupiska a přiřazené zápasy.')) return
     const { error } = await supabase.from('teams').delete().eq('id', id)
     if (error) showToast('Chyba: ' + error.message)
-    else showToast('Tým smazán')
+    else { showToast('Tým smazán'); refetchTeams() }
   }
 
   const startEdit = (t: Team) => {
@@ -186,6 +191,7 @@ export default function TeamsTab({ teams, players, showToast }: Props) {
     if (error) { showToast('Chyba: ' + error.message); return }
     setEditingId(null)
     showToast('Název uložen ✓')
+    refetchTeams()
   }
 
   return (
@@ -257,8 +263,8 @@ export default function TeamsTab({ teams, players, showToast }: Props) {
                 </div>
                 {expanded && !isEditing && (
                   <div style={{ padding: '0 .9rem .75rem' }}>
-                    <LogoSection team={t} showToast={showToast} />
-                    <RosterSection team={t} players={players} showToast={showToast} />
+                    <LogoSection team={t} showToast={showToast} refetchTeams={refetchTeams} />
+                    <RosterSection team={t} players={players} showToast={showToast} refetchPlayers={refetchPlayers} />
                   </div>
                 )}
               </div>

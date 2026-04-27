@@ -4,10 +4,11 @@ import type { Tournament } from '../../../hooks/useTournament'
 
 interface Props {
   tournament: Tournament | null
+  refetchTournament: () => void
   showToast: (msg: string) => void
 }
 
-export default function SettingsTab({ tournament, showToast }: Props) {
+export default function SettingsTab({ tournament, refetchTournament, showToast }: Props) {
   const [p1, setP1] = useState('')
   const [p2, setP2] = useState('')
   const [loading, setLoading] = useState(false)
@@ -35,7 +36,7 @@ export default function SettingsTab({ tournament, showToast }: Props) {
       .update({ tips_enabled: !tournament.tips_enabled })
       .eq('id', tournament.id)
     if (error) showToast('Chyba: ' + error.message)
-    else showToast(tournament.tips_enabled ? 'Tipovačka vypnuta' : 'Tipovačka zapnuta ✓')
+    else { showToast(tournament.tips_enabled ? 'Tipovačka vypnuta' : 'Tipovačka zapnuta ✓'); refetchTournament() }
   }
 
   const toggleFormat = async () => {
@@ -43,7 +44,7 @@ export default function SettingsTab({ tournament, showToast }: Props) {
     const next = tournament.format === 'league' ? 'groups' : 'league'
     const { error } = await supabase.from('tournament').update({ format: next }).eq('id', tournament.id)
     if (error) showToast('Chyba: ' + error.message)
-    else showToast(next === 'league' ? 'Formát: Liga ✓' : 'Formát: Skupiny ✓')
+    else { showToast(next === 'league' ? 'Formát: Liga ✓' : 'Formát: Skupiny ✓'); refetchTournament() }
   }
 
   const saveLeagueParams = async () => {
@@ -55,7 +56,7 @@ export default function SettingsTab({ tournament, showToast }: Props) {
       round_break: leagueParams.round_break,
     }).eq('id', tournament.id)
     if (error) showToast('Chyba: ' + error.message)
-    else showToast('Parametry uloženy ✓')
+    else { showToast('Parametry uloženy ✓'); refetchTournament() }
   }
 
   const changePassword = async () => {

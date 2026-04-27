@@ -12,6 +12,8 @@ interface Props {
   groups: Group[]
   matches: Match[]
   tournament: Tournament | null
+  refetchGroups: () => void
+  refetchMatches: () => void
   showToast: (msg: string) => void
 }
 
@@ -52,7 +54,7 @@ function generatePairs(teamIds: string[], schedule: 'once' | 'twice') {
   return result
 }
 
-export default function GroupsTab({ teams, groups, matches, tournament, showToast }: Props) {
+export default function GroupsTab({ teams, groups, matches, tournament, refetchGroups, refetchMatches, showToast }: Props) {
   const [form, setForm] = useState<GroupForm>({
     name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_first',
     start_time: '', match_duration: '20', break_between: '5',
@@ -128,6 +130,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, showToas
       if (mErr) throw mErr
 
       showToast(`Ligový rozpis vygenerován — ${matchRows.length} zápasů ✓`)
+      refetchGroups(); refetchMatches()
     } catch (e: unknown) {
       showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
     } finally {
@@ -183,6 +186,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, showToas
 
     setForm({ name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_first', start_time: '', match_duration: '20', break_between: '5' })
     showToast(`Skupina přidána, vygenerováno ${matchRows.length} zápasů ✓`)
+    refetchGroups(); refetchMatches()
   }
 
   const removeGroup = async (g: Group) => {
@@ -192,6 +196,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, showToas
     const { error } = await supabase.from('groups').delete().eq('id', g.id)
     if (error) { showToast('Chyba: ' + error.message); return }
     showToast('Skupina smazána')
+    refetchGroups(); refetchMatches()
   }
 
   const preview = previewEnd()

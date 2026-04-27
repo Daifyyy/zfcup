@@ -38,10 +38,10 @@ export default function App() {
   const [toastShow, setToastShow] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout>>()
 
-  const { tournament } = useTournament()
-  const { teams } = useTeams()
-  const { players } = usePlayers()
-  const { groups } = useGroups()
+  const { tournament, refetch: refetchTournament } = useTournament()
+  const { teams, refetch: refetchTeams } = useTeams()
+  const { players, refetch: refetchPlayers } = usePlayers()
+  const { groups, refetch: refetchGroups } = useGroups()
   const { matches, refetch: refetchMatches } = useMatches()
   const { goals, refetch: refetchGoals } = useGoals()
   const { rounds: bracketRounds, slots: bracketSlots } = useBracket()
@@ -176,6 +176,10 @@ export default function App() {
           session={session}
           tournament={tournament}
           bracketGoals={bracketGoals}
+          refetchTournament={refetchTournament}
+          refetchTeams={refetchTeams}
+          refetchPlayers={refetchPlayers}
+          refetchGroups={refetchGroups}
           refetchMatches={refetchMatches}
           refetchGoals={refetchGoals}
           refetchBracketGoals={refetchBracketGoals}
