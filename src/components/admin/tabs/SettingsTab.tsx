@@ -195,7 +195,7 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
         <input className="field-input" type="password" value={p2} onChange={e => setP2(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && changePassword()} placeholder="Znovu nové heslo" />
       </div>
-      <button className="btn btn-s" onClick={changePassword} disabled={loading}>
+      <button type="button" className="btn btn-s" onClick={changePassword} style={{ opacity: loading ? 0.6 : 1 }}>
         {loading ? 'Ukládám…' : '🔑 Změnit heslo'}
       </button>
 

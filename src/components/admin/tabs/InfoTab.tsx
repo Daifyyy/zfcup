@@ -60,7 +60,7 @@ export default function InfoTab({ tournament, showToast }: Props) {
           style={{ resize: 'vertical', minHeight: 80, lineHeight: 1.5 }}
         />
       </div>
-      <button className="btn btn-p btn-full" onClick={save}>💾 Uložit</button>
+      <button type="button" className="btn btn-p btn-full" onClick={save}>💾 Uložit</button>
     </div>
   )
 }

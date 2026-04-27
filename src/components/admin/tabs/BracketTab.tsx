@@ -601,7 +601,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
                  <strong>≥ 11 týmů:</strong> Čtvrtfinále → Semifinále → O 3. místo + Finále</>
           }
         </div>
-        <button type="button" className="btn btn-s" onClick={generateStructure} disabled={generating}>
+        <button type="button" className="btn btn-s" onClick={generateStructure} style={{ opacity: generating ? 0.6 : 1 }}>
           {generating ? 'Vytvářím…' : '⚡ Vytvořit strukturu playoff'}
         </button>
       </div>
@@ -621,13 +621,11 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
             : <>⏳ Zápasy nejsou dohrány — odehráno <strong>{playedCount}/{groupMatches.length}</strong> zápasů.</>
           }
         </div>
-        {/* type="button" + never disabled → works on mobile touch */}
         <button
           type="button"
           className="btn btn-p"
           onClick={seedTeams}
-          disabled={generating}
-          style={{ opacity: allGroupsComplete ? 1 : 0.5 }}
+          style={{ opacity: allGroupsComplete && !generating ? 1 : 0.5 }}
         >
           {generating ? 'Nasazuji…' : '🏆 Nasadit týmy do playoff'}
         </button>

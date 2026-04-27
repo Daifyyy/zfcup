@@ -482,7 +482,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
         {/* Tab pills */}
         <div data-kiosk-ctrl style={{ display: 'flex', gap: '.6vw', flexWrap: 'nowrap' }}>
           {KIOSK_TABS.map((t, i) => (
-            <button key={t.key} onClick={e => { e.stopPropagation(); goTo(i) }} style={{
+            <button type="button" key={t.key} onClick={e => { e.stopPropagation(); goTo(i) }} style={{
               background: i === idx ? 'rgba(255,255,255,.2)' : 'transparent',
               color: i === idx ? '#fff' : 'rgba(255,255,255,.5)',
               border: `2px solid ${i === idx ? 'rgba(255,255,255,.6)' : 'rgba(255,255,255,.15)'}`,
@@ -507,7 +507,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
           {paused && (
             <span style={{ fontSize: TV.small, color: 'rgba(255,255,255,.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>⏸ Pauza</span>
           )}
-          <button onClick={e => { e.stopPropagation(); onScoreboard() }} style={{
+          <button type="button" onClick={e => { e.stopPropagation(); onScoreboard() }} style={{
             background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)',
             borderRadius: 10, color: 'rgba(255,255,255,.7)',
             fontSize: TV.small, fontWeight: 700, padding: '.5vw 1.2vw',
@@ -518,7 +518,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
           >
             📋 Tabule
           </button>
-          <button onClick={e => { e.stopPropagation(); onExit() }} style={{
+          <button type="button" onClick={e => { e.stopPropagation(); onExit() }} style={{
             background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)',
             borderRadius: 10, color: 'rgba(255,255,255,.7)',
             fontSize: TV.small, fontWeight: 700, padding: '.5vw 1.2vw',

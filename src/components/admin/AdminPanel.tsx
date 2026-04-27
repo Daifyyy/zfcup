@@ -126,11 +126,11 @@ export default function AdminPanel(props: Props) {
             {session ? 'Přihlášen' : 'Správce'}
           </span>
           {session && (
-            <button onClick={logout} className="btn btn-d btn-sm" style={{ marginRight: '.25rem' }}>
+            <button type="button" onClick={logout} className="btn btn-d btn-sm" style={{ marginRight: '.25rem' }}>
               Odhlásit
             </button>
           )}
-          <button onClick={onClose} className="btn btn-d btn-sm">✕ Zavřít</button>
+          <button type="button" onClick={onClose} className="btn btn-d btn-sm">✕ Zavřít</button>
         </div>
 
         {!session ? (
@@ -160,7 +160,7 @@ export default function AdminPanel(props: Props) {
                 placeholder="••••••••"
               />
             </div>
-            <button className="btn btn-p btn-full" onClick={login} disabled={loading}>
+            <button type="button" className="btn btn-p btn-full" onClick={login} style={{ opacity: loading ? 0.6 : 1 }}>
               {loading ? 'Přihlašuji…' : 'Přihlásit'}
             </button>
             {err && <p style={{ color: 'var(--danger)', fontSize: '.78rem' }}>{err}</p>}

@@ -263,7 +263,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
             </div>
           </div>
 
-          <button type="button" className="btn btn-p" onClick={generateLeague} disabled={leagueGenerating}>
+          <button type="button" className="btn btn-p" onClick={generateLeague} style={{ opacity: leagueGenerating ? 0.6 : 1 }}>
             {leagueGenerating ? 'Generuji…' : '⚡ Generovat ligový rozpis'}
           </button>
 
@@ -368,7 +368,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
           <input className="field-input" type="number" min="0" value={form.break_between} onChange={e => setForm(f => ({ ...f, break_between: e.target.value }))} />
         </div>
       </div>
-      <button className="btn btn-p" onClick={createGroup}>⚡ Vytvořit skupinu a generovat zápasy</button>
+      <button type="button" className="btn btn-p" onClick={createGroup}>⚡ Vytvořit skupinu a generovat zápasy</button>
 
       <hr className="divider" />
       <div className="sub-title">Existující skupiny</div>

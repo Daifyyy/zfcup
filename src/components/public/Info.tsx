@@ -61,7 +61,7 @@ export default function Info({ tournament, announcements, onTab }: Props) {
 
       {onTab && (
         <div style={{ marginTop: '1.5rem' }}>
-          <button className="btn btn-s" onClick={() => onTab('overview')}>← Zpět na přehled</button>
+          <button type="button" className="btn btn-s" onClick={() => onTab('overview')}>← Zpět na přehled</button>
         </div>
       )}
     </div>

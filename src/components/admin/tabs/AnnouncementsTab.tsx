@@ -82,8 +82,8 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
           placeholder="Podrobnější informace…" style={{ resize: 'vertical', minHeight: 64, lineHeight: 1.5 }} />
       </div>
       <div className="btn-row">
-        <button className="btn btn-p" onClick={save}>{editId ? '💾 Uložit' : '+ Přidat'}</button>
-        {editId && <button className="btn btn-d btn-sm" onClick={() => { setEditId(null); setForm({ icon: '📌', title: '', body: '' }) }}>✕ Zrušit</button>}
+        <button type="button" className="btn btn-p" onClick={save}>{editId ? '💾 Uložit' : '+ Přidat'}</button>
+        {editId && <button type="button" className="btn btn-d btn-sm" onClick={() => { setEditId(null); setForm({ icon: '📌', title: '', body: '' }) }}>✕ Zrušit</button>}
       </div>
 
       <hr className="divider" />
@@ -99,8 +99,8 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
                 <div className="a-item-main">{a.title}</div>
                 {a.body && <div className="a-item-sub">{a.body}</div>}
               </div>
-              <button className="btn btn-d btn-sm" onClick={() => edit(a)}>Upravit</button>
-              <button className="btn btn-d btn-sm" onClick={() => remove(a.id)}>Smazat</button>
+              <button type="button" className="btn btn-d btn-sm" onClick={() => edit(a)}>Upravit</button>
+              <button type="button" className="btn btn-d btn-sm" onClick={() => remove(a.id)}>Smazat</button>
             </div>
           ))}
         </div>

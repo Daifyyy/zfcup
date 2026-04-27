@@ -12,6 +12,7 @@ export function TeamLogo({ team, size = 18, radius = 4 }: Props) {
     return (
       <img
         src={team.logo_url}
+        alt=""
         onError={() => setImgError(true)}
         style={{ width: size, height: size, borderRadius: radius, objectFit: 'contain', flexShrink: 0, display: 'block' }}
       />

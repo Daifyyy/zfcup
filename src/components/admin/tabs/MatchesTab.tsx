@@ -363,7 +363,7 @@ export default function MatchesTab({ teams, players, matches, goals, groups, bra
               : `⏳ Odehráno ${groupMatches.filter(m => m.played).length}/${groupMatches.length} zápasů.`}
           </div>
           <button type="button" className="btn btn-p" onClick={seedPlayoff}
-            disabled={seeding} style={{ opacity: allGroupsComplete ? 1 : 0.5 }}>
+            style={{ opacity: allGroupsComplete && !seeding ? 1 : 0.5 }}>
             {seeding ? 'Nasazuji…' : '🏆 Nasadit týmy'}
           </button>
         </div>
