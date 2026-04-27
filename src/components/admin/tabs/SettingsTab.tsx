@@ -71,6 +71,27 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
     showToast('Heslo změněno ✓')
   }
 
+  const resetTournamentData = async () => {
+    if (!confirm('Smazat zápasy, skupiny, góly a tipy? Týmy a hráči zůstanou.')) return
+    if (!confirm('Opravdu? Tato akce je nevratná.')) return
+
+    const NULL_ID = '00000000-0000-0000-0000-000000000000'
+    // Delete in dependency order: goals/tips first, then matches/slots, then rounds/groups
+    const tables = [
+      'bracket_goals', 'goals',
+      'tips', 'bracket_tips', 'special_tips',
+      'bracket_slots', 'bracket_rounds',
+      'matches', 'groups',
+    ]
+    for (const table of tables) {
+      const { error } = await supabase.from(table).delete().neq('id', NULL_ID)
+      if (error) { showToast('Chyba (' + table + '): ' + error.message); return }
+    }
+    // Reset tipster points (keep accounts)
+    await supabase.from('tipsters').update({ total_points: 0 }).neq('id', NULL_ID)
+    showToast('Zápasy, skupiny, góly a tipy smazány ✓')
+  }
+
   const resetData = async () => {
     if (!confirm('Opravdu smazat VŠECHNA data? Tuto akci nelze vrátit!')) return
     if (!confirm('Opravdu? Poslední potvrzení — smazat vše?')) return
@@ -219,15 +240,38 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
       <hr className="divider" />
       <div className="sub-title">Nebezpečná zóna</div>
       <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
-        Smaže veškerá data turnaje nevratně. Účet Supabase Auth zůstane zachován.
+        Tyto akce jsou nevratné.
       </p>
-      <button
-        className="btn btn-d"
-        style={{ border: '1px solid var(--border)' }}
-        onClick={resetData}
-      >
-        🗑 Vymazat vše
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+        <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .9rem' }}>
+          <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>🔄 Čistý start (zachovat týmy)</div>
+          <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.55rem' }}>
+            Smaže zápasy, skupiny, góly, play-off a tipy všech uživatelů. Týmy a hráči zůstanou.
+          </div>
+          <button
+            type="button"
+            className="btn btn-d"
+            style={{ border: '1px solid rgba(217,119,6,.4)', color: '#b45309' }}
+            onClick={resetTournamentData}
+          >
+            🔄 Resetovat zápasy &amp; tipy
+          </button>
+        </div>
+        <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .9rem' }}>
+          <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>🗑 Vymazat úplně vše</div>
+          <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.55rem' }}>
+            Smaže veškerá data včetně týmů. Účet Supabase Auth zůstane zachován.
+          </div>
+          <button
+            type="button"
+            className="btn btn-d"
+            style={{ border: '1px solid var(--border)' }}
+            onClick={resetData}
+          >
+            🗑 Vymazat vše
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
