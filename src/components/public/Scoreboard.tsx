@@ -646,17 +646,28 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
         gap: '1.5rem',
         flexShrink: 0,
       }}>
-        <span style={{
-          fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: S.title,
-          letterSpacing: '.1em',
-          color: '#ffffff',
-          flex: 1, minWidth: 0,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          textShadow: '0 1px 4px rgba(0,0,0,.2)',
-        }}>
-          {tournament?.name || 'Firemní turnaj'}
-        </span>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <span style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: S.title,
+            letterSpacing: '.1em',
+            color: '#ffffff',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            textShadow: '0 1px 4px rgba(0,0,0,.2)',
+            lineHeight: 1.1,
+          }}>
+            ZF CUP 2026
+          </span>
+          <span style={{
+            fontSize: S.label,
+            color: 'rgba(255,255,255,.55)',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            letterSpacing: '.04em',
+            lineHeight: 1,
+          }}>
+            vyvinuto SmartFactory ZF Jablonec
+          </span>
+        </div>
 
         <span style={{
           fontFamily: "'Bebas Neue', sans-serif",
