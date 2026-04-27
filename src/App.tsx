@@ -150,7 +150,7 @@ export default function App() {
         {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} goals={goals} announcements={announcements} onTab={navigateTab} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} />}
-        {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} />}
+        {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
         {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} players={players} teams={teams} />}
         {tab === 'bracket'   && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
