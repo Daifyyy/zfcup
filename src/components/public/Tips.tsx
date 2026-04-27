@@ -8,6 +8,7 @@ import type { Match } from '../../hooks/useMatches'
 import type { Team } from '../../hooks/useTeams'
 import type { Group } from '../../hooks/useGroups'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
+import type { Tournament } from '../../hooks/useTournament'
 import { TeamLogo } from '../ui/TeamLogo'
 
 const STORAGE_KEY = 'zfcup_tipster_id'
@@ -18,6 +19,7 @@ interface Props {
   groups: Group[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
+  tournament: Tournament | null
   showToast: (msg: string) => void
 }
 
@@ -170,13 +172,14 @@ function Leaderboard({ tipsters, myId }: { tipsters: ReturnType<typeof useTipste
 
 // ── Special tips ───────────────────────────────────────────────────────────────
 
-function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPlayed, showToast }: {
+function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPlayed, showToast, isLeague }: {
   groups: Group[]
   teams: Team[]
   tipsterId: string
   specialTips: ReturnType<typeof useSpecialTips>['specialTips']
   anyMatchPlayed: boolean
   showToast: (m: string) => void
+  isLeague: boolean
 }) {
   // selected = what user sees in dropdowns
   // savedSelections = what's confirmed saved (updated immediately after save, not waiting for realtime)
@@ -307,9 +310,10 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
     { tipType: 'tournament_winner', label: '🏆 Vítěz turnaje', teamPool: teams, points: 10 },
     ...sortedGroups.flatMap(g => {
       const groupTeams = teams.filter(t => g.team_ids.includes(t.id))
+      const ligaGroup = isLeague && g.name === 'Liga'
       return [
-        { tipType: `group_winner:${g.id}`, label: `🥇 Vítěz skupiny ${g.name}`, teamPool: groupTeams, points: 5 },
-        { tipType: `group_last:${g.id}`, label: `⬇️ Poslední skupiny ${g.name}`, teamPool: groupTeams, points: 3 },
+        { tipType: `group_winner:${g.id}`, label: ligaGroup ? '🥇 Vítěz ligy' : `🥇 Vítěz skupiny ${g.name}`, teamPool: groupTeams, points: 5 },
+        { tipType: `group_last:${g.id}`, label: ligaGroup ? '⬇️ Poslední v lize' : `⬇️ Poslední skupiny ${g.name}`, teamPool: groupTeams, points: 3 },
       ]
     }),
   ]
@@ -346,13 +350,14 @@ function isMatchTimePassed(scheduledTime: string | null | undefined): boolean {
 
 // ── Group match tips ───────────────────────────────────────────────────────────
 
-function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToast }: {
+function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToast, isLeague }: {
   matches: Match[]
   teams: Team[]
   myTips: ReturnType<typeof useTips>['tips']
   tipsterId: string
   loading: boolean
   showToast: (m: string) => void
+  isLeague: boolean
 }) {
   const [inputs, setInputs] = useState<Record<string, { home: string; away: string }>>({})
   const [dirty, setDirty] = useState<Set<string>>(new Set())
@@ -404,13 +409,24 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
     else showToast(saved > 0 ? `${saved} tipů uloženo ✓` : 'Žádné nové tipy k uložení')
   }
 
-  const roundsMap: Record<string, Match[]> = {}
-  for (const m of matches) {
-    const r = m.round || 'Ostatní'
-    if (!roundsMap[r]) roundsMap[r] = []
-    roundsMap[r].push(m)
+  let sections: [string, Match[]][]
+  if (isLeague) {
+    const slotsMap = new Map<string, Match[]>()
+    for (const m of [...matches].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
+      const key = m.scheduled_time ?? '—'
+      if (!slotsMap.has(key)) slotsMap.set(key, [])
+      slotsMap.get(key)!.push(m)
+    }
+    sections = [...slotsMap.entries()]
+  } else {
+    const roundsMap: Record<string, Match[]> = {}
+    for (const m of matches) {
+      const r = m.round || 'Ostatní'
+      if (!roundsMap[r]) roundsMap[r] = []
+      roundsMap[r].push(m)
+    }
+    sections = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
   }
-  const rounds = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
   const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
 
@@ -422,9 +438,9 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
 
   return (
     <div style={{ marginBottom: '1.8rem' }}>
-      {rounds.map(([round, ms]) => (
-        <div key={round} style={{ marginBottom: '1rem' }}>
-          <div style={groupHeader}>{round}</div>
+      {sections.map(([label, ms]) => (
+        <div key={label} style={{ marginBottom: '1rem' }}>
+          <div style={groupHeader}>{isLeague ? `🕐 ${label}` : label}</div>
           <div className="card" style={{ overflow: 'hidden' }}>
             {ms.map((m, i) => {
               const inp = inputs[m.id] ?? { home: '', away: '' }
@@ -676,7 +692,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function Tips({ matches, teams, groups, bracketRounds, bracketSlots, showToast }: Props) {
+export default function Tips({ matches, teams, groups, bracketRounds, bracketSlots, tournament, showToast }: Props) {
   const [tipsterId, setTipsterId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY))
   const [view, setView] = useState<'tips' | 'leaderboard'>('tips')
   const { tipsters } = useTipsters()
@@ -685,6 +701,7 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
   const { specialTips } = useSpecialTips(tipsterId)
 
   const currentTipster = tipsters.find(t => t.id === tipsterId)
+  const isLeague = tournament?.format === 'league'
   const groupMatches = matches.filter(m => m.group_id !== null)
 
   const handleLogin = (id: string) => {
@@ -722,7 +739,7 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
         borderRadius: 8, border: '1px solid rgba(37,99,235,.1)',
         display: 'flex', gap: '.8rem', flexWrap: 'wrap',
       }}>
-        <span>Skupiny: <strong style={{ color: 'var(--text)' }}>3</strong> / <strong style={{ color: 'var(--text)' }}>1 b.</strong></span>
+        <span>{isLeague ? 'Liga' : 'Skupiny'}: <strong style={{ color: 'var(--text)' }}>3</strong> / <strong style={{ color: 'var(--text)' }}>1 b.</strong></span>
         <span>Playoff: <strong style={{ color: 'var(--text)' }}>5</strong> / <strong style={{ color: 'var(--text)' }}>2 b.</strong></span>
         <span>Finále: <strong style={{ color: 'var(--text)' }}>8</strong> / <strong style={{ color: 'var(--text)' }}>3 b.</strong></span>
         <span style={{ borderLeft: '1px solid var(--border)', paddingLeft: '.8rem' }}>
@@ -744,11 +761,11 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
           <SpecialTipsSection
             groups={groups} teams={teams} tipsterId={tipsterId}
             specialTips={specialTips} showToast={showToast}
-            anyMatchPlayed={matches.some(m => m.played)}
+            anyMatchPlayed={matches.some(m => m.played)} isLeague={isLeague}
           />
           <GroupTipsSection
             matches={groupMatches} teams={teams} myTips={tips}
-            tipsterId={tipsterId} loading={tipsLoading} showToast={showToast}
+            tipsterId={tipsterId} loading={tipsLoading} showToast={showToast} isLeague={isLeague}
           />
           {bracketRounds.length > 0 && (
             <BracketTipsSection
