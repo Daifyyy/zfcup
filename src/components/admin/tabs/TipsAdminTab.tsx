@@ -224,11 +224,16 @@ export default function TipsAdminTab({ showToast, teams, groups, matches }: Prop
 
   const resetAll = async () => {
     if (!confirm('Smazat všechny tipy a vynulovat body? Tuto akci nelze vrátit.')) return
-    await supabase.from('tips').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    await supabase.from('bracket_tips').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    await supabase.from('special_tips').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-    await supabase.from('tipsters').update({ total_points: 0 }).neq('id', '00000000-0000-0000-0000-000000000000')
-    showToast('Tipy resetovány')
+    const [r1, r2, r3, r4] = await Promise.all([
+      supabase.from('tips').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      supabase.from('bracket_tips').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      supabase.from('special_tips').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      supabase.from('tipsters').update({ total_points: 0 }).neq('id', '00000000-0000-0000-0000-000000000000'),
+    ])
+    const err = r1.error ?? r2.error ?? r3.error ?? r4.error
+    if (err) { showToast('Chyba reset: ' + err.message); return }
+    autoRunRef.current = false
+    showToast('Tipy resetovány ✓')
   }
 
   const deleteTipster = async (id: string, name: string) => {

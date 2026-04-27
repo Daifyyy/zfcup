@@ -187,20 +187,16 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
   const [savedSelections, setSavedSelections] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
 
-  // On DB load: populate entries not yet seen; always sync savedSelections
+  // On DB load: sync state; when specialTips empties (after reset) clear stale entries
   useEffect(() => {
     setSelected(prev => {
-      const next = { ...prev }
+      const next: Record<string, string> = {}
       for (const tip of specialTips) {
-        if (!(tip.tip_type in next)) next[tip.tip_type] = tip.predicted_team_id
+        next[tip.tip_type] = prev[tip.tip_type] ?? tip.predicted_team_id
       }
       return next
     })
-    setSavedSelections(prev => {
-      const next = { ...prev }
-      for (const tip of specialTips) next[tip.tip_type] = tip.predicted_team_id
-      return next
-    })
+    setSavedSelections(Object.fromEntries(specialTips.map(t => [t.tip_type, t.predicted_team_id])))
   }, [specialTips])
 
   const handleChange = (tipType: string, teamId: string) => {

@@ -41,7 +41,8 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `tips`: id, tipster_id (FK → tipsters), match_id (FK → matches), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, match_id)
 - `bracket_tips`: id, tipster_id (FK → tipsters), slot_id (FK → bracket_slots), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, slot_id)
 - `special_tips`: id, tipster_id (FK → tipsters), tip_type (TEXT), predicted_team_id (UUID FK → teams), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, tip_type)
-- `tournament`: obsahuje `tips_enabled BOOLEAN` — řídí viditelnost záložky Tipy
+- `tournament`: obsahuje `tips_enabled BOOLEAN` — řídí viditelnost záložky Tipy; `format TEXT DEFAULT 'groups'` (`'groups'` | `'league'`); `match_duration INT DEFAULT 20`; `halves SMALLINT DEFAULT 1`; `playoff_kickoff TEXT DEFAULT ''`; `round_break INT DEFAULT 5`
+  - SQL migrace: `ALTER TABLE tournament ADD COLUMN IF NOT EXISTS format TEXT DEFAULT 'groups', ADD COLUMN IF NOT EXISTS match_duration INT DEFAULT 20, ADD COLUMN IF NOT EXISTS halves SMALLINT DEFAULT 1, ADD COLUMN IF NOT EXISTS playoff_kickoff TEXT DEFAULT '', ADD COLUMN IF NOT EXISTS round_break INT DEFAULT 5;`
 
 ## Pravidla kódování
 - Komponenty do `src/components/`, stránky (záložky) jsou inline v App.tsx
@@ -85,7 +86,9 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `teams` — Týmy + soupisky; hráči seřazeni abecedně; zobrazení: Jméno | RoleBadge (C/B/CB) | ⚽N (jen pokud > 0)
 - `results` — Zápasy skupinových zápasů (řazené abecedně dle skupiny), zvýraznění vítěze; mobilní layout: týmy vlevo + skóre vpravo (CSS grid/flex s !important override na ≤500px)
   - **Poznámka**: záložka se jmenuje `results` (key), ale label v BottomNav i Header je **"Zápasy"** (sjednoceno s dlaždičkou na Přehledu)
-- `standings` — Tabulky skupin; **používá tiebreaker B (h2h_first)**: body → vzájemný zápas → gólový rozdíl → vstřelené góly
+- `standings` — Tabulky skupin; **používá tiebreaker B (h2h_first)**: body → vzájemný zápas → gólový rozdíl → vstřelené góly; barevné kódování dle `tournament.format`:
+  - **Liga**: řádky 0–1 zelená (→ SF), 2–5 amber (→ QF), badge sloupec vpravo s pilulkami "→ SF" / "→ QF"
+  - **Groups**: řádek 0 zelená (🥇 vítěz skupiny), řádek 1 světle modrá (možný postup)
 - `scorers` — Střelci (agregováno z goals + bracket_goals)
 - `bracket` — Play-off jako flat list zápasů oddělených koly (ne pavouk), finále zlatě; karty mají **stacked layout** (home řádek / away řádek se skóre vpravo) — responzivní na všech šířkách včetně Androidu
 - `info` — Info o turnaji + oznámení
@@ -98,13 +101,33 @@ Záložky aktivně používané při turnaji (**Zápasy, Play-off, Tipovačka**)
 
 - `info` — Metadata turnaje
 - `announcements` — CRUD oznámení
-- `teams` — Týmy + soupisky; hráči mají pole role (Kapitán/Brankář/Kapitán+Brankář/žádná); dres# odebrán z UI
-- `groups` — Skupiny + generování zápasů (circle-method)
+- `teams` — Týmy + soupisky; hráči mají pole role (Kapitán/Brankář/Kapitán+Brankář/žádná); dres# odebrán z UI; **inline editace hráče**: tlačítko ✎ u každého hráče → rozbalí input jméno + select role + ✓/✕; ukládá přes `supabase.from('players').update({name, role}).eq('id', editingId)`
+- `groups` — Skupiny + generování zápasů (circle-method); v liga módu generuje skupinu "Liga" (circle-method, 9 týmů = 36 zápasů / 18 slotů)
 - `scorers` — Read-only přehled střelců
 - `matches` — **Sjednocený inline editor**: tlačítko "✎ Upravit" rozbalí panel přímo pod zápasem se skóre (±stepery) + soupiskou obou týmů (±góly per hráč) + "💾 Uložit vše" (ukládá skóre i góly najednou). Horní formulář slouží pouze pro přidání nového zápasu.
 - `bracket` — 2-krokový flow: Step 1 = vygenerovat strukturu (vždy dostupné), Step 2 = nasadit týmy (jen pokud jsou všechny skupinové zápasy odehrané); SlotEditor má ±stepery skóre + pole Čas + BracketGoalEditor per hráč; záložka přejmenována z "Pavouk" na "Play-off"
 - `tips` — Tipovačka admin: pořadí sekcí: 1) Vyhodnocení speciálních tipů (skupiny auto, turnajový vítěz ručně), 2) Přepočet bodů, 3) Nebezpečná zóna, 4) Tipéři
 - `settings` — Nastavení (včetně toggle `tips_enabled`)
+
+## Liga formát — architektura
+
+### Přehled
+`tournament.format = 'league'` aktivuje liga mód. Jeden velký "round-robin" turnaj bez skupin (nebo s jednou skupinou "Liga"). Playoff má 2 QF + 2 SF + O3 + Finále.
+
+### Generování harmonogramu (`src/lib/leagueSchedule.ts`)
+- **Circle-method round-robin**: 9 týmů → doplnit BYE na 10 → 9 kol × 5 párů
+- **DP optimalizace slotů**: každé kolo má 5 párů → rozdělit na slotA (2 zápasy) + slotB (2 zápasy) + bye; funkce `computeSplits(pairs)` generuje všech C(4,2)=6 rozdělení; `dpOptimize(rounds)` globálně minimalizuje back-to-back přechody (cost = backToBack×1000 + longRest)
+- **Rotační loop**: zkusí všechna N rotací pole týmů, vybere rotaci s nejméně back-to-back; zastaví se při cost=0
+- **Výsledek**: 18 časových slotů; každý slot má 2 simultánní zápasy (2 hřiště)
+
+### Liga playoff (BracketTab)
+- Formát: QF(2) + SF(2) + O3 + Finále = 6 slotů
+- Nasazení (`seedTeams`): 3. vs 6. a 4. vs 5. v QF; 2. a 1. jsou předsazeni do SF (auto-advance)
+- Auto-advance QF→SF: vítěz QF1 → away_id SF1, vítěz QF2 → away_id SF2; home_id je předsazený tým
+
+### Settings (SettingsTab)
+- Toggle formátu: "Skupinový turnaj" / "Ligový turnaj"
+- V liga módu: `match_duration`, `halves`, `playoff_kickoff`, `round_break` jsou viditelné a editovatelné
 
 ## Bracket (Play-off) — architektura
 - **Krok 1** (`generateStructure`): vytvoří `bracket_rounds` + prázdné `bracket_slots` podle počtu týmů
@@ -281,6 +304,8 @@ $$ LANGUAGE plpgsql;
     - Po odehrání nebo po čase výkopu: zobrazí 🔒 + uložený tip (nebo "nezadáno")
     - Po odehrání + vyhodnocení: zobrazuje skóre + "tip: X:Y" + body badge (`+N b. ✓` / `0 b.` / `čeká…`)
     - Časový zámek se re-vyhodnocuje každou minutu (setInterval 60s uvnitř komponenty)
+    - **Liga mód** (`isLeague` prop): sekce se seskupují dle `scheduled_time` (18 slotů), ne dle kola; záhlaví sekce: `🕐 HH:MM` (čas slotu)
+  - `SpecialTipsSection` — liga mód: `ligaGroup = isLeague && g.name === 'Liga'` → zobrazí "Vítěz ligy" / "Poslední v lize" místo "Vítěz skupiny Liga"
   - `BracketTipsSection` — playoff sloty; TBD sloty nelze tipovat; po odehrání read-only s body
     - Stejný dirty tracking + loading + upsert + časový zámek (dle `s.scheduled_time`) jako GroupTipsSection
 - `src/components/admin/tabs/TipsAdminTab.tsx` — admin záložka
@@ -368,14 +393,28 @@ CSS v `src/index.css` — třídy `.match-grid`, `.match-col-time`, `.match-col-
 
 ## TV Scoreboard (Tabule) — architektura
 **2 sloupce `30% | 70%`**, `overflow: hidden` všude (žádný scroll), fluid fonty přes `clamp()`:
+- **Záhlaví**: "ZF CUP 2026" velký Bebas Neue + "vyvinuto SmartFactory ZF Jablonec" malý muted text; `padding: '.6rem 1.5rem .75rem'` (ne fixní height)
 - **Levý (30%)**: skupinové tabulky + top-3 střelců; střelci jsou `flex-shrink: 0` sekce dole → vždy viditelní; střelci agregují `goals + bracket_goals` dohromady; každá skupina má `flex: 1, minHeight: 0` → rovný podíl výšky, žádná skupina není oříznutá
+  - **Liga mód**: tabulka barevně kódovaná — řádky 0–1 zelené (→ SF), řádky 2–5 amber (→ QF); legenda v záhlaví sloupce; tiebreaker poznámka v závorce; funkce `leagueRowStyle(i)` vrací barvu pozadí + borderLeft + barvu čísla
 - **Pravý (70%)**: dynamický obsah dle fáze turnaje:
-  - **Skupinová fáze**: 2 sub-sloupce side-by-side (`repeat(N, 1fr)`) — každá skupina má svůj sloupec s názvem a zápasy; čas vlevo každého řádku (`gridTemplateColumns: 'auto 1fr auto 1fr'`)
+  - **Skupinová fáze / groups**: 2 sub-sloupce side-by-side (`repeat(N, 1fr)`) — každá skupina má svůj sloupec s názvem a zápasy; čas vlevo každého řádku (`gridTemplateColumns: 'auto 1fr auto 1fr'`)
+  - **Skupinová fáze / league**: `LeagueMatchesCol` — 18 časových slotů × 2 simultánní zápasy; každý slot je `flex: 1`; `MatchCell` zobrazí logo+jméno | VS/skóre | jméno+logo; všech 36 zápasů viditelných bez scrollu
   - **Po odehrání skupin** (`allGroupMatchesPlayed`): `PlayoffMatchesSubCol` — flat list playoff slotů per kolo s detekcí finále/3.místa
 - **Odstraněn 3. sloupec** `FlatBracketCol` — prostřední sloupec má více prostoru pro zápasy
 - **Střelci (levý sloupec)**: jméno hráče + pod ním název týmu menším fontem (`S.label`, muted barva)
 - Props: `tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit`
-- `MatchesCol` přijímá: `matches, teams, groups, bracketRounds, bracketSlots`
+- `MatchesCol` a `StandingsCol` přijímají `tournament` prop pro podmíněné renderování liga/groups
+
+## Audit — opravené bugy (2026-04-27)
+
+### Android `disabled` atribut — odstraněno ze všech tlačítek
+Dotčené soubory: `AdminPanel.tsx`, `MatchesTab.tsx`, `GroupsTab.tsx`, `BracketTab.tsx`, `SettingsTab.tsx`. Místo `disabled` se používá `style={{ opacity: condition ? 1 : 0.5 }}` + guard uvnitř onClick handleru.
+
+### `type="button"` doplněno
+Doplněno do: `AdminPanel.tsx` (login/logout/close), `AnnouncementsTab.tsx` (4 tlačítka), `GroupsTab.tsx` (createGroup), `InfoTab.tsx`, `Info.tsx`, `KioskMode.tsx`. Pravidlo: **všechna tlačítka musí mít `type="button"`** bez výjimky.
+
+### `TeamLogo` — doplněn `alt=""`
+`src/components/ui/TeamLogo.tsx` — `<img alt="">` pro sémanticky prázdné logo.
 
 ## Barvy týmů (TEAM_COLORS v src/lib/constants.ts)
 20 barev: červená, modrá, zelená, žlutá, oranžová, fialová, růžová, tmavě červená, tmavě zelená, šedá, tyrkysová, jantarová, indigo, malinová, limetková, teplá šedá, tmavě modrá, purpurová, hnědá, smaragdová.

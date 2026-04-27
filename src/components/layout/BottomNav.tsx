@@ -34,6 +34,7 @@ export default function BottomNav({ tab, onTab, tipsEnabled }: Props) {
         boxShadow: '0 -2px 16px rgba(0,0,0,.08)',
         display: 'flex',
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 6px)',
+        overflow: 'hidden',
       }}
     >
       {TABS.map(t => {
@@ -43,7 +44,7 @@ export default function BottomNav({ tab, onTab, tipsEnabled }: Props) {
             key={t.key}
             onClick={() => onTab(t.key)}
             style={{
-              flex: 1,
+              flex: 1, minWidth: 0,
               display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
               gap: '.15rem',
@@ -53,6 +54,7 @@ export default function BottomNav({ tab, onTab, tipsEnabled }: Props) {
               transition: 'color .15s',
               WebkitTapHighlightColor: 'transparent',
               position: 'relative',
+              overflow: 'hidden',
             }}
           >
             {active && (
@@ -67,8 +69,10 @@ export default function BottomNav({ tab, onTab, tipsEnabled }: Props) {
             <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>{t.icon}</span>
             <span style={{
               fontSize: '.58rem', fontWeight: active ? 700 : 500,
-              textTransform: 'uppercase', letterSpacing: '.05em',
+              textTransform: 'uppercase', letterSpacing: '.04em',
               lineHeight: 1,
+              width: '100%', textAlign: 'center',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {t.label}
             </span>
