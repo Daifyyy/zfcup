@@ -172,12 +172,13 @@ function Leaderboard({ tipsters, myId }: { tipsters: ReturnType<typeof useTipste
 
 // ── Special tips ───────────────────────────────────────────────────────────────
 
-function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPlayed, showToast, isLeague }: {
+function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPlayed, anyPlayoffPlayed, showToast, isLeague }: {
   groups: Group[]
   teams: Team[]
   tipsterId: string
   specialTips: ReturnType<typeof useSpecialTips>['specialTips']
   anyMatchPlayed: boolean
+  anyPlayoffPlayed: boolean
   showToast: (m: string) => void
   isLeague: boolean
 }) {
@@ -230,6 +231,8 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
     const savedVal = savedSelections[tipType] ?? ''
     const changed = currentVal !== savedVal && currentVal !== ''
     const borderStyle = isLast ? 'none' : '1px solid var(--border)'
+    // tournament_winner locks when first playoff match played; group tips lock when first group match played
+    const isLocked = tipType === 'tournament_winner' ? anyPlayoffPlayed : anyMatchPlayed
 
     if (isEvaluated) {
       return (
@@ -254,7 +257,7 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
       )
     }
 
-    if (anyMatchPlayed) {
+    if (isLocked) {
       // Locked — show saved selection read-only
       return (
         <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: borderStyle, opacity: .75 }}>
@@ -303,13 +306,13 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
   }
 
   const rows: { tipType: string; label: string; teamPool: Team[]; points: number }[] = [
-    { tipType: 'tournament_winner', label: '🏆 Vítěz turnaje', teamPool: teams, points: 10 },
+    { tipType: 'tournament_winner', label: '🏆 Vítěz turnaje (vč. playoff)', teamPool: teams, points: 10 },
     ...sortedGroups.flatMap(g => {
       const groupTeams = teams.filter(t => g.team_ids.includes(t.id))
       const ligaGroup = isLeague && g.name === 'Liga'
       return [
-        { tipType: `group_winner:${g.id}`, label: ligaGroup ? '🥇 Vítěz ligy' : `🥇 Vítěz skupiny ${g.name}`, teamPool: groupTeams, points: 5 },
-        { tipType: `group_last:${g.id}`, label: ligaGroup ? '⬇️ Poslední v lize' : `⬇️ Poslední skupiny ${g.name}`, teamPool: groupTeams, points: 3 },
+        { tipType: `group_winner:${g.id}`, label: ligaGroup ? '🥇 Vítěz ligové fáze' : `🥇 Vítěz skupiny ${g.name}`, teamPool: groupTeams, points: 5 },
+        { tipType: `group_last:${g.id}`, label: ligaGroup ? '⬇️ Poslední v ligové fázi' : `⬇️ Poslední skupiny ${g.name}`, teamPool: groupTeams, points: 3 },
       ]
     }),
   ]
@@ -317,9 +320,14 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
   return (
     <div style={{ marginBottom: '1.8rem' }}>
       <div style={groupHeader}>Speciální tipy</div>
-      {anyMatchPlayed && (
+      {anyMatchPlayed && !anyPlayoffPlayed && (
         <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.5rem', padding: '.3rem .8rem', background: 'rgba(0,0,0,.03)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-          🔒 Speciální tipy jsou uzamčeny — turnaj již probíhá.
+          🔒 Skupinové tipy jsou uzamčeny. Tip na vítěze turnaje lze stále změnit (zamkne se se začátkem play-off).
+        </div>
+      )}
+      {anyPlayoffPlayed && (
+        <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.5rem', padding: '.3rem .8rem', background: 'rgba(0,0,0,.03)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+          🔒 Všechny speciální tipy jsou uzamčeny.
         </div>
       )}
       <div className="card" style={{ overflow: 'hidden', marginBottom: '.3rem' }}>
@@ -327,7 +335,7 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
       </div>
       {!anyMatchPlayed && (
         <div style={{ fontSize: '.67rem', color: 'var(--muted)', padding: '0 .2rem' }}>
-          Speciální tipy se uzamknou po odehrání prvního zápasu.
+          Skupinové tipy se uzamknou po prvním zápase. Vítěz turnaje se zamkne se začátkem play-off.
         </div>
       )}
     </div>
@@ -764,7 +772,9 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
           <SpecialTipsSection
             groups={groups} teams={teams} tipsterId={tipsterId}
             specialTips={specialTips} showToast={showToast}
-            anyMatchPlayed={groupMatches.some(m => m.played)} isLeague={isLeague}
+            anyMatchPlayed={groupMatches.some(m => m.played)}
+            anyPlayoffPlayed={bracketSlots.some(s => s.played)}
+            isLeague={isLeague}
           />
           <GroupTipsSection
             matches={groupMatches} teams={teams} myTips={tips}

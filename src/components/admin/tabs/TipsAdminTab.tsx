@@ -261,6 +261,7 @@ export default function TipsAdminTab({ showToast, teams, groups, matches }: Prop
         {sortedGroups.map(g => {
           const status = groupStatus[g.id] ?? 'pending'
           const info = groupWinners[g.id]
+          const isLiga = g.name === 'Liga'
           return (
             <div key={g.id} style={{
               display: 'flex', alignItems: 'center', gap: '.6rem',
@@ -268,7 +269,7 @@ export default function TipsAdminTab({ showToast, teams, groups, matches }: Prop
               background: status === 'done' ? 'rgba(22,163,74,.04)' : 'transparent',
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '.8rem', fontWeight: 600 }}>Skupina {g.name}</div>
+                <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{isLiga ? 'Ligová fáze' : `Skupina ${g.name}`}</div>
                 <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>
                   🥇 vítěz 5 b. &nbsp;·&nbsp; ⬇️ poslední 3 b.
                 </div>
