@@ -137,43 +137,63 @@ function InlineMatchEditor({
     </div>
   )
 
+  const scoreBtn = (variant: 'minus' | 'plus') => ({
+    width: 36, height: 36, borderRadius: 7, cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700,
+    border: variant === 'plus' ? '1px solid var(--accent)' : '1px solid var(--border)',
+    background: variant === 'plus' ? 'var(--accent-dim)' : '#f8fafc',
+    color: variant === 'plus' ? 'var(--accent)' : 'var(--muted)',
+    flexShrink: 0,
+  } as React.CSSProperties)
+
   return (
     <div style={{ padding: '.75rem .85rem .85rem', borderTop: '2px solid rgba(37,99,235,.15)', background: 'var(--accent-dim)' }}>
 
-      {/* Skóre */}
-      <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.65rem' }}>
+      {/* Skóre — každý tým na vlastním řádku */}
+      <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.55rem' }}>
         📝 Skóre zápasu
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '.65rem', flexWrap: 'wrap' }}>
-        {/* Domácí skóre */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)', minWidth: 60 }}>{ht?.name ?? '—'}</span>
-          <button type="button" onClick={() => changeScore('home', -1)}
-            style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
-          <span style={{ width: 36, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', color: 'var(--accent)' }}>{homeScore}</span>
-          <button type="button" onClick={() => changeScore('home', +1)}
-            style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: 'var(--accent)' }}>+</button>
+
+      {/* Domácí */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem', marginBottom: '.3rem' }}>
+        <span className="team-dot" style={{ background: ht?.color ?? '#94a3b8', flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: '.84rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+          {ht?.name ?? '—'}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <button type="button" style={scoreBtn('minus')} onClick={() => changeScore('home', -1)}>−</button>
+          <span style={{ width: 38, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>
+            {homeScore}
+          </span>
+          <button type="button" style={scoreBtn('plus')} onClick={() => changeScore('home', +1)}>+</button>
         </div>
-        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', color: 'var(--muted)' }}>:</span>
-        {/* Hostující skóre */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-          <button type="button" onClick={() => changeScore('away', -1)}
-            style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
-          <span style={{ width: 36, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', color: 'var(--accent)' }}>{awayScore}</span>
-          <button type="button" onClick={() => changeScore('away', +1)}
-            style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', cursor: 'pointer', fontSize: '1rem', fontWeight: 700, color: 'var(--accent)' }}>+</button>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)', minWidth: 60 }}>{at?.name ?? '—'}</span>
+      </div>
+
+      {/* Hostující */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem', marginBottom: '.6rem' }}>
+        <span className="team-dot" style={{ background: at?.color ?? '#94a3b8', flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: '.84rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+          {at?.name ?? '—'}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <button type="button" style={scoreBtn('minus')} onClick={() => changeScore('away', -1)}>−</button>
+          <span style={{ width: 38, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>
+            {awayScore}
+          </span>
+          <button type="button" style={scoreBtn('plus')} onClick={() => changeScore('away', +1)}>+</button>
         </div>
-        {/* Odehrán + čas */}
-        <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.8rem', marginLeft: '.4rem' }}>
+      </div>
+
+      {/* Odehrán + čas — jeden řádek */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '.65rem', flexWrap: 'wrap' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.82rem' }}>
           <input type="checkbox" checked={played} onChange={e => setPlayed(e.target.checked)}
-            style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
+            style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
           Odehrán {played && <span style={{ color: 'var(--success)' }}>✓</span>}
         </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>Čas:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>🕐</span>
           <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
-            style={{ fontSize: '.8rem', padding: '.22rem .4rem', border: '1px solid var(--border)', borderRadius: 5 }} />
+            style={{ fontSize: '.82rem', padding: '.25rem .45rem', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }} />
         </div>
       </div>
 
