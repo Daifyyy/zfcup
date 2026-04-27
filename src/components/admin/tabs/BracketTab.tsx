@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { calcGroupStandings } from '../../../lib/standings'
 import { addMinutes } from '../../../lib/constants'
@@ -18,110 +18,13 @@ interface Props {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   bracketGoals: BracketGoal[]
+  refetchBracket: () => void
   refetchBracketGoals: () => void
   tournament: Tournament | null
   showToast: (msg: string) => void
 }
 
-// ── Bracket Goal Editor ───────────────────────────────────────────────────────
-function BracketGoalEditor({
-  slot, teams, players, bracketGoals, showToast, onClose, refetchBracketGoals,
-}: {
-  slot: BracketSlot
-  teams: Team[]
-  players: Player[]
-  bracketGoals: BracketGoal[]
-  showToast: (m: string) => void
-  onClose: () => void
-  refetchBracketGoals: () => void
-}) {
-  const homePlayers = players.filter(p => p.team_id === slot.home_id)
-  const awayPlayers = players.filter(p => p.team_id === slot.away_id)
-  const allPlayers = [...homePlayers, ...awayPlayers]
-
-  const initCounts = () => {
-    const c: Record<string, number> = {}
-    for (const p of allPlayers) {
-      const g = bracketGoals.find(g => g.player_id === p.id && g.slot_id === slot.id)
-      c[p.id] = g?.count ?? 0
-    }
-    return c
-  }
-  const [counts, setCounts] = useState<Record<string, number>>(initCounts)
-
-  const change = (pid: string, delta: number) =>
-    setCounts(c => ({ ...c, [pid]: Math.max(0, (c[pid] ?? 0) + delta) }))
-
-  const saveGoals = async () => {
-    for (const [player_id, count] of Object.entries(counts)) {
-      if (count > 0) {
-        const { error } = await supabase.from('bracket_goals').upsert(
-          { player_id, slot_id: slot.id, count },
-          { onConflict: 'player_id,slot_id' }
-        )
-        if (error) { showToast('Chyba: ' + error.message); return }
-      } else {
-        await supabase.from('bracket_goals').delete().match({ player_id, slot_id: slot.id })
-      }
-    }
-    refetchBracketGoals()
-    showToast('Góly uloženy ✓')
-    onClose()
-  }
-
-  const ht = teams.find(t => t.id === slot.home_id)
-  const at = teams.find(t => t.id === slot.away_id)
-
-  const PlayerRow = ({ p, color }: { p: Player; color: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.4rem 0', borderBottom: '1px solid var(--border)' }}>
-      <span className="team-dot" style={{ background: color }} />
-      <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <button type="button" onClick={() => change(p.id, -1)}
-          style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
-        <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: counts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
-          {counts[p.id] ?? 0}
-        </span>
-        <button type="button" onClick={() => change(p.id, +1)}
-          style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}>+</button>
-      </div>
-    </div>
-  )
-
-  return (
-    <div style={{ marginTop: '.75rem', padding: '.85rem', background: 'var(--accent-dim)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 9 }}>
-      <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.65rem' }}>
-        ⚽ Góly hráčů
-      </div>
-      {allPlayers.length === 0 ? (
-        <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.65rem' }}>
-          Hráči nejsou zadáni. Přidej je v záložce Týmy → Soupiska.
-        </p>
-      ) : (
-        <div style={{ marginBottom: '.75rem' }}>
-          {ht && homePlayers.length > 0 && (
-            <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: '.4rem', marginBottom: '.2rem', display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span className="team-dot" style={{ background: ht.color }} />{ht.name}
-            </div>
-          )}
-          {homePlayers.map(p => <PlayerRow key={p.id} p={p} color={ht?.color ?? '#94a3b8'} />)}
-          {at && awayPlayers.length > 0 && (
-            <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: '.6rem', marginBottom: '.2rem', display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span className="team-dot" style={{ background: at.color }} />{at.name}
-            </div>
-          )}
-          {awayPlayers.map(p => <PlayerRow key={p.id} p={p} color={at?.color ?? '#94a3b8'} />)}
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: '.4rem' }}>
-        <button type="button" className="btn btn-p btn-sm" onClick={saveGoals}>💾 Uložit góly</button>
-        <button type="button" className="btn btn-d btn-sm" onClick={onClose}>Zavřít</button>
-      </div>
-    </div>
-  )
-}
-
-// ── Slot Editor ───────────────────────────────────────────────────────────────
+// ── Slot Editor (skóre + góly v jednom panelu, stejný layout jako MatchesTab) ──
 function SlotEditor({
   slot, teams, players, bracketGoals, refetchBracketGoals, showToast, onSave,
 }: {
@@ -131,10 +34,28 @@ function SlotEditor({
   bracketGoals: BracketGoal[]
   refetchBracketGoals: () => void
   showToast: (m: string) => void
-  onSave: (data: Partial<BracketSlot>) => void
+  onSave: (data: Partial<BracketSlot>) => Promise<void>
 }) {
   const [s, setS] = useState({ ...slot, scheduled_time: slot.scheduled_time ?? '' })
-  const [goalOpen, setGoalOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const homePlayers = players.filter(p => p.team_id === s.home_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+  const awayPlayers = players.filter(p => p.team_id === s.away_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+
+  const buildCounts = (homeId: string | null, awayId: string | null) => {
+    const c: Record<string, number> = {}
+    for (const p of [...players.filter(p => p.team_id === homeId), ...players.filter(p => p.team_id === awayId)]) {
+      const g = bracketGoals.find(g => g.player_id === p.id && g.slot_id === slot.id)
+      c[p.id] = g?.count ?? 0
+    }
+    return c
+  }
+  const [counts, setCounts] = useState<Record<string, number>>(() => buildCounts(slot.home_id, slot.away_id))
+
+  // Re-init counts when teams change
+  useEffect(() => {
+    setCounts(buildCounts(s.home_id, s.away_id))
+  }, [s.home_id, s.away_id, slot.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const changeScore = (k: 'home_score' | 'away_score', delta: number) => {
     setS(x => {
@@ -142,12 +63,63 @@ function SlotEditor({
       return { ...x, [k]: next, played: next > 0 ? true : x.played }
     })
   }
+  const changeGoal = (pid: string, delta: number) =>
+    setCounts(c => ({ ...c, [pid]: Math.max(0, (c[pid] ?? 0) + delta) }))
 
   const ht = teams.find(t => t.id === s.home_id)
   const at = teams.find(t => t.id === s.away_id)
 
-  const btnMinus = { width: 32, height: 32, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', fontSize: '1rem', fontWeight: 700, color: 'var(--muted)', cursor: 'pointer' } as const
-  const btnPlus  = { width: 32, height: 32, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '1rem', fontWeight: 700, color: 'var(--accent)', cursor: 'pointer' } as const
+  const scoreBtn = (variant: 'minus' | 'plus') => ({
+    width: 36, height: 36, borderRadius: 7, cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700,
+    border: variant === 'plus' ? '1px solid var(--accent)' : '1px solid var(--border)',
+    background: variant === 'plus' ? 'var(--accent-dim)' : '#f8fafc',
+    color: variant === 'plus' ? 'var(--accent)' : 'var(--muted)',
+    flexShrink: 0,
+  } as React.CSSProperties)
+
+  const saveAll = async () => {
+    setSaving(true)
+    // 1) Save goals
+    const allPlayers = [...homePlayers, ...awayPlayers]
+    for (const p of allPlayers) {
+      const count = counts[p.id] ?? 0
+      if (count > 0) {
+        const { error } = await supabase.from('bracket_goals').upsert(
+          { player_id: p.id, slot_id: slot.id, count },
+          { onConflict: 'player_id,slot_id' }
+        )
+        if (error) { showToast('Chyba gólů: ' + error.message); setSaving(false); return }
+      } else {
+        await supabase.from('bracket_goals').delete().match({ player_id: p.id, slot_id: slot.id })
+      }
+    }
+    refetchBracketGoals()
+    // 2) Save slot + auto-advance (shows toast)
+    const autoPlayed = s.played || s.home_score > 0 || s.away_score > 0
+    await onSave({
+      home_id: s.home_id, away_id: s.away_id,
+      home_score: s.home_score, away_score: s.away_score,
+      played: autoPlayed,
+      scheduled_time: s.scheduled_time || null,
+    })
+    setSaving(false)
+  }
+
+  const PlayerRow = ({ p, color }: { p: Player; color: string }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.38rem 0', borderBottom: '1px solid var(--border)' }}>
+      <span className="team-dot" style={{ background: color }} />
+      <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <button type="button" onClick={() => changeGoal(p.id, -1)}
+          style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
+        <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: (counts[p.id] ?? 0) > 0 ? 'var(--accent)' : 'var(--muted)' }}>
+          {counts[p.id] ?? 0}
+        </span>
+        <button type="button" onClick={() => changeGoal(p.id, +1)}
+          style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}>+</button>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ padding: '.75rem .85rem .85rem', marginTop: '.55rem', borderTop: '2px solid rgba(37,99,235,.15)', background: 'var(--accent-dim)', borderRadius: '0 0 8px 8px' }}>
@@ -169,62 +141,69 @@ function SlotEditor({
         </select>
       </div>
 
-      {/* Skóre — stejný layout jako InlineMatchEditor */}
-      <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem' }}>
+      {/* Skóre — každý tým na vlastním řádku */}
+      <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.55rem' }}>
         📝 Skóre zápasu
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '.65rem', flexWrap: 'wrap' }}>
-        {/* Domácí */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)', minWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {ht?.name ?? 'TBD'}
-          </span>
-          <button type="button" onClick={() => changeScore('home_score', -1)} style={btnMinus}>−</button>
-          <span style={{ width: 36, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', color: 'var(--accent)' }}>{s.home_score}</span>
-          <button type="button" onClick={() => changeScore('home_score', +1)} style={btnPlus}>+</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem', marginBottom: '.3rem' }}>
+        <span className="team-dot" style={{ background: ht?.color ?? '#94a3b8', flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: '.84rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+          {ht?.name ?? 'TBD'}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <button type="button" style={scoreBtn('minus')} onClick={() => changeScore('home_score', -1)}>−</button>
+          <span style={{ width: 38, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>{s.home_score}</span>
+          <button type="button" style={scoreBtn('plus')} onClick={() => changeScore('home_score', +1)}>+</button>
         </div>
-        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', color: 'var(--muted)' }}>:</span>
-        {/* Hostující */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-          <button type="button" onClick={() => changeScore('away_score', -1)} style={btnMinus}>−</button>
-          <span style={{ width: 36, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.5rem', color: 'var(--accent)' }}>{s.away_score}</span>
-          <button type="button" onClick={() => changeScore('away_score', +1)} style={btnPlus}>+</button>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)', minWidth: 56, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {at?.name ?? 'TBD'}
-          </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem', marginBottom: '.6rem' }}>
+        <span className="team-dot" style={{ background: at?.color ?? '#94a3b8', flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: '.84rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+          {at?.name ?? 'TBD'}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <button type="button" style={scoreBtn('minus')} onClick={() => changeScore('away_score', -1)}>−</button>
+          <span style={{ width: 38, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>{s.away_score}</span>
+          <button type="button" style={scoreBtn('plus')} onClick={() => changeScore('away_score', +1)}>+</button>
         </div>
-        {/* Odehrán + čas */}
-        <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.8rem', marginLeft: '.2rem' }}>
+      </div>
+
+      {/* Odehrán + čas */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '.65rem', flexWrap: 'wrap' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.82rem' }}>
           <input type="checkbox" checked={s.played} onChange={e => setS(x => ({ ...x, played: e.target.checked }))}
-            style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
+            style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
           Odehrán {s.played && <span style={{ color: 'var(--success)' }}>✓</span>}
         </label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>Čas:</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>🕐</span>
           <input type="time" value={s.scheduled_time} onChange={e => setS(x => ({ ...x, scheduled_time: e.target.value }))}
-            style={{ fontSize: '.8rem', padding: '.22rem .4rem', border: '1px solid var(--border)', borderRadius: 5 }} />
+            style={{ fontSize: '.82rem', padding: '.25rem .45rem', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }} />
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginBottom: '.3rem' }}>
-        <button type="button" className="btn btn-p btn-sm" onClick={() => onSave({
-          home_id: s.home_id, away_id: s.away_id,
-          home_score: s.home_score, away_score: s.away_score, played: s.played,
-          scheduled_time: s.scheduled_time || null,
-        })}>💾 Uložit</button>
-        <button type="button" className="btn btn-s btn-sm" onClick={() => setGoalOpen(o => !o)}>
-          {goalOpen ? '✕ Zavřít góly' : '⚽ Góly'}
-        </button>
-      </div>
-
-      {goalOpen && (
-        <BracketGoalEditor
-          slot={slot} teams={teams} players={players}
-          bracketGoals={bracketGoals} showToast={showToast}
-          onClose={() => setGoalOpen(false)}
-          refetchBracketGoals={refetchBracketGoals}
-        />
+      {/* Góly hráčů — inline */}
+      {(homePlayers.length > 0 || awayPlayers.length > 0) && (
+        <div style={{ marginBottom: '.75rem' }}>
+          <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.45rem' }}>⚽ Góly hráčů</div>
+          {ht && homePlayers.length > 0 && (
+            <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.2rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span className="team-dot" style={{ background: ht.color }} />{ht.name}
+            </div>
+          )}
+          {homePlayers.map(p => <PlayerRow key={p.id} p={p} color={ht?.color ?? '#94a3b8'} />)}
+          {at && awayPlayers.length > 0 && (
+            <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: '.5rem', marginBottom: '.2rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span className="team-dot" style={{ background: at.color }} />{at.name}
+            </div>
+          )}
+          {awayPlayers.map(p => <PlayerRow key={p.id} p={p} color={at?.color ?? '#94a3b8'} />)}
+        </div>
       )}
+
+      <button type="button" className="btn btn-p btn-sm" onClick={saveAll} style={{ opacity: saving ? 0.6 : 1 }}>
+        {saving ? 'Ukládám…' : '💾 Uložit vše'}
+      </button>
     </div>
   )
 }
@@ -242,7 +221,7 @@ function RoundCard({
   refetchBracketGoals: () => void
   showToast: (m: string) => void
   matchDuration: number
-  onSave: (slotId: string, data: Partial<BracketSlot>) => void
+  onSave: (slotId: string, data: Partial<BracketSlot>) => Promise<void>
   onRemove: (id: string) => void
   onApplyTimes: (r: BracketRound & { _start: string; _break: number }) => void
 }) {
@@ -289,7 +268,7 @@ function RoundCard({
           key={slot.id} slot={slot} teams={teams} players={players}
           bracketGoals={bracketGoals} refetchBracketGoals={refetchBracketGoals}
           showToast={showToast}
-          onSave={data => onSave(slot.id, data)}
+          onSave={data => onSave(slot.id, data) as Promise<void>}
         />
       ))}
     </div>
@@ -297,7 +276,7 @@ function RoundCard({
 }
 
 // ── Main BracketTab ───────────────────────────────────────────────────────────
-export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, refetchBracketGoals, tournament, showToast }: Props) {
+export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, refetchBracket, refetchBracketGoals, tournament, showToast }: Props) {
   const [name, setName] = useState('')
   const [slotCount, setSlotCount] = useState('2')
   const [generating, setGenerating] = useState(false)
@@ -454,6 +433,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         }
       }
 
+      refetchBracket()
       showToast('Týmy nasazeny do playoff ✓')
     } catch (e: unknown) {
       showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
@@ -491,7 +471,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     else showToast('Kolo smazáno')
   }
 
-  const saveSlot = async (slotId: string, data: Partial<BracketSlot>) => {
+  const saveSlot = async (slotId: string, data: Partial<BracketSlot>): Promise<void> => {
     const payload = { ...data, scheduled_time: data.scheduled_time ?? null }
     const { error } = await supabase.from('bracket_slots').update(payload).eq('id', slotId)
     if (error) { showToast('Chyba: ' + error.message); return }
@@ -499,14 +479,14 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     // ── Auto-advance winner to next round ──────────────────────────────
     const isDecisive = data.played && data.home_score !== data.away_score
     const hasBothTeams = data.home_id && data.away_id
-    if (!isDecisive || !hasBothTeams) { showToast('Uloženo ✓'); return }
+    if (!isDecisive || !hasBothTeams) { refetchBracket(); showToast('Uloženo ✓'); return }
 
     const slot = bracketSlots.find(s => s.id === slotId)
     const currentRound = slot ? bracketRounds.find(r => r.id === slot.round_id) : null
-    if (!slot || !currentRound) { showToast('Uloženo ✓'); return }
+    if (!slot || !currentRound) { refetchBracket(); showToast('Uloženo ✓'); return }
 
     const maxPos = Math.max(...bracketRounds.map(r => r.position))
-    if (currentRound.position >= maxPos - 1) { showToast('Uloženo ✓'); return }
+    if (currentRound.position >= maxPos - 1) { refetchBracket(); showToast('Uloženo ✓'); return }
 
     const homeWins = (data.home_score ?? 0) > (data.away_score ?? 0)
     const winner = homeWins ? data.home_id! : data.away_id!
@@ -526,10 +506,12 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         const targetSlot = sfSlots[slot.position]
         if (targetSlot) {
           await supabase.from('bracket_slots').update({ away_id: winner }).eq('id', targetSlot.id)
+          refetchBracket()
           showToast('Uloženo ✓ — vítěz postoupil do semifinále')
           return
         }
       }
+      refetchBracket()
       showToast('Uloženo ✓')
       return
     }
@@ -547,17 +529,20 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
       if (thirdSlot)
         ops.push(supabase.from('bracket_slots').update({ [field]: loser }).eq('id', thirdSlot.id))
       await Promise.all(ops)
+      refetchBracket()
       showToast('Uloženo ✓ — vítěz postoupil do finále')
     } else {
       const nextRound = bracketRounds.find(r => r.position === currentRound.position + 1)
-      if (!nextRound) { showToast('Uloženo ✓'); return }
+      if (!nextRound) { refetchBracket(); showToast('Uloženo ✓'); return }
       const nextSlots = slotsOf(nextRound.id)
       const targetSlot = nextSlots[Math.floor(slot.position / 2)]
       const field = isEven ? 'home_id' : 'away_id'
       if (targetSlot) {
         await supabase.from('bracket_slots').update({ [field]: winner }).eq('id', targetSlot.id)
+        refetchBracket()
         showToast('Uloženo ✓ — vítěz postoupil dál')
       } else {
+        refetchBracket()
         showToast('Uloženo ✓')
       }
     }

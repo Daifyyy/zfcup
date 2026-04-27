@@ -336,8 +336,13 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
 
 // ── Time-lock helper ──────────────────────────────────────────────────────────
 
-function isMatchTimePassed(scheduledTime: string | null | undefined): boolean {
+function isMatchTimePassed(scheduledTime: string | null | undefined, lockFromDate?: string): boolean {
   if (!scheduledTime) return false
+  // If a lock date is set, only lock on or after that date
+  if (lockFromDate) {
+    const today = new Date().toISOString().slice(0, 10)
+    if (today < lockFromDate) return false
+  }
   const now = new Date()
   const [hh, mm] = scheduledTime.split(':').map(Number)
   if (isNaN(hh) || isNaN(mm)) return false
@@ -346,11 +351,12 @@ function isMatchTimePassed(scheduledTime: string | null | undefined): boolean {
 
 // ── Group match tips ───────────────────────────────────────────────────────────
 
-function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToast, isLeague }: {
+function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToast, isLeague, lockFromDate }: {
   matches: Match[]
   teams: Team[]
   myTips: ReturnType<typeof useTips>['tips']
   tipsterId: string
+  lockFromDate?: string
   loading: boolean
   showToast: (m: string) => void
   isLeague: boolean
@@ -387,7 +393,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
     let saved = 0, failed = 0
     for (const m of matches) {
       // Zamknout odehrané i časově uzavřené zápasy
-      if (m.played || isMatchTimePassed(m.scheduled_time)) continue
+      if (m.played || isMatchTimePassed(m.scheduled_time, lockFromDate)) continue
       const inp = inputs[m.id]
       if (!inp || inp.home === '' || inp.away === '') continue
       const h = parseInt(inp.home), a = parseInt(inp.away)
@@ -443,7 +449,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
               const tip = myTips.find(t => t.match_id === m.id)
               const hw = m.played && m.home_score > m.away_score
               const aw = m.played && m.away_score > m.home_score
-              const timeLocked = !m.played && isMatchTimePassed(m.scheduled_time)
+              const timeLocked = !m.played && isMatchTimePassed(m.scheduled_time, lockFromDate)
               const isLocked = m.played || timeLocked
               return (
                 <div key={m.id} style={{
@@ -520,7 +526,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
 
 // ── Bracket tips ───────────────────────────────────────────────────────────────
 
-function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, tipsterId, loading, showToast }: {
+function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, tipsterId, loading, showToast, lockFromDate }: {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   teams: Team[]
@@ -528,6 +534,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
   tipsterId: string
   loading: boolean
   showToast: (m: string) => void
+  lockFromDate?: string
 }) {
   const [inputs, setInputs] = useState<Record<string, { home: string; away: string }>>({})
   const [dirty, setDirty] = useState<Set<string>>(new Set())
@@ -556,7 +563,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
     for (const s of bracketSlots) {
       if (s.played || !s.home_id || !s.away_id) continue
       // Zamknout i časově uzavřené playoff sloty
-      if (isMatchTimePassed(s.scheduled_time)) continue
+      if (isMatchTimePassed(s.scheduled_time, lockFromDate)) continue
       const inp = inputs[s.id]
       if (!inp || inp.home === '' || inp.away === '') continue
       const h = parseInt(inp.home), a = parseInt(inp.away)
@@ -604,7 +611,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                 const tip = bracketTips.find(t => t.slot_id === s.id)
                 const hw = s.played && s.home_score > s.away_score
                 const aw = s.played && s.away_score > s.home_score
-                const timeLocked = !!s.home_id && !!s.away_id && !s.played && isMatchTimePassed(s.scheduled_time)
+                const timeLocked = !!s.home_id && !!s.away_id && !s.played && isMatchTimePassed(s.scheduled_time, lockFromDate)
                 const canTip = !!s.home_id && !!s.away_id && !s.played && !timeLocked
 
                 return (
@@ -757,16 +764,18 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
           <SpecialTipsSection
             groups={groups} teams={teams} tipsterId={tipsterId}
             specialTips={specialTips} showToast={showToast}
-            anyMatchPlayed={matches.some(m => m.played)} isLeague={isLeague}
+            anyMatchPlayed={groupMatches.some(m => m.played)} isLeague={isLeague}
           />
           <GroupTipsSection
             matches={groupMatches} teams={teams} myTips={tips}
             tipsterId={tipsterId} loading={tipsLoading} showToast={showToast} isLeague={isLeague}
+            lockFromDate={tournament?.tips_lock_from || undefined}
           />
           {bracketRounds.length > 0 && (
             <BracketTipsSection
               bracketRounds={bracketRounds} bracketSlots={bracketSlots} teams={teams}
               bracketTips={bracketTips} tipsterId={tipsterId} loading={bracketTipsLoading} showToast={showToast}
+              lockFromDate={tournament?.tips_lock_from || undefined}
             />
           )}
         </>

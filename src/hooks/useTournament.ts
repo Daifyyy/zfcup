@@ -14,6 +14,7 @@ export interface Tournament {
   halves: number
   playoff_kickoff: string
   round_break: number
+  tips_lock_from: string
 }
 
 export function useTournament() {

@@ -44,7 +44,7 @@ export default function App() {
   const { groups, refetch: refetchGroups } = useGroups()
   const { matches, refetch: refetchMatches } = useMatches()
   const { goals, refetch: refetchGoals } = useGoals()
-  const { rounds: bracketRounds, slots: bracketSlots } = useBracket()
+  const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket()
   const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals()
   const { announcements } = useAnnouncements()
 
@@ -182,6 +182,7 @@ export default function App() {
           refetchGroups={refetchGroups}
           refetchMatches={refetchMatches}
           refetchGoals={refetchGoals}
+          refetchBracket={refetchBracket}
           refetchBracketGoals={refetchBracketGoals}
           onClose={() => setAdminOpen(false)}
         />

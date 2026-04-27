@@ -55,13 +55,14 @@ interface Props {
   refetchGroups: () => void
   refetchMatches: () => void
   refetchGoals: () => void
+  refetchBracket: () => void
   refetchBracketGoals: () => void
   showToast: (msg: string) => void
   onClose: () => void
 }
 
 export default function AdminPanel(props: Props) {
-  const { session, onClose, showToast, refetchMatches, refetchGoals, refetchBracketGoals } = props
+  const { session, onClose, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals } = props
   const [aTab, setATab] = useState<ATab>('info')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -82,7 +83,7 @@ export default function AdminPanel(props: Props) {
     showToast('Odhlášen ✓')
   }
 
-  const tabProps = { ...props, showToast, refetchMatches, refetchGoals, refetchBracketGoals }
+  const tabProps = { ...props, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals }
 
   return (
     <div

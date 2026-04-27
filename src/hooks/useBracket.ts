@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export interface BracketRound {
@@ -25,6 +25,7 @@ export function useBracket() {
   const [rounds, setRounds] = useState<BracketRound[]>([])
   const [slots, setSlots] = useState<BracketSlot[]>([])
   const [loading, setLoading] = useState(true)
+  const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
@@ -36,6 +37,7 @@ export function useBracket() {
       setSlots(s ?? [])
       setLoading(false)
     }
+    fetchRef.current = fetch
     fetch()
 
     const subR = supabase
@@ -55,5 +57,5 @@ export function useBracket() {
     }
   }, [])
 
-  return { rounds, slots, loading }
+  return { rounds, slots, loading, refetch: () => fetchRef.current() }
 }

@@ -70,7 +70,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
   const gt = (id: string) => teams.find(t => t.id === id)
   const isLeague = tournament?.format === 'league'
 
-  // Top 3 scorers — aggregate group goals + bracket_goals
+  // Top 5 scorers — aggregate group goals + bracket_goals
   const scorers = players
     .map(p => ({
       name: p.name,
@@ -81,7 +81,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
     }))
     .filter(r => r.total > 0)
     .sort((a, b) => b.total - a.total)
-    .slice(0, 3)
+    .slice(0, 5)
 
   // League row highlight: 1-2 = direct SF (green), 3-6 = QF (amber), 7+ = out (none)
   const leagueRowStyle = (i: number): { bg: string; borderLeft: string; numColor: string } => {
@@ -331,14 +331,20 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                 const aw = s.played && s.away_score > s.home_score
                 return (
                   <div key={s.id} style={{
+                    borderRadius: 5,
+                    background: s.played ? C.col : '#eff6ff',
+                    border: `1px solid ${isFinal ? 'rgba(217,119,6,.3)' : isThird ? 'rgba(146,64,14,.2)' : C.border}`,
+                    overflow: 'hidden',
+                  }}>
+                  {s.scheduled_time && !s.played && (
+                    <div style={{ fontSize: S.label, color: C.muted, padding: '.1rem .5rem 0', fontWeight: 600 }}>🕐 {s.scheduled_time}</div>
+                  )}
+                  <div style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr auto 1fr',
                     alignItems: 'center',
                     gap: '.3rem',
                     padding: '.26rem .5rem',
-                    borderRadius: 5,
-                    background: s.played ? C.col : '#eff6ff',
-                    border: `1px solid ${isFinal ? 'rgba(217,119,6,.3)' : isThird ? 'rgba(146,64,14,.2)' : C.border}`,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.25rem', minWidth: 0 }}>
                       <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? accentColor : hT ? C.muted : C.muted, fontStyle: hT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -361,6 +367,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                         {tn(s.away_id)}
                       </span>
                     </div>
+                  </div>
                   </div>
                 )
               })}

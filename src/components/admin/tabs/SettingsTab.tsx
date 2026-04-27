@@ -154,6 +154,23 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
 
       <hr className="divider" />
       <div className="sub-title">Tipovačka</div>
+      <div style={{ marginBottom: '.75rem' }}>
+        <label className="field-label">Datum turnaje (uzamkne tipy v čas výkopu)</label>
+        <input
+          className="field-input"
+          type="date"
+          value={tournament?.tips_lock_from ?? ''}
+          onChange={async e => {
+            if (!tournament) return
+            const { error } = await supabase.from('tournament').update({ tips_lock_from: e.target.value }).eq('id', tournament.id)
+            if (error) showToast('Chyba: ' + error.message)
+            else refetchTournament()
+          }}
+        />
+        <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: '.28rem' }}>
+          Tipy se uzamknou v čas zápasu pouze v tento den. Bez data se zamykají podle času každý den.
+        </div>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.7rem .9rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, marginBottom: '1rem' }}>
         <div>
           <div style={{ fontWeight: 600, fontSize: '.85rem' }}>Zobrazit tipovačku uživatelům</div>
