@@ -3,12 +3,15 @@ import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
 import type { Group } from '../../../hooks/useGroups'
 import type { Match } from '../../../hooks/useMatches'
+import type { Tournament } from '../../../hooks/useTournament'
 import { matchCount, addMinutes } from '../../../lib/constants'
+import { generateLeagueSchedule, leagueMatchCount, leagueSlotCount } from '../../../lib/leagueSchedule'
 
 interface Props {
   teams: Team[]
   groups: Group[]
   matches: Match[]
+  tournament: Tournament | null
   showToast: (msg: string) => void
 }
 
@@ -49,11 +52,88 @@ function generatePairs(teamIds: string[], schedule: 'once' | 'twice') {
   return result
 }
 
-export default function GroupsTab({ teams, groups, matches, showToast }: Props) {
+export default function GroupsTab({ teams, groups, matches, tournament, showToast }: Props) {
   const [form, setForm] = useState<GroupForm>({
     name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_first',
     start_time: '', match_duration: '20', break_between: '5',
   })
+
+  // League mode state
+  const [leagueTeamIds, setLeagueTeamIds] = useState<string[]>([])
+  const [leagueStart, setLeagueStart] = useState('')
+  const [leagueDur, setLeagueDur] = useState(String(tournament?.match_duration ?? 20))
+  const [leagueBreak, setLeagueBreak] = useState(String(tournament?.round_break ?? 5))
+  const [leagueGenerating, setLeagueGenerating] = useState(false)
+
+  const leagueGroup = groups.find(g => g.name === 'Liga')
+  const isLeague = tournament?.format === 'league'
+
+  const toggleLeagueTeam = (id: string) =>
+    setLeagueTeamIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
+
+  const leaguePreview = () => {
+    const n = leagueTeamIds.length
+    if (n < 2) return null
+    const dur = parseInt(leagueDur) || 20
+    const brk = parseInt(leagueBreak) || 5
+    const slots = leagueSlotCount(n)
+    const endTime = leagueStart ? addMinutes(leagueStart, slots * (dur + brk) - brk) : null
+    return `${n} týmů · ${leagueMatchCount(n)} zápasů · ${slots} time slotů${endTime ? ` · ${leagueStart}–${endTime}` : ''}`
+  }
+
+  const generateLeague = async () => {
+    if (leagueTeamIds.length < 3) { showToast('Vyber alespoň 3 týmy'); return }
+    if (!confirm(leagueGroup
+      ? `Smazat stávající ligový rozpis a vygenerovat nový pro ${leagueTeamIds.length} týmů?`
+      : `Vygenerovat ligový rozpis pro ${leagueTeamIds.length} týmů?`)) return
+
+    setLeagueGenerating(true)
+    try {
+      // Smazat existující ligovou skupinu a zápasy
+      if (leagueGroup) {
+        await supabase.from('matches').delete().eq('group_id', leagueGroup.id)
+        await supabase.from('groups').delete().eq('id', leagueGroup.id)
+      }
+
+      // Vytvořit skupinu "Liga"
+      const { data: grp, error: grpErr } = await supabase.from('groups').insert({
+        name: 'Liga',
+        team_ids: leagueTeamIds,
+        schedule: 'once',
+        tiebreaker: 'h2h_first',
+        start_time: leagueStart,
+        match_duration: parseInt(leagueDur) || 20,
+        break_between: parseInt(leagueBreak) || 5,
+      }).select().single()
+      if (grpErr) throw grpErr
+
+      const schedule = generateLeagueSchedule(
+        leagueTeamIds, leagueStart,
+        parseInt(leagueDur) || 20,
+        parseInt(leagueBreak) || 5,
+      )
+
+      const matchRows = schedule.map(m => ({
+        group_id: grp.id,
+        round: 'Liga',
+        home_id: m.home_id,
+        away_id: m.away_id,
+        home_score: 0,
+        away_score: 0,
+        played: false,
+        scheduled_time: m.scheduled_time,
+      }))
+
+      const { error: mErr } = await supabase.from('matches').insert(matchRows)
+      if (mErr) throw mErr
+
+      showToast(`Ligový rozpis vygenerován — ${matchRows.length} zápasů ✓`)
+    } catch (e: unknown) {
+      showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setLeagueGenerating(false)
+    }
+  }
 
   const toggle = (id: string) =>
     setForm(f => ({ ...f, teamIds: f.teamIds.includes(id) ? f.teamIds.filter(x => x !== id) : [...f.teamIds, id] }))
@@ -125,7 +205,86 @@ export default function GroupsTab({ teams, groups, matches, showToast }: Props) 
         <div className="warn-box"><strong>Nejsou žádné týmy.</strong> Nejprve přidej týmy v záložce Týmy.</div>
       )}
 
-      <div className="sub-title">Vytvořit skupinu</div>
+      {isLeague && (
+        <>
+          <div className="sub-title">Liga — generovat rozpis</div>
+          <div className="info-box" style={{ marginBottom: '.75rem' }}>
+            <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.6 }}>
+              Circle-method: každý tým hraje s každým 1×. Vždy 2 souběžné zápasy,
+              algoritmus minimalizuje hrání dvakrát za sebou. Délka zápasu a přestávka se přebírají z Nastavení nebo je lze přepsat níže.
+            </div>
+          </div>
+
+          {leagueGroup && (
+            <div className="warn-box" style={{ marginBottom: '.75rem' }}>
+              ⚠️ Ligový rozpis existuje: <strong>{matches.filter(m => m.group_id === leagueGroup.id).length} zápasů</strong>
+              {' '}({matches.filter(m => m.group_id === leagueGroup.id && m.played).length} odehráno).
+              Generování smaže stávající rozpis.
+            </div>
+          )}
+
+          <div className="field-group">
+            <label className="field-label">Týmy v lize</label>
+            <div className="chk-list">
+              {teams.map(t => (
+                <div key={t.id} className="chk-item" onClick={() => toggleLeagueTeam(t.id)} style={{ cursor: 'pointer' }}>
+                  <input type="checkbox" readOnly checked={leagueTeamIds.includes(t.id)} />
+                  <label style={{ cursor: 'pointer' }}>
+                    <span className="team-dot" style={{ background: t.color }} />{t.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+            {leagueTeamIds.length >= 2 && (
+              <div className="gen-preview">✓ {leaguePreview()}</div>
+            )}
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Začátek (čas)</label>
+            <input className="field-input" type="time" value={leagueStart}
+              onChange={e => setLeagueStart(e.target.value)} />
+          </div>
+          <div className="field-row">
+            <div className="field-group">
+              <label className="field-label">Délka zápasu (min)</label>
+              <input className="field-input" type="number" min="1" value={leagueDur}
+                onChange={e => setLeagueDur(e.target.value)} />
+            </div>
+            <div className="field-group">
+              <label className="field-label">Přestávka (min)</label>
+              <input className="field-input" type="number" min="0" value={leagueBreak}
+                onChange={e => setLeagueBreak(e.target.value)} />
+            </div>
+          </div>
+
+          <button type="button" className="btn btn-p" onClick={generateLeague} disabled={leagueGenerating}>
+            {leagueGenerating ? 'Generuji…' : '⚡ Generovat ligový rozpis'}
+          </button>
+
+          <hr className="divider" />
+          <div className="sub-title">Existující zápasy</div>
+          {!leagueGroup ? (
+            <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Ligový rozpis nebyl vygenerován.</p>
+          ) : (
+            <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem 1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.4rem' }}>
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.95rem', letterSpacing: '.06em', flex: 1 }}>Liga</span>
+                <button type="button" className="btn btn-d btn-sm" onClick={() => removeGroup(leagueGroup)}>Smazat</button>
+              </div>
+              <div style={{ fontSize: '.71rem', color: 'var(--muted)' }}>
+                {leagueGroup.team_ids.length} týmů · {matches.filter(m => m.group_id === leagueGroup.id).length} zápasů
+                {' '}({matches.filter(m => m.group_id === leagueGroup.id && m.played).length} odehráno)
+                {leagueGroup.start_time && ` · od ${leagueGroup.start_time}`}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {!isLeague && (
+        <>
+          <div className="sub-title">Vytvořit skupinu</div>
       <div className="field-group">
         <label className="field-label">Název skupiny</label>
         <input className="field-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Skupina A" />
@@ -217,7 +376,7 @@ export default function GroupsTab({ teams, groups, matches, showToast }: Props) 
           <div key={g.id} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem 1rem', marginBottom: '.6rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.4rem' }}>
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.95rem', letterSpacing: '.06em', flex: 1 }}>{g.name}</span>
-              <button className="btn btn-d btn-sm" onClick={() => removeGroup(g)}>Smazat</button>
+              <button type="button" className="btn btn-d btn-sm" onClick={() => removeGroup(g)}>Smazat</button>
             </div>
             <div style={{ fontSize: '.71rem', color: 'var(--muted)', marginBottom: '.4rem' }}>
               {g.team_ids.length} týmů · {cnt} zápasů ({playedCnt} odehráno) · {g.schedule === 'twice' ? '2×' : '1×'} každý s každým
@@ -239,6 +398,8 @@ export default function GroupsTab({ teams, groups, matches, showToast }: Props) 
           </div>
         )
       })}
+        </>
+      )}
     </div>
   )
 }

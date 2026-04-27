@@ -7,6 +7,7 @@ import type { Group } from '../../../hooks/useGroups'
 import type { Match } from '../../../hooks/useMatches'
 import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { BracketGoal } from '../../../hooks/useBracketGoals'
+import type { Tournament } from '../../../hooks/useTournament'
 
 interface Props {
   teams: Team[]
@@ -17,6 +18,7 @@ interface Props {
   bracketSlots: BracketSlot[]
   bracketGoals: BracketGoal[]
   refetchBracketGoals: () => void
+  tournament: Tournament | null
   showToast: (msg: string) => void
 }
 
@@ -227,10 +229,12 @@ function SlotEditor({
 }
 
 // ── Main BracketTab ───────────────────────────────────────────────────────────
-export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, refetchBracketGoals, showToast }: Props) {
+export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, refetchBracketGoals, tournament, showToast }: Props) {
   const [name, setName] = useState('')
   const [slotCount, setSlotCount] = useState('2')
   const [generating, setGenerating] = useState(false)
+
+  const isLeague = tournament?.format === 'league'
 
   // Group completion status
   const groupMatches = matches.filter(m => groups.some(g => g.id === m.group_id))
@@ -238,13 +242,14 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
   const allGroupsComplete = groupMatches.length > 0 && playedCount === groupMatches.length
 
   const totalTeams = teams.length
+  const isSingleGroup = !isLeague && groups.length === 1
   const advancingPerGroup = totalTeams <= 10 ? 2 : 4
-  const format = advancingPerGroup === 2 ? 'sf' : 'qf'
-  const formatLabel = format === 'sf' ? 'Semifinále' : 'Čtvrtfinále'
+  const groupFormat = (isSingleGroup || advancingPerGroup === 2) ? 'sf' : 'qf'
+  const formatLabel = isLeague ? 'Liga top-6 playoff' : (groupFormat === 'sf' ? 'Semifinále' : 'Čtvrtfinále')
 
   // ── Step 1: Create bracket structure (all slots TBD) ─────────────────
   const generateStructure = async () => {
-    if (groups.length < 2) { showToast('Potřebuješ aspoň 2 skupiny'); return }
+    if (!isLeague && groups.length < 1) { showToast('Potřebuješ aspoň 1 skupinu'); return }
     if (!confirm(`Vytvořit strukturu playoff (${formatLabel})? Stávající pavouk bude smazán.`)) return
 
     setGenerating(true)
@@ -267,7 +272,13 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         if (se) throw se
       }
 
-      if (format === 'sf') {
+      if (isLeague) {
+        // Liga: QF(2) → SF(2) → O3(1) → Final(1)
+        await createRound('Čtvrtfinále', 2, 0)
+        await createRound('Semifinále',  2, 1)
+        await createRound('O 3. místo',  1, 2)
+        await createRound('Finále',      1, 3)
+      } else if (groupFormat === 'sf') {
         await createRound('Semifinále', 2, 0)
         await createRound('O 3. místo', 1, 1)
         await createRound('Finále',     1, 2)
@@ -286,36 +297,16 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     }
   }
 
-  // ── Step 2: Seed teams from completed group standings ─────────────────
+  // ── Step 2: Seed teams from completed standings ───────────────────────
   const seedTeams = async () => {
     if (!bracketRounds.length) { showToast('Nejdříve vytvoř strukturu playoff'); return }
-    // Check done inside fn (button is never disabled so it works on mobile touch)
     if (!allGroupsComplete) {
       showToast(`Skupiny nejsou dohrány (${playedCount}/${groupMatches.length} zápasů)`)
       return
     }
-    if (!confirm('Nasadit týmy do playoff dle tabulek skupin? Vyplní se TBD sloty prvního kola.')) return
+    if (!confirm('Nasadit týmy do playoff dle tabulky? Vyplní se TBD sloty prvního kola.')) return
 
-    const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
-    const grouped = sortedGroups.map(g =>
-      calcGroupStandings(g, matches).slice(0, advancingPerGroup).map(r => r.id)
-    )
-    const A = grouped[0] ?? []
-    const B = grouped[1] ?? []
     const fill = (arr: string[], i: number): string | null => arr[i] ?? null
-
-    const pairs: Array<{ home: string | null; away: string | null }> = format === 'sf'
-      ? [
-          { home: fill(A, 0), away: fill(B, 1) },
-          { home: fill(B, 0), away: fill(A, 1) },
-        ]
-      : [
-          { home: fill(A, 0), away: fill(B, 3) },
-          { home: fill(B, 1), away: fill(A, 2) },
-          { home: fill(B, 0), away: fill(A, 3) },
-          { home: fill(A, 1), away: fill(B, 2) },
-        ]
-
     const firstRound = bracketRounds.find(r => r.position === 0)
     if (!firstRound) { showToast('Struktura playoff nenalezena'); return }
     const firstSlots = [...bracketSlots]
@@ -324,15 +315,77 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
 
     setGenerating(true)
     try {
-      for (let i = 0; i < pairs.length; i++) {
-        const slot = firstSlots[i]
-        if (!slot) continue
-        const { error } = await supabase
-          .from('bracket_slots')
-          .update({ home_id: pairs[i].home, away_id: pairs[i].away })
-          .eq('id', slot.id)
-        if (error) throw error
+      if (isLeague) {
+        // Liga: top-6 z jedné skupiny "Liga"
+        const ligaGroup = groups.find(g => g.name === 'Liga')
+        if (!ligaGroup) { showToast('Skupinu "Liga" nenalezena — nejprve vygeneruj ligový rozpis'); setGenerating(false); return }
+        const standings = calcGroupStandings(ligaGroup, matches).slice(0, 6).map(r => r.id)
+        // QF: slot 0 = 3.(idx2) vs 6.(idx5), slot 1 = 4.(idx3) vs 5.(idx4)
+        const qfPairs = [
+          { home: fill(standings, 2), away: fill(standings, 5) },
+          { home: fill(standings, 3), away: fill(standings, 4) },
+        ]
+        for (let i = 0; i < qfPairs.length; i++) {
+          const slot = firstSlots[i]
+          if (!slot) continue
+          const { error } = await supabase.from('bracket_slots')
+            .update({ home_id: qfPairs[i].home, away_id: qfPairs[i].away }).eq('id', slot.id)
+          if (error) throw error
+        }
+        // SF: seed 2. a 1. jako home (away bude doplněno auto-advance po QF)
+        const sfRound = bracketRounds.find(r => r.position === 1)
+        if (sfRound) {
+          const sfSlots = [...bracketSlots].filter(s => s.round_id === sfRound.id).sort((a, b) => a.position - b.position)
+          // SF slot 0: home = 2. místo (idx1), SF slot 1: home = 1. místo (idx0)
+          const sfSeeds = [fill(standings, 1), fill(standings, 0)]
+          for (let i = 0; i < sfSeeds.length; i++) {
+            const slot = sfSlots[i]
+            if (!slot) continue
+            const { error } = await supabase.from('bracket_slots')
+              .update({ home_id: sfSeeds[i], away_id: null }).eq('id', slot.id)
+            if (error) throw error
+          }
+        }
+      } else if (isSingleGroup) {
+        const standings = calcGroupStandings(groups[0], matches).slice(0, 4).map(r => r.id)
+        const pairs = [
+          { home: fill(standings, 0), away: fill(standings, 3) },
+          { home: fill(standings, 1), away: fill(standings, 2) },
+        ]
+        for (let i = 0; i < pairs.length; i++) {
+          const slot = firstSlots[i]
+          if (!slot) continue
+          const { error } = await supabase.from('bracket_slots')
+            .update({ home_id: pairs[i].home, away_id: pairs[i].away }).eq('id', slot.id)
+          if (error) throw error
+        }
+      } else {
+        const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
+        const grouped = sortedGroups.map(g =>
+          calcGroupStandings(g, matches).slice(0, advancingPerGroup).map(r => r.id)
+        )
+        const A = grouped[0] ?? []
+        const B = grouped[1] ?? []
+        const pairs = groupFormat === 'sf'
+          ? [
+              { home: fill(A, 0), away: fill(B, 1) },
+              { home: fill(B, 0), away: fill(A, 1) },
+            ]
+          : [
+              { home: fill(A, 0), away: fill(B, 3) },
+              { home: fill(B, 1), away: fill(A, 2) },
+              { home: fill(B, 0), away: fill(A, 3) },
+              { home: fill(A, 1), away: fill(B, 2) },
+            ]
+        for (let i = 0; i < pairs.length; i++) {
+          const slot = firstSlots[i]
+          if (!slot) continue
+          const { error } = await supabase.from('bracket_slots')
+            .update({ home_id: pairs[i].home, away_id: pairs[i].away }).eq('id', slot.id)
+          if (error) throw error
+        }
       }
+
       showToast('Týmy nasazeny do playoff ✓')
     } catch (e: unknown) {
       showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
@@ -397,6 +450,22 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
 
     const isSemifinal = currentRound.position === maxPos - 2
 
+    // Liga QF: winner goes to SF slot at SAME index, as away_id (home is pre-seeded with 1st/2nd)
+    if (isLeague && currentRound.position === 0) {
+      const sfRound = bracketRounds.find(r => r.position === 1)
+      if (sfRound) {
+        const sfSlots = slotsOf(sfRound.id)
+        const targetSlot = sfSlots[slot.position]
+        if (targetSlot) {
+          await supabase.from('bracket_slots').update({ away_id: winner }).eq('id', targetSlot.id)
+          showToast('Uloženo ✓ — vítěz postoupil do semifinále')
+          return
+        }
+      }
+      showToast('Uloženo ✓')
+      return
+    }
+
     if (isSemifinal) {
       const finalRound = bracketRounds.find(r => r.position === maxPos)
       const thirdRound = bracketRounds.find(r => r.position === maxPos - 1)
@@ -435,8 +504,13 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         <div style={{ fontWeight: 600, marginBottom: '.35rem', fontSize: '.82rem' }}>📋 Krok 1 — Vytvořit strukturu</div>
         <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '.6rem' }}>
           Vytvoří prázdný pavouk (všechna místa TBD). Lze udělat <strong>před turnajem</strong>.<br />
-          <strong>≤ 10 týmů:</strong> Semifinále → O 3. místo + Finále<br />
-          <strong>≥ 11 týmů:</strong> Čtvrtfinále → Semifinále → O 3. místo + Finále
+          {isLeague
+            ? <><strong>Liga (top 6):</strong> Čtvrtfinále (3.vs6., 4.vs5.) → Semifinále (2.vs QF, 1.vs QF) → O 3. místo + Finále</>
+            : isSingleGroup
+              ? <><strong>1 skupina (3–7 týmů):</strong> Top 4 → Semifinále → O 3. místo + Finále</>
+              : <><strong>≤ 10 týmů:</strong> Semifinále → O 3. místo + Finále<br />
+                 <strong>≥ 11 týmů:</strong> Čtvrtfinále → Semifinále → O 3. místo + Finále</>
+          }
         </div>
         <button type="button" className="btn btn-s" onClick={generateStructure} disabled={generating}>
           {generating ? 'Vytvářím…' : '⚡ Vytvořit strukturu playoff'}
@@ -448,8 +522,14 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         <div style={{ fontWeight: 600, marginBottom: '.35rem', fontSize: '.82rem' }}>🏆 Krok 2 — Nasadit týmy ze skupin</div>
         <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '.6rem' }}>
           {allGroupsComplete
-            ? <>✅ Všechny skupinové zápasy jsou odehrány. Lze nasadit týmy.<br />Doplní A1 vs B2, B1 vs A2 (nebo dle čtvrtfinálového klíče).</>
-            : <>⏳ Skupiny nejsou dohrány — odehráno <strong>{playedCount}/{groupMatches.length}</strong> zápasů.</>
+            ? <>✅ Všechny zápasy jsou odehrány. Lze nasadit týmy.<br />
+               {isLeague
+                 ? 'Liga: 3.vs6. a 4.vs5. v QF; 2. a 1. předsazeni do SF.'
+                 : isSingleGroup
+                   ? 'Doplní 1. vs 4., 2. vs 3. ze skupiny.'
+                   : 'Doplní A1 vs B2, B1 vs A2 (nebo dle čtvrtfinálového klíče).'
+               }</>
+            : <>⏳ Zápasy nejsou dohrány — odehráno <strong>{playedCount}/{groupMatches.length}</strong> zápasů.</>
           }
         </div>
         {/* type="button" + never disabled → works on mobile touch */}

@@ -9,6 +9,11 @@ export interface Tournament {
   venue: string
   description: string
   tips_enabled: boolean
+  format: 'groups' | 'league'
+  match_duration: number
+  halves: number
+  playoff_kickoff: string
+  round_break: number
 }
 
 export function useTournament() {
