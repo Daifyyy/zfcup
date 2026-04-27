@@ -95,6 +95,9 @@ function LogoSection({ team, showToast, refetchTeams }: { team: Team; showToast:
 function RosterSection({ team, players, showToast, refetchPlayers }: { team: Team; players: Player[]; showToast: (m: string) => void; refetchPlayers: () => void }) {
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editRole, setEditRole] = useState('')
   const roster = players.filter(p => p.team_id === team.id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
 
   const addPlayer = async () => {
@@ -108,6 +111,24 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
     if (error) { showToast('Chyba: ' + error.message); return }
     setName(''); setRole('')
     showToast('Hráč přidán ✓')
+    refetchPlayers()
+  }
+
+  const startEdit = (p: Player) => {
+    setEditingId(p.id)
+    setEditName(p.name)
+    setEditRole(p.role ?? '')
+  }
+
+  const saveEdit = async () => {
+    if (!editName.trim()) { showToast('Jméno nesmí být prázdné'); return }
+    const { error } = await supabase.from('players').update({
+      name: editName.trim(),
+      role: editRole || null,
+    }).eq('id', editingId!)
+    if (error) { showToast('Chyba: ' + error.message); return }
+    setEditingId(null)
+    showToast('Hráč uložen ✓')
     refetchPlayers()
   }
 
@@ -125,15 +146,47 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
       </div>
       {roster.length > 0 && (
         <div className="a-list" style={{ marginBottom: '.5rem' }}>
-          {roster.map(p => (
-            <div key={p.id} className="a-item" style={{ padding: '.4rem .7rem' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem', flex: 1, minWidth: 0 }}>
-                <span className="a-item-main" style={{ fontSize: '.8rem' }}>{p.name}</span>
-                <RoleBadge role={p.role} />
-              </span>
-              <button type="button" className="btn btn-d btn-sm" onClick={() => removePlayer(p.id)}>✕</button>
-            </div>
-          ))}
+          {roster.map(p => {
+            const isEditing = editingId === p.id
+            return (
+              <div key={p.id} className="a-item" style={{ padding: '.4rem .7rem', flexDirection: 'column', alignItems: 'stretch', gap: '.35rem' }}>
+                {isEditing ? (
+                  <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }}>
+                    <input
+                      className="field-input"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null) }}
+                      style={{ flex: 1, fontSize: '.8rem', padding: '.25rem .45rem' }}
+                      autoFocus
+                    />
+                    <select
+                      className="field-input field-select"
+                      value={editRole}
+                      onChange={e => setEditRole(e.target.value)}
+                      style={{ width: 130, flexShrink: 0, fontSize: '.78rem', padding: '.25rem .4rem' }}
+                    >
+                      <option value="">Žádná role</option>
+                      <option value="captain">Kapitán (C)</option>
+                      <option value="goalkeeper">Brankář (B)</option>
+                      <option value="both">Kapitán + Brankář</option>
+                    </select>
+                    <button type="button" className="btn btn-p btn-sm" onClick={saveEdit}>✓</button>
+                    <button type="button" className="btn btn-d btn-sm" onClick={() => setEditingId(null)}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem', flex: 1, minWidth: 0 }}>
+                      <span className="a-item-main" style={{ fontSize: '.8rem' }}>{p.name}</span>
+                      <RoleBadge role={p.role} />
+                    </span>
+                    <button type="button" className="btn btn-s btn-sm" onClick={() => startEdit(p)}>✎</button>
+                    <button type="button" className="btn btn-d btn-sm" onClick={() => removePlayer(p.id)}>✕</button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
       <div style={{ display: 'flex', gap: '.4rem', alignItems: 'flex-end' }}>
