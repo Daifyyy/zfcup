@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { calcGroupStandings } from '../../lib/standings'
+import { addMinutes } from '../../lib/constants'
 import QRCode from '../ui/QRCode'
 import { TeamLogo } from '../ui/TeamLogo'
 import type { Tournament } from '../../hooks/useTournament'
@@ -346,14 +347,96 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
   )
 }
 
+// ── League match cell (one of 2 simultaneous matches) ─────────────────────────
+function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
+  const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
+  const tt = (id: string) => teams.find(t => t.id === id)
+  const hw = match.played && match.home_score > match.away_score
+  const aw = match.played && match.away_score > match.home_score
+  return (
+    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '.18rem', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.2rem', minWidth: 0 }}>
+        <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {tn(match.home_id)}
+        </span>
+        {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={14} />}
+      </div>
+      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
+        {match.played ? (
+          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>
+            {match.home_score}:{match.away_score}
+          </span>
+        ) : (
+          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.small, color: C.muted }}>VS</span>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
+        {tt(match.away_id) && <TeamLogo team={tt(match.away_id)!} size={14} />}
+        <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {tn(match.away_id)}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+// ── League matches — all 36 grouped by time slot, 2 side by side ──────────────
+function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] }) {
+  // Group by scheduled_time
+  const slotsMap = new Map<string, Match[]>()
+  for (const m of [...matches].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
+    const key = m.scheduled_time ?? ''
+    if (!slotsMap.has(key)) slotsMap.set(key, [])
+    slotsMap.get(key)!.push(m)
+  }
+  const sortedSlots = [...slotsMap.entries()]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', padding: '.3rem .55rem', gap: '.18rem', boxSizing: 'border-box' }}>
+      {sortedSlots.map(([time, slotMatches], si) => {
+        const m1 = slotMatches[0]
+        const m2 = slotMatches[1] ?? null
+        const allPlayed = slotMatches.every(m => m.played)
+        return (
+          <div key={time || si} style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '.5rem',
+            padding: '.15rem .4rem',
+            borderRadius: 5,
+            background: allPlayed ? C.col : '#eff6ff',
+            border: `1px solid ${C.border}`,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}>
+            {/* Čas */}
+            <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>
+              {time || '—'}
+            </div>
+            {/* Zápas 1 */}
+            <MatchCell match={m1} teams={teams} />
+            {/* Oddělovač */}
+            <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
+            {/* Zápas 2 */}
+            {m2 ? <MatchCell match={m2} teams={teams} /> : <div style={{ flex: 1 }} />}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Matches column — 2 skupiny nebo playoff ────────────────────────────────────
-function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots }: {
+function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots, tournament }: {
   matches: Match[]
   teams: Team[]
   groups: Group[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
+  tournament: Tournament | null
 }) {
+  const isLeague = tournament?.format === 'league'
   const groupMatches = matches.filter(m => m.group_id !== null)
   const allGroupMatchesPlayed = groups.length > 0 && groupMatches.length > 0 && groupMatches.every(m => m.played)
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -367,6 +450,10 @@ function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots }: {
       Žádné zápasy
     </div>
   )
+
+  if (isLeague) {
+    return <LeagueMatchesCol matches={groupMatches} teams={teams} />
+  }
 
   return (
     <div style={{
@@ -510,8 +597,9 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
     return () => window.removeEventListener('keydown', handler)
   }, [onExit])
 
+  const isLeague = tournament?.format === 'league'
   const cols = [
-    { icon: '📊', label: 'Skupiny — tabulky & střelci' },
+    { icon: '📊', label: isLeague ? 'Liga — tabulka & střelci' : 'Skupiny — tabulky & střelci' },
     { icon: '⚽', label: 'Zápasy — výsledky' },
   ]
 
@@ -620,7 +708,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
           <StandingsCol groups={groups} matches={matches} teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} />
         </div>
         <div style={{ background: '#f8faff', overflow: 'hidden' }}>
-          <MatchesCol matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} />
+          <MatchesCol matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} />
         </div>
       </div>
     </div>
