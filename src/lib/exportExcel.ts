@@ -48,10 +48,10 @@ export function exportSchedule(matches: Match[], groups: Group[], teams: Team[])
 //   [14] away_name | [7] away_role | [4] away_goals
 //
 // Row structure per card:
-//   row 0: "ZF CUP — KARTA ZÁPASU"  · group · time    (16pt)
-//   row 1: "DOMÁCÍ: X"              · "HOSTÉ: Y"       (14pt)
-//   row 2: col headers                                  (10pt)
-//   rows 3..N: players (both teams side by side)        (11pt each)
+//   row 0: "Čas: HH:MM"             (14pt)
+//   row 1: "Tým domácí" · "Tým hosté"  (14pt)
+//   row 2: col headers               (10pt)
+//   rows 3..N: players side by side  (11pt each)
 //   → manual page break after row N
 
 export function exportRefCards(matches: Match[], groups: Group[], teams: Team[], players: Player[]) {
@@ -81,13 +81,13 @@ export function exportRefCards(matches: Match[], groups: Group[], teams: Team[],
       .sort((a, b) => a.name.localeCompare(b.name, 'cs'))
     const maxLen = Math.max(homePl.length, awayPl.length, 1)
 
-    // Header: title + group + time (one row)
-    allRows.push([`ZF CUP — KARTA ZÁPASU`, `${gn}`, `Čas: ${time}`, '', '', '', ''])
-    rowHeights.push({ hpt: 16 })
+    // Čas
+    allRows.push([`Čas: ${time}`, '', '', '', '', '', ''])
+    rowHeights.push({ hpt: 14 })
     ri++
 
     // Team names
-    allRows.push([`DOMÁCÍ: ${hn}`, '', '', '', `HOSTÉ: ${an}`, '', ''])
+    allRows.push([hn, '', '', '', an, '', ''])
     rowHeights.push({ hpt: 14 })
     ri++
 
