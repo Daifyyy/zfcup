@@ -5,9 +5,12 @@ import { calcGroupStandings } from '../../../lib/standings'
 import type { Team } from '../../../hooks/useTeams'
 import type { Group } from '../../../hooks/useGroups'
 import type { Match } from '../../../hooks/useMatches'
+import type { Tournament } from '../../../hooks/useTournament'
+import TipsGuideModal from '../TipsGuideModal'
 
 interface Props {
   showToast: (msg: string) => void
+  tournament: Tournament | null
   teams: Team[]
   groups: Group[]
   matches: Match[]
@@ -186,10 +189,11 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
 // ── Stav auto-vyhodnocení skupiny ─────────────────────────────────────────────
 type GroupEvalStatus = 'pending' | 'running' | 'done' | 'incomplete'
 
-export default function TipsAdminTab({ showToast, teams, groups, matches }: Props) {
+export default function TipsAdminTab({ showToast, tournament, teams, groups, matches }: Props) {
   const { tipsters } = useTipsters()
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const [recalcing, setRecalcing] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   // stav vyhodnocení per-skupina: 'incomplete' | 'pending' | 'running' | 'done'
   const [groupStatus, setGroupStatus] = useState<Record<string, GroupEvalStatus>>({})
   const [groupWinners, setGroupWinners] = useState<Record<string, { winner: string; last: string }>>({})
@@ -273,6 +277,32 @@ export default function TipsAdminTab({ showToast, teams, groups, matches }: Prop
 
   return (
     <div>
+      {/* Návod k tipovačce */}
+      <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.2)', borderRadius: 10, padding: '.85rem 1rem', marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '.8rem' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '.82rem', fontWeight: 700, marginBottom: '.15rem' }}>📋 Návod k tipovačce</div>
+          <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>
+            Vygeneruje leták s QR kódem a pravidly — vytiskni nebo ulož jako PDF a vyvěs na informační tabuli.
+          </div>
+        </div>
+        <button
+          type="button"
+          className="btn btn-p btn-sm"
+          onClick={() => setShowGuide(true)}
+          style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
+          🖨️ Otevřít leták
+        </button>
+      </div>
+
+      {showGuide && (
+        <TipsGuideModal
+          tournament={tournament}
+          groups={groups}
+          onClose={() => setShowGuide(false)}
+        />
+      )}
+
       {/* Vyhodnocení speciálních tipů */}
       <div className="sub-title">Vyhodnocení speciálních tipů</div>
       <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.8rem' }}>

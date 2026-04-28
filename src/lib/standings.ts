@@ -33,28 +33,39 @@ export function calcGroupStandings(group: Group, matches: Match[]): StandingRow[
 
   const arr = Object.values(rows).map(r => ({ ...r, gd: r.gf - r.ga }))
 
+  const calcH2H = (a: StandingRow, b: StandingRow): number => {
+    const h2h = groupMatches.filter(m =>
+      (m.home_id === a.id && m.away_id === b.id) ||
+      (m.home_id === b.id && m.away_id === a.id)
+    )
+    let aPts = 0, bPts = 0
+    for (const m of h2h) {
+      if (m.home_id === a.id) {
+        if (m.home_score > m.away_score) aPts += 3
+        else if (m.home_score === m.away_score) { aPts++; bPts++ }
+        else bPts += 3
+      } else {
+        if (m.away_score > m.home_score) aPts += 3
+        else if (m.away_score === m.home_score) { aPts++; bPts++ }
+        else bPts += 3
+      }
+    }
+    return bPts - aPts
+  }
+
   if (group.tiebreaker === 'h2h_first') {
     arr.sort((a, b) => {
       if (b.pts !== a.pts) return b.pts - a.pts
-      // Head-to-head
-      const h2h = groupMatches.filter(m =>
-        (m.home_id === a.id && m.away_id === b.id) ||
-        (m.home_id === b.id && m.away_id === a.id)
-      )
-      let aPts = 0, bPts = 0
-      for (const m of h2h) {
-        if (m.home_id === a.id) {
-          if (m.home_score > m.away_score) aPts += 3
-          else if (m.home_score === m.away_score) { aPts++; bPts++ }
-          else bPts += 3
-        } else {
-          if (m.away_score > m.home_score) aPts += 3
-          else if (m.away_score === m.home_score) { aPts++; bPts++ }
-          else bPts += 3
-        }
-      }
-      if (bPts !== aPts) return bPts - aPts
+      const h2h = calcH2H(a, b)
+      if (h2h !== 0) return h2h
       return b.gd - a.gd || b.gf - a.gf
+    })
+  } else if (group.tiebreaker === 'score_then_h2h') {
+    arr.sort((a, b) => {
+      if (b.pts !== a.pts) return b.pts - a.pts
+      if (b.gd !== a.gd) return b.gd - a.gd
+      if (b.gf !== a.gf) return b.gf - a.gf
+      return calcH2H(a, b)
     })
   } else {
     arr.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf)

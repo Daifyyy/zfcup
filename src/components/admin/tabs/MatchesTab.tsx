@@ -8,6 +8,7 @@ import type { Group } from '../../../hooks/useGroups'
 import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { Tournament } from '../../../hooks/useTournament'
 import { calcGroupStandings } from '../../../lib/standings'
+import { exportSchedule, exportRefCards } from '../../../lib/exportExcel'
 
 interface Props {
   teams: Team[]
@@ -385,6 +386,26 @@ export default function MatchesTab({ teams, players, matches, goals, groups, bra
           <button type="button" className="btn btn-p" onClick={seedPlayoff}
             style={{ opacity: allGroupsComplete && !seeding ? 1 : 0.5 }}>
             {seeding ? 'Nasazuji…' : '🏆 Nasadit týmy'}
+          </button>
+        </div>
+      )}
+
+      {/* Export tlačítka */}
+      {matches.length > 0 && (
+        <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          <button
+            type="button"
+            className="btn btn-d btn-sm"
+            onClick={() => exportSchedule(matches, groups, teams)}
+          >
+            📥 Exportovat rozpis (Excel)
+          </button>
+          <button
+            type="button"
+            className="btn btn-d btn-sm"
+            onClick={() => exportRefCards(matches, groups, teams, players)}
+          >
+            📋 Karty rozhodčího (Excel)
           </button>
         </div>
       )}

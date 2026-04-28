@@ -6,7 +6,7 @@ export interface Group {
   name: string
   team_ids: string[]
   schedule: 'once' | 'twice'
-  tiebreaker: 'score_first' | 'h2h_first'
+  tiebreaker: 'score_first' | 'h2h_first' | 'score_then_h2h'
   start_time: string
   match_duration: number
   break_between: number

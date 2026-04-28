@@ -21,7 +21,7 @@ interface GroupForm {
   name: string
   teamIds: string[]
   schedule: 'once' | 'twice'
-  tiebreaker: 'score_first' | 'h2h_first'
+  tiebreaker: 'score_first' | 'h2h_first' | 'score_then_h2h'
   start_time: string
   match_duration: string
   break_between: string
@@ -339,15 +339,19 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
         </div>
       </div>
       <div className="field-group">
-        <label className="field-label">Tiebreaker</label>
-        <div className="radio-row">
+        <label className="field-label">Tiebreaker (při rovnosti bodů)</label>
+        <div className="radio-row" style={{ flexDirection: 'column', gap: '.3rem' }}>
           <div className="radio-item" onClick={() => setForm(f => ({ ...f, tiebreaker: 'score_first' }))}>
             <input type="radio" readOnly checked={form.tiebreaker === 'score_first'} />
-            <label>A: Skóre → vzájemné</label>
+            <label>A: Skóre → vstřelené góly</label>
           </div>
           <div className="radio-item" onClick={() => setForm(f => ({ ...f, tiebreaker: 'h2h_first' }))}>
             <input type="radio" readOnly checked={form.tiebreaker === 'h2h_first'} />
-            <label>B: Vzájemné → skóre</label>
+            <label>B: Vzájemný zápas → skóre → vstřelené</label>
+          </div>
+          <div className="radio-item" onClick={() => setForm(f => ({ ...f, tiebreaker: 'score_then_h2h' }))}>
+            <input type="radio" readOnly checked={form.tiebreaker === 'score_then_h2h'} />
+            <label>C: Skóre → vstřelené → vzájemný zápas</label>
           </div>
         </div>
       </div>
