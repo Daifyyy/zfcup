@@ -18,7 +18,7 @@ interface Props {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   bracketGoals: BracketGoal[]
-  refetchBracket: () => void
+  refetchBracket: () => Promise<void> | void
   refetchBracketGoals: () => void
   tournament: Tournament | null
   showToast: (msg: string) => void
@@ -227,6 +227,7 @@ function RoundCard({
 }) {
   const [start, setStart] = useState(round.scheduled_start ?? '')
   const [brk, setBrk] = useState(String(round.break_after ?? 5))
+  const [openSlotId, setOpenSlotId] = useState<string | null>(null)
 
   const preview = () => {
     if (!start || rSlots.length === 0) return null
@@ -263,14 +264,51 @@ function RoundCard({
         </div>
       </div>
 
-      {rSlots.map(slot => (
-        <SlotEditor
-          key={slot.id} slot={slot} teams={teams} players={players}
-          bracketGoals={bracketGoals} refetchBracketGoals={refetchBracketGoals}
-          showToast={showToast}
-          onSave={data => onSave(slot.id, data) as Promise<void>}
-        />
-      ))}
+      {/* Zápasy — kompaktní řádky s rozbalovacím editorem */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem' }}>
+        {rSlots.map(slot => {
+          const ht = teams.find(t => t.id === slot.home_id)
+          const at = teams.find(t => t.id === slot.away_id)
+          const isOpen = openSlotId === slot.id
+          return (
+            <div key={slot.id} style={{ border: '1px solid var(--border)', borderRadius: 7, overflow: 'hidden', background: '#fff' }}>
+              {/* Kompaktní řádek */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.42rem .65rem', background: isOpen ? 'var(--accent-dim)' : '#fff' }}>
+                <span style={{ fontSize: '.68rem', color: 'var(--muted)', minWidth: 34, flexShrink: 0 }}>
+                  {slot.scheduled_time || '—'}
+                </span>
+                <span style={{ flex: 1, fontSize: '.82rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {ht?.name ?? 'TBD'}
+                  {' '}
+                  <span style={{ fontFamily: "'Bebas Neue', sans-serif", color: slot.played ? 'var(--accent)' : 'var(--muted)', fontSize: '.9rem' }}>
+                    {slot.played ? `${slot.home_score}:${slot.away_score}` : 'vs'}
+                  </span>
+                  {' '}
+                  {at?.name ?? 'TBD'}
+                </span>
+                {slot.played && <span style={{ fontSize: '.65rem', color: 'var(--success)', flexShrink: 0 }}>✓</span>}
+                <button
+                  type="button"
+                  className="btn btn-s btn-sm"
+                  onClick={() => setOpenSlotId(isOpen ? null : slot.id)}
+                  style={{ flexShrink: 0 }}
+                >
+                  {isOpen ? '✕ Zavřít' : '✎ Upravit'}
+                </button>
+              </div>
+              {/* Rozbalený editor */}
+              {isOpen && (
+                <SlotEditor
+                  slot={slot} teams={teams} players={players}
+                  bracketGoals={bracketGoals} refetchBracketGoals={refetchBracketGoals}
+                  showToast={showToast}
+                  onSave={data => onSave(slot.id, data) as Promise<void>}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -479,14 +517,14 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     // ── Auto-advance winner to next round ──────────────────────────────
     const isDecisive = data.played && data.home_score !== data.away_score
     const hasBothTeams = data.home_id && data.away_id
-    if (!isDecisive || !hasBothTeams) { refetchBracket(); showToast('Uloženo ✓'); return }
+    if (!isDecisive || !hasBothTeams) { await refetchBracket(); showToast('Uloženo ✓'); return }
 
     const slot = bracketSlots.find(s => s.id === slotId)
     const currentRound = slot ? bracketRounds.find(r => r.id === slot.round_id) : null
-    if (!slot || !currentRound) { refetchBracket(); showToast('Uloženo ✓'); return }
+    if (!slot || !currentRound) { await refetchBracket(); showToast('Uloženo ✓'); return }
 
     const maxPos = Math.max(...bracketRounds.map(r => r.position))
-    if (currentRound.position >= maxPos - 1) { refetchBracket(); showToast('Uloženo ✓'); return }
+    if (currentRound.position >= maxPos - 1) { await refetchBracket(); showToast('Uloženo ✓'); return }
 
     const homeWins = (data.home_score ?? 0) > (data.away_score ?? 0)
     const winner = homeWins ? data.home_id! : data.away_id!
@@ -506,12 +544,12 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         const targetSlot = sfSlots[slot.position]
         if (targetSlot) {
           await supabase.from('bracket_slots').update({ away_id: winner }).eq('id', targetSlot.id)
-          refetchBracket()
+          await refetchBracket()
           showToast('Uloženo ✓ — vítěz postoupil do semifinále')
           return
         }
       }
-      refetchBracket()
+      await refetchBracket()
       showToast('Uloženo ✓')
       return
     }
@@ -529,20 +567,20 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
       if (thirdSlot)
         ops.push(supabase.from('bracket_slots').update({ [field]: loser }).eq('id', thirdSlot.id))
       await Promise.all(ops)
-      refetchBracket()
+      await refetchBracket()
       showToast('Uloženo ✓ — vítěz postoupil do finále')
     } else {
       const nextRound = bracketRounds.find(r => r.position === currentRound.position + 1)
-      if (!nextRound) { refetchBracket(); showToast('Uloženo ✓'); return }
+      if (!nextRound) { await refetchBracket(); showToast('Uloženo ✓'); return }
       const nextSlots = slotsOf(nextRound.id)
       const targetSlot = nextSlots[Math.floor(slot.position / 2)]
       const field = isEven ? 'home_id' : 'away_id'
       if (targetSlot) {
         await supabase.from('bracket_slots').update({ [field]: winner }).eq('id', targetSlot.id)
-        refetchBracket()
+        await refetchBracket()
         showToast('Uloženo ✓ — vítěz postoupil dál')
       } else {
-        refetchBracket()
+        await refetchBracket()
         showToast('Uloženo ✓')
       }
     }

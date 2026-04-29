@@ -13,9 +13,9 @@ function groupName(m: Match, groups: Group[]) {
 }
 
 function roleBadge(role: string | null) {
-  if (role === 'captain') return 'Kapitán'
-  if (role === 'goalkeeper') return 'Brankář'
-  if (role === 'both') return 'Kap.+Brank.'
+  if (role === 'captain') return 'K'
+  if (role === 'goalkeeper') return 'B'
+  if (role === 'both') return 'K+B'
   return ''
 }
 
@@ -92,7 +92,7 @@ export function exportRefCards(matches: Match[], groups: Group[], teams: Team[],
     ri++
 
     // Column headers
-    allRows.push(['Hráč', 'Funkce', 'Góly', '', 'Hráč', 'Funkce', 'Góly'])
+    allRows.push(['Hráč', 'Rol', 'Góly', '', 'Hráč', 'Rol', 'Góly'])
     rowHeights.push({ hpt: 10 })
     ri++
 
@@ -117,10 +117,10 @@ export function exportRefCards(matches: Match[], groups: Group[], teams: Team[],
 
   const ws = XLSX.utils.aoa_to_sheet(allRows)
 
-  // Column widths: 14 + 7 + 4 + 1 + 14 + 7 + 4 = 51 wch ≈ 135mm → fits A6 landscape
+  // Column widths: 20 + 3 + 5 + 1 + 20 + 3 + 5 = 57 wch × 2.65mm × 90% ≈ 136mm → fits A6 landscape
   ws['!cols'] = [
-    { wch: 14 }, { wch: 7 }, { wch: 4 }, { wch: 1 },
-    { wch: 14 }, { wch: 7 }, { wch: 4 },
+    { wch: 20 }, { wch: 3 }, { wch: 5 }, { wch: 1 },
+    { wch: 20 }, { wch: 3 }, { wch: 5 },
   ]
 
   ws['!rows'] = rowHeights
@@ -130,7 +130,7 @@ export function exportRefCards(matches: Match[], groups: Group[], teams: Team[],
   ;(ws as any)['!pageSetup'] = {
     paperSize: 70,
     orientation: 'landscape',
-    scale: 100,
+    scale: 90,
     horizontalDpi: 200,
     verticalDpi: 200,
   }

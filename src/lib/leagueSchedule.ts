@@ -1,4 +1,13 @@
-import { addMinutes } from './constants'
+function timeToMin(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+function minToTime(m: number): string {
+  const h = Math.floor(m / 60) % 24
+  const min = m % 60
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+}
 
 export interface LeagueMatch {
   home_id: string
@@ -137,6 +146,8 @@ export function generateLeagueSchedule(
   startTime: string,
   matchDurationMin: number,
   roundBreakMin: number,
+  breakWindowStart?: string,
+  breakWindowDuration?: number,
 ): LeagueMatch[] {
   // Try every rotation of the team array as starting point for the circle method.
   // Different "fixed" teams produce different pair orderings → different optimal slot splits.
@@ -158,14 +169,38 @@ export function generateLeagueSchedule(
 
   const slotDuration = matchDurationMin + roundBreakMin
   const result: LeagueMatch[] = []
-  let slotIndex = 0
+
+  if (!startTime) {
+    for (const { slotA, slotB } of bestAssignments) {
+      for (const [home_id, away_id] of slotA) result.push({ home_id, away_id, scheduled_time: '' })
+      for (const [home_id, away_id] of slotB) result.push({ home_id, away_id, scheduled_time: '' })
+    }
+    return result
+  }
+
+  const brkStart = breakWindowStart ? timeToMin(breakWindowStart) : null
+  const brkEnd = (brkStart !== null && breakWindowDuration) ? brkStart + breakWindowDuration : null
+
+  // Advance cursor past break window if a slot would start or overlap with it
+  const skipBreak = (cur: number): number => {
+    if (brkStart === null || brkEnd === null) return cur
+    if (cur + matchDurationMin > brkStart && cur < brkEnd) return brkEnd
+    return cur
+  }
+
+  let cur = timeToMin(startTime)
 
   for (const { slotA, slotB } of bestAssignments) {
-    const timeA = startTime ? addMinutes(startTime, slotIndex * slotDuration) : ''
-    const timeB = startTime ? addMinutes(startTime, (slotIndex + 1) * slotDuration) : ''
+    cur = skipBreak(cur)
+    const timeA = minToTime(cur)
+    cur += slotDuration
+
+    cur = skipBreak(cur)
+    const timeB = minToTime(cur)
+    cur += slotDuration
+
     for (const [home_id, away_id] of slotA) result.push({ home_id, away_id, scheduled_time: timeA })
     for (const [home_id, away_id] of slotB) result.push({ home_id, away_id, scheduled_time: timeB })
-    slotIndex += 2
   }
 
   return result

@@ -6,6 +6,7 @@ import type { Team } from '../../../hooks/useTeams'
 import type { Group } from '../../../hooks/useGroups'
 import type { Match } from '../../../hooks/useMatches'
 import type { Tournament } from '../../../hooks/useTournament'
+import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import TipsGuideModal from '../TipsGuideModal'
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
   teams: Team[]
   groups: Group[]
   matches: Match[]
+  bracketSlots: BracketSlot[]
+  bracketRounds: BracketRound[]
 }
 
 const SPECIAL_POINTS: Record<string, number> = {
@@ -47,6 +50,7 @@ async function recalcTipsterPoints() {
 }
 
 async function recalcAllTips() {
+  // Skupinové zápasy: 3/1 b.
   const { data: playedMatches } = await supabase
     .from('matches').select('id, home_score, away_score').eq('played', true)
   if (playedMatches?.length) {
@@ -63,27 +67,19 @@ async function recalcAllTips() {
     }
   }
 
+  // Playoff zápasy: 5/2 b. (všechna kola včetně finále)
   const { data: playedSlots } = await supabase
-    .from('bracket_slots').select('id, round_id, home_score, away_score').eq('played', true)
+    .from('bracket_slots').select('id, home_score, away_score').eq('played', true)
   if (playedSlots?.length) {
-    const roundIds = [...new Set(playedSlots.map(s => s.round_id))]
-    const { data: rounds } = await supabase
-      .from('bracket_rounds').select('id, name, position').in('id', roundIds)
-    const maxPos = Math.max(...(rounds ?? []).map(r => r.position))
-    const isFinal = (roundId: string) => {
-      const r = rounds?.find(r => r.id === roundId)
-      return r?.position === maxPos && !/3|třet|bronze/i.test(r.name ?? '')
-    }
     const { data: allBTips } = await supabase
       .from('bracket_tips').select('id, slot_id, predicted_home, predicted_away')
       .in('slot_id', playedSlots.map(s => s.id))
     for (const tip of allBTips ?? []) {
       const s = playedSlots.find(s => s.id === tip.slot_id)
       if (!s) continue
-      const fin = isFinal(s.round_id)
       let pts = 0
-      if (tip.predicted_home === s.home_score && tip.predicted_away === s.away_score) pts = fin ? 8 : 5
-      else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(s.home_score - s.away_score)) pts = fin ? 3 : 2
+      if (tip.predicted_home === s.home_score && tip.predicted_away === s.away_score) pts = 5
+      else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(s.home_score - s.away_score)) pts = 2
       await supabase.from('bracket_tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
     }
   }
@@ -105,12 +101,13 @@ async function evaluateSpecialTip(tipType: string, correctTeamId: string) {
   }
 }
 
-// ── EvalRow: pouze pro ruční tipy (turnajový vítěz) ───────────────────────────
-function EvalRow({ tipType, label, teamPool, showToast }: {
+// ── EvalRow: ruční override (nebo informační řádek po auto-vyhodnocení) ─────────
+function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId }: {
   tipType: string
   label: string
   teamPool: Team[]
   showToast: (m: string) => void
+  autoWinnerId?: string | null
 }) {
   const [selected, setSelected] = useState('')
   const [evaluating, setEvaluating] = useState(false)
@@ -124,6 +121,11 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
       .select('id').eq('tip_type', tipType).eq('evaluated', true).limit(1)
       .then(({ data }) => { if (data && data.length > 0) setDone(true) })
   }, [tipType])
+
+  // Sync done state when auto-winner is detected
+  useEffect(() => {
+    if (autoWinnerId) setDone(true)
+  }, [autoWinnerId])
 
   const evaluate = async () => {
     if (!selected) { showToast('Vyber tým'); return }
@@ -147,6 +149,8 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
     showToast('Vyhodnocení zrušeno ✓')
   }
 
+  const autoTeam = autoWinnerId ? teamPool.find(t => t.id === autoWinnerId) : null
+
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '.6rem',
@@ -159,7 +163,11 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
       </div>
       {done ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
-          <span style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}>✓ Vyhodnoceno</span>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}>
+              {autoTeam ? `✓ Auto: ${autoTeam.name}` : '✓ Vyhodnoceno'}
+            </div>
+          </div>
           <button type="button" className="btn btn-d btn-sm" onClick={resetEval}
             style={{ opacity: resetting ? .6 : 1 }}>
             {resetting ? '…' : 'Zrušit'}
@@ -167,19 +175,25 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
-          <select
-            className="field-input field-select"
-            style={{ width: 'auto', minWidth: 130, fontSize: '.78rem', padding: '.3rem .5rem' }}
-            value={selected}
-            onChange={e => setSelected(e.target.value)}
-          >
-            <option value="">— správný tým —</option>
-            {teamPool.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <button type="button" className="btn btn-s btn-sm" onClick={evaluate}
-            style={{ opacity: evaluating ? .6 : 1, whiteSpace: 'nowrap' }}>
-            {evaluating ? '…' : 'Vyhodnotit'}
-          </button>
+          {autoWinnerId ? (
+            <span style={{ fontSize: '.73rem', color: 'var(--accent)' }}>Vyhodnocuji…</span>
+          ) : (
+            <>
+              <select
+                className="field-input field-select"
+                style={{ width: 'auto', minWidth: 130, fontSize: '.78rem', padding: '.3rem .5rem' }}
+                value={selected}
+                onChange={e => setSelected(e.target.value)}
+              >
+                <option value="">— správný tým —</option>
+                {teamPool.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+              <button type="button" className="btn btn-s btn-sm" onClick={evaluate}
+                style={{ opacity: evaluating ? .6 : 1, whiteSpace: 'nowrap' }}>
+                {evaluating ? '…' : 'Vyhodnotit'}
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -189,15 +203,17 @@ function EvalRow({ tipType, label, teamPool, showToast }: {
 // ── Stav auto-vyhodnocení skupiny ─────────────────────────────────────────────
 type GroupEvalStatus = 'pending' | 'running' | 'done' | 'incomplete'
 
-export default function TipsAdminTab({ showToast, tournament, teams, groups, matches }: Props) {
+export default function TipsAdminTab({ showToast, tournament, teams, groups, matches, bracketSlots, bracketRounds }: Props) {
   const { tipsters } = useTipsters()
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const [recalcing, setRecalcing] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
-  // stav vyhodnocení per-skupina: 'incomplete' | 'pending' | 'running' | 'done'
   const [groupStatus, setGroupStatus] = useState<Record<string, GroupEvalStatus>>({})
   const [groupWinners, setGroupWinners] = useState<Record<string, { winner: string; last: string }>>({})
   const autoRunRef = useRef(false)
+  const tournamentAutoRunRef = useRef(false)
+  // ID vítěze finále detekovaného automaticky
+  const [autoTournamentWinnerId, setAutoTournamentWinnerId] = useState<string | null>(null)
 
   // Auto-vyhodnocení skupin při načtení / změně dat
   useEffect(() => {
@@ -245,6 +261,35 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
     runAutoEval()
   }, [groups.length, matches.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-vyhodnocení vítěze turnaje po odehrání finále
+  useEffect(() => {
+    if (!bracketSlots.length || !bracketRounds.length) return
+    if (tournamentAutoRunRef.current) return
+
+    const maxPos = Math.max(...bracketRounds.map(r => r.position))
+    const finalRound = bracketRounds.find(r =>
+      r.position === maxPos && !/3|třet|bronze/i.test(r.name)
+    )
+    if (!finalRound) return
+    const finalSlot = bracketSlots.find(s => s.round_id === finalRound.id && s.played)
+    if (!finalSlot || !finalSlot.home_id || !finalSlot.away_id) return
+    if (finalSlot.home_score === finalSlot.away_score) return // remíza ve finále
+
+    const winnerId = finalSlot.home_score > finalSlot.away_score
+      ? finalSlot.home_id
+      : finalSlot.away_id
+
+    tournamentAutoRunRef.current = true
+    setAutoTournamentWinnerId(winnerId)
+
+    const run = async () => {
+      await evaluateSpecialTip('tournament_winner', winnerId)
+      await recalcTipsterPoints()
+      showToast('Vítěz turnaje auto-vyhodnocen ✓')
+    }
+    run()
+  }, [bracketSlots, bracketRounds]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleRecalcAll = async () => {
     setRecalcing(true)
     await recalcAllTips()
@@ -263,6 +308,8 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
     const err = r1.error ?? r2.error ?? r3.error ?? r4.error
     if (err) { showToast('Chyba reset: ' + err.message); return }
     autoRunRef.current = false
+    tournamentAutoRunRef.current = false
+    setAutoTournamentWinnerId(null)
     showToast('Tipy resetovány ✓')
   }
 
@@ -306,12 +353,18 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
       {/* Vyhodnocení speciálních tipů */}
       <div className="sub-title">Vyhodnocení speciálních tipů</div>
       <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.8rem' }}>
-        Skupiny se vyhodnotí automaticky jakmile jsou dohráné. Vítěz turnaje se zadá ručně.
+        Skupiny a vítěz turnaje se vyhodnotí automaticky. Ručním „Vyhodnotit" lze výsledek přepsat.
       </p>
 
       <div className="card" style={{ overflow: 'hidden', marginBottom: '1.4rem' }}>
-        {/* Vítěz turnaje — ručně */}
-        <EvalRow tipType="tournament_winner" label="🏆 Vítěz turnaje" teamPool={teams} showToast={showToast} />
+        {/* Vítěz turnaje — auto po finále, ruční override */}
+        <EvalRow
+          tipType="tournament_winner"
+          label="🏆 Vítěz turnaje"
+          teamPool={teams}
+          showToast={showToast}
+          autoWinnerId={autoTournamentWinnerId}
+        />
 
         {/* Skupiny — automaticky */}
         {sortedGroups.map(g => {

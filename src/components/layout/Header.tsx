@@ -72,7 +72,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
             overflow: 'hidden', textOverflow: 'ellipsis',
             color: 'var(--text)',
           }}>
-            {tournament?.name || 'Firemní turnaj'}
+            {tournament?.name || 'ZF CUP 2026'}
           </h1>
           {meta && (
             <div style={{ fontSize: '.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.12em', marginTop: 1 }}>

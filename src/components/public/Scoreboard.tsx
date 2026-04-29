@@ -181,36 +181,30 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
         )}
       </div>
 
-      {/* Top scorers — always visible at bottom, not pushed by standings */}
+      {/* Top scorers — always visible at bottom, compact single-line */}
       {scorers.length > 0 && (
-        <div style={{ flexShrink: 0, padding: '.4rem .8rem .6rem', borderTop: `2px solid ${C.border}` }}>
+        <div style={{ flexShrink: 0, padding: '.3rem .8rem .4rem', borderTop: `2px solid ${C.border}` }}>
           <div style={{
             fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: S.section,
+            fontSize: S.body,
             letterSpacing: '.1em',
             color: C.gold,
-            marginBottom: '.3rem',
+            marginBottom: '.15rem',
           }}>
             ⚽ Střelci
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '.15rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.08rem' }}>
             {scorers.map((s, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.4rem', padding: '.15rem .05rem' }}>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: i === 0 ? C.gold : C.muted, width: 16, textAlign: 'center', flexShrink: 0 }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.3rem', padding: '.08rem .05rem' }}>
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.label, color: i === 0 ? C.gold : C.muted, width: 14, textAlign: 'center', flexShrink: 0 }}>
                   {i + 1}
                 </span>
-                {s.team && <TeamLogo team={s.team} size={16} />}
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: S.body, fontWeight: i === 0 ? 700 : 500, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.name}
-                  </span>
-                  {s.team && (
-                    <span style={{ fontSize: S.label, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {s.team.name}
-                    </span>
-                  )}
-                </div>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: i === 0 ? C.gold : C.accent, flexShrink: 0 }}>
+                {s.team && <TeamLogo team={s.team} size={14} />}
+                <span style={{ flex: 1, minWidth: 0, fontSize: S.small, fontWeight: i === 0 ? 700 : 500, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.name}
+                  {s.team && <span style={{ color: C.muted, fontWeight: 400 }}> · {s.team.name}</span>}
+                </span>
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.body, color: i === 0 ? C.gold : C.accent, flexShrink: 0 }}>
                   {s.total}
                 </span>
               </div>
@@ -425,6 +419,13 @@ function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', padding: '.3rem .55rem', gap: '.18rem', boxSizing: 'border-box' }}>
+      {/* Záhlaví hřišť */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '0 .4rem', flexShrink: 0 }}>
+        <div style={{ minWidth: '3.1em', flexShrink: 0 }} />
+        <div style={{ flex: 1, textAlign: 'center', fontSize: S.label, color: C.accent, fontWeight: 700, letterSpacing: '.08em' }}>HŘIŠTĚ A</div>
+        <div style={{ width: 1, flexShrink: 0 }} />
+        <div style={{ flex: 1, textAlign: 'center', fontSize: S.label, color: C.accent, fontWeight: 700, letterSpacing: '.08em' }}>HŘIŠTĚ B</div>
+      </div>
       {sortedSlots.map(([time, slotMatches], si) => {
         const m1 = slotMatches[0]
         const m2 = slotMatches[1] ?? null
@@ -446,11 +447,11 @@ function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] 
             <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>
               {time || '—'}
             </div>
-            {/* Zápas 1 */}
+            {/* Zápas 1 — Hřiště A */}
             <MatchCell match={m1} teams={teams} />
             {/* Oddělovač */}
             <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
-            {/* Zápas 2 */}
+            {/* Zápas 2 — Hřiště B */}
             {m2 ? <MatchCell match={m2} teams={teams} /> : <div style={{ flex: 1 }} />}
           </div>
         )

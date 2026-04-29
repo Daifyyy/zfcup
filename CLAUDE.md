@@ -41,8 +41,9 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `tips`: id, tipster_id (FK → tipsters), match_id (FK → matches), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, match_id)
 - `bracket_tips`: id, tipster_id (FK → tipsters), slot_id (FK → bracket_slots), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, slot_id)
 - `special_tips`: id, tipster_id (FK → tipsters), tip_type (TEXT), predicted_team_id (UUID FK → teams), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, tip_type)
-- `tournament`: obsahuje `tips_enabled BOOLEAN` — řídí viditelnost záložky Tipy; `format TEXT DEFAULT 'groups'` (`'groups'` | `'league'`); `match_duration INT DEFAULT 20`; `halves SMALLINT DEFAULT 1`; `playoff_kickoff TEXT DEFAULT ''`; `round_break INT DEFAULT 5`
+- `tournament`: obsahuje `tips_enabled BOOLEAN` — řídí viditelnost záložky Tipy; `format TEXT DEFAULT 'groups'` (`'groups'` | `'league'`); `match_duration INT DEFAULT 20`; `halves SMALLINT DEFAULT 1`; `playoff_kickoff TEXT DEFAULT ''`; `round_break INT DEFAULT 5`; `tips_lock_from TEXT DEFAULT ''` — datum ve formátu `YYYY-MM-DD` pro datový zámek tipování
   - SQL migrace: `ALTER TABLE tournament ADD COLUMN IF NOT EXISTS format TEXT DEFAULT 'groups', ADD COLUMN IF NOT EXISTS match_duration INT DEFAULT 20, ADD COLUMN IF NOT EXISTS halves SMALLINT DEFAULT 1, ADD COLUMN IF NOT EXISTS playoff_kickoff TEXT DEFAULT '', ADD COLUMN IF NOT EXISTS round_break INT DEFAULT 5;`
+  - SQL migrace (tips_lock_from): `ALTER TABLE tournament ADD COLUMN IF NOT EXISTS tips_lock_from TEXT DEFAULT '';`
 
 ## Pravidla kódování
 - Komponenty do `src/components/`, stránky (záložky) jsou inline v App.tsx
@@ -52,7 +53,7 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
   - Aktivní data (matches, goals, bracket, bracketGoals, tips*, tipsters): **10s**
   - Oznámení (announcements): **30s**
   - Statická data (teams, players, groups, tournament): **60s**
-- `refetch()` z hooků exponovat přes `useRef` pattern — umožňuje okamžitý refresh po save (viz useMatches, useGoals, useBracketGoals)
+- `refetch()` z hooků exponovat přes `useRef` pattern — umožňuje okamžitý refresh po save (viz useMatches, useGoals, useBracketGoals, useBracket)
 - Nikdy service_role key ve frontendu
 - Chyby vždy ošetři — ukaž uživateli toast, ne console.error
 - Všechny `<button>` musí mít `type="button"` — bez toho může dojít k nechtěnému submit
@@ -69,7 +70,11 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - **Tipy — NEvymazávat `dirty` po save**: `setDirty(new Set())` po `saveAll()` způsobuje, že při příchodu realtime odpovědi z DB `useEffect` přepíše inputy před aktualizací `myTips` → zápas vizuálně zmizí. `dirty` se čistí pouze na unmount (přepnutí záložky), nikdy manuálně po save.
 - **Tipy — loading stav**: `useTips` a `useBracketTips` vrací `loading: boolean` — při remountu komponenty (přepnutí záložky a návrat) zobrazit spinner místo prázdných inputů, aby uživatel věděl že data se načítají.
 - **Tipy — upsert místo insert/update**: `saveAll` v `GroupTipsSection` i `BracketTipsSection` používá `supabase.from('tips').upsert({tipster_id, match_id, predicted_home, predicted_away}, {onConflict: 'tipster_id,match_id'})` — předchází race condition kdy stale `myTips` způsobovalo UNIQUE constraint violation při druhém save.
-- **Tipy — časový zámek**: skupinové zápasy se zamknou v čas `scheduled_time` (helper `isMatchTimePassed`), playoff sloty pokud mají `scheduled_time` nastaven v SlotEditoru. Zámek se re-vyhodnocuje každou minutu (setInterval v GroupTipsSection). Zamčený zápas zobrazí 🔒 + uložený tip.
+- **Tipy — časový zámek**: skupinové zápasy se zamknou v čas `scheduled_time` (helper `isMatchTimePassed(scheduledTime, lockFromDate?)`), playoff sloty pokud mají `scheduled_time` nastaven v SlotEditoru. Zámek se re-vyhodnocuje každou minutu (setInterval v GroupTipsSection). Zamčený zápas zobrazí 🔒 + uložený tip.
+- **Tipy — datový zámek (`tips_lock_from`)**: `isMatchTimePassed` přijímá volitelný `lockFromDate` (z `tournament.tips_lock_from`). Pokud `today < lockFromDate`, vrací `false` — tipy se na jiný den nezamykají (opravuje bug kdy testování v 14:00 zamklo vše i týden před turnajem).
+- **`anyMatchPlayed` vs `anyPlayoffPlayed`**: speciální tip `tournament_winner` se zamkne až při prvním odehraném playoff slotu (`anyPlayoffPlayed = bracketSlots.some(s => s.played)`); skupinové speciální tipy se zamknou při prvním skupinovém zápasu (`anyMatchPlayed = groupMatches.some(m => m.played)`).
+- **EvalRow — persistence stavu**: `EvalRow` v `TipsAdminTab` kontroluje DB na mount (`supabase.from('special_tips').select...eq('evaluated', true)`) — zachová `done=true` stav po page refresh. Má tlačítko "Zrušit" pro un-evaluaci (nastaví `evaluated=false`, `points_earned=0`, přepočítá body).
+- **useBracket exportuje `refetch()`**: `useBracket` vrací `refetch: () => fetchRef.current()` (useRef pattern) — volá se po každém `saveSlot` a `seedTeams` v BracketTab pro okamžitý UI update.
 
 ## Styl a UX
 - Světlé téma: pozadí `#f8fafc`, karty bílé se shadow, akcent `#2563eb` (modrá)
@@ -105,9 +110,9 @@ Záložky aktivně používané při turnaji (**Zápasy, Play-off, Tipovačka**)
 - `groups` — Skupiny + generování zápasů (circle-method); v liga módu generuje skupinu "Liga" (circle-method, 9 týmů = 36 zápasů / 18 slotů)
 - `scorers` — Read-only přehled střelců
 - `matches` — **Sjednocený inline editor**: tlačítko "✎ Upravit" rozbalí panel přímo pod zápasem se skóre (±stepery) + soupiskou obou týmů (±góly per hráč) + "💾 Uložit vše" (ukládá skóre i góly najednou). Horní formulář slouží pouze pro přidání nového zápasu.
-- `bracket` — 2-krokový flow: Step 1 = vygenerovat strukturu (vždy dostupné), Step 2 = nasadit týmy (jen pokud jsou všechny skupinové zápasy odehrané); SlotEditor má ±stepery skóre + pole Čas + BracketGoalEditor per hráč; záložka přejmenována z "Pavouk" na "Play-off"
+- `bracket` — 2-krokový flow: Step 1 = vygenerovat strukturu (vždy dostupné), Step 2 = nasadit týmy (jen pokud jsou všechny skupinové zápasy odehrané); **SlotEditor** přepracován: stacked layout shodný s `InlineMatchEditor` (MatchesTab), inline editace gólů, **jediné tlačítko "💾 Uložit vše"** (ukládá skóre + góly najednou); `BracketGoalEditor` jako samostatná komponenta odstraněn; záložka přejmenována z "Pavouk" na "Play-off"
 - `tips` — Tipovačka admin: pořadí sekcí: 1) Vyhodnocení speciálních tipů (skupiny auto, turnajový vítěz ručně), 2) Přepočet bodů, 3) Nebezpečná zóna, 4) Tipéři
-- `settings` — Nastavení (včetně toggle `tips_enabled`)
+- `settings` — Nastavení (včetně toggle `tips_enabled`); **datum turnaje** (`tips_lock_from` date input) pro datový zámek tipů; **"Čistý start"** tlačítko — smaže zápasy/skupiny/góly/tipy, zachová týmy+hráče
 
 ## Liga formát — architektura
 
@@ -132,8 +137,8 @@ Záložky aktivně používané při turnaji (**Zápasy, Play-off, Tipovačka**)
 ## Bracket (Play-off) — architektura
 - **Krok 1** (`generateStructure`): vytvoří `bracket_rounds` + prázdné `bracket_slots` podle počtu týmů
 - **Krok 2** (`seedTeams`): doplní týmy z tabulky skupin do prvního kola; podmínka: všechny skupinové zápasy musí být odehrané; **tlačítko bez `disabled`** — check uvnitř onClick
-- **SlotEditor**: sjednocen layoutem s InlineMatchEditor (accent-dim background, týmy u steperů, pole Čas); ±stepery pro home/away score + toggle "⚽ Góly" → zobrazí `BracketGoalEditor`; ukládá i `scheduled_time` (nullable) → umožňuje časový zámek tipování
-- **BracketGoalEditor**: upsert/delete do `bracket_goals` (slot_id, player_id, count); po save volá `refetchBracketGoals()`
+- **SlotEditor**: stacked layout shodný s InlineMatchEditor (accent-dim background, týmy u steperů, pole Čas); ±stepery pro home/away score; góly **inline** (bez toggle, vždy viditelné) — seznam hráčů obou týmů s ±stepery; ukládá i `scheduled_time` (nullable) → umožňuje časový zámek tipování; `buildCounts` reinicializuje goal counts při změně `home_id`/`away_id` (useEffect dependency)
+- **BracketGoalEditor jako samostatná komponenta odstraněn** — logika sloučena do SlotEditor; `refetchBracketGoals()` se volá uvnitř saveAll
 - **bracket_goals SQL** (spustit jednou v Supabase):
 ```sql
 CREATE TABLE bracket_goals (
@@ -292,10 +297,11 @@ $$ LANGUAGE plpgsql;
   - `TipsLogin` — registrace/přihlášení: **dvě pole Jméno + Příjmení** (uloženo jako `"jan novák"` lowercase), 4místný PIN, UNIQUE constraint na celé jméno
   - `Leaderboard` — žebříček tipérů, zvýraznění aktuálního uživatele
   - `SpecialTipsSection` — vítěz turnaje + vítěz/poslední každé skupiny
-    - **Zamčeno** (read-only 🔒) jakmile je odehrán první zápas (`anyMatchPlayed` prop)
+    - **Per-tip zamykání**: skupinové speciální tipy (`group_winner`, `group_last`) se zamknou při `anyMatchPlayed` (první skupinový zápas); `tournament_winner` se zamkne až při `anyPlayoffPlayed` (první playoff slot)
     - Po vyhodnocení adminem: zobrazuje výsledek + body
     - State pattern: `selected` (dropdowny) + `savedSelections` (potvrzené v DB) — `savedSelections` se aktualizuje okamžitě po save bez čekání na realtime; `changed = selected !== savedSelections`
     - **Nesmí být definována jako nested komponenta** — způsobuje unmount/remount na každý re-render a reset state
+    - **Liga mód popisky**: "Vítěz ligové fáze" / "Poslední v ligové fázi" (místo "Vítěz skupiny Liga"); `tournament_winner` = "Vítěz turnaje (vč. playoff)"
   - `GroupTipsSection` — skupinové zápasy seřazené dle kola, score inputy, hromadný save
     - Dirty tracking: user-edited inputy se nepřepisují realtime updatem; **dirty se nečistí po save** (viz known issues)
     - `loading` prop z `useTips` — zobrazí "Načítám tipy…" spinner místo prázdných inputů
@@ -310,7 +316,7 @@ $$ LANGUAGE plpgsql;
     - Stejný dirty tracking + loading + upsert + časový zámek (dle `s.scheduled_time`) jako GroupTipsSection
 - `src/components/admin/tabs/TipsAdminTab.tsx` — admin záložka
   - **Auto-vyhodnocení skupin**: `useEffect` při načtení zkontroluje každou skupinu; pokud jsou všechny zápasy odehrány → `calcGroupStandings` → automaticky uloží `group_winner` a `group_last` do `special_tips` → zobrazí `✓ 🥇 [tým] / ✓ ⬇️ [tým]`; pokud skupina není hotová → "Čeká na dokončení skupiny…"
-  - Vítěz turnaje: ruční výběr (EvalRow s dropdownem)
+  - Vítěz turnaje: ruční výběr (`EvalRow` s dropdownem); `EvalRow` načítá DB stav na mount → zachová `done=true` po page refresh; tlačítko "Zrušit" un-evaluuje (nastaví `evaluated=false`, vynuluje body, přepočítá)
   - **Přepočet bodů**: tlačítko "🔄 Přepočítat tipy ze zápasů" — volá `recalcAllTips()` pro re-evaluaci ze skutečných výsledků
   - Reset všech tipů (tips + bracket_tips + special_tips + vynulování bodů)
   - Přehled tipérů s body + mazání (sekce je **dole** — méně důležitá při turnaji)
@@ -394,12 +400,12 @@ CSS v `src/index.css` — třídy `.match-grid`, `.match-col-time`, `.match-col-
 ## TV Scoreboard (Tabule) — architektura
 **2 sloupce `30% | 70%`**, `overflow: hidden` všude (žádný scroll), fluid fonty přes `clamp()`:
 - **Záhlaví**: "ZF CUP 2026" velký Bebas Neue + "vyvinuto SmartFactory ZF Jablonec" malý muted text; `padding: '.6rem 1.5rem .75rem'` (ne fixní height)
-- **Levý (30%)**: skupinové tabulky + top-3 střelců; střelci jsou `flex-shrink: 0` sekce dole → vždy viditelní; střelci agregují `goals + bracket_goals` dohromady; každá skupina má `flex: 1, minHeight: 0` → rovný podíl výšky, žádná skupina není oříznutá
+- **Levý (30%)**: skupinové tabulky + **top-5 střelců**; střelci jsou `flex-shrink: 0` sekce dole → vždy viditelní; střelci agregují `goals + bracket_goals` dohromady; každá skupina má `flex: 1, minHeight: 0` → rovný podíl výšky, žádná skupina není oříznutá
   - **Liga mód**: tabulka barevně kódovaná — řádky 0–1 zelené (→ SF), řádky 2–5 amber (→ QF); legenda v záhlaví sloupce; tiebreaker poznámka v závorce; funkce `leagueRowStyle(i)` vrací barvu pozadí + borderLeft + barvu čísla
 - **Pravý (70%)**: dynamický obsah dle fáze turnaje:
   - **Skupinová fáze / groups**: 2 sub-sloupce side-by-side (`repeat(N, 1fr)`) — každá skupina má svůj sloupec s názvem a zápasy; čas vlevo každého řádku (`gridTemplateColumns: 'auto 1fr auto 1fr'`)
   - **Skupinová fáze / league**: `LeagueMatchesCol` — 18 časových slotů × 2 simultánní zápasy; každý slot je `flex: 1`; `MatchCell` zobrazí logo+jméno | VS/skóre | jméno+logo; všech 36 zápasů viditelných bez scrollu
-  - **Po odehrání skupin** (`allGroupMatchesPlayed`): `PlayoffMatchesSubCol` — flat list playoff slotů per kolo s detekcí finále/3.místa
+  - **Po odehrání skupin** (`allGroupMatchesPlayed`): `PlayoffMatchesSubCol` — flat list playoff slotů per kolo s detekcí finále/3.místa; zobrazuje `scheduled_time` nad neodehranými sloty (🕐 HH:MM)
 - **Odstraněn 3. sloupec** `FlatBracketCol` — prostřední sloupec má více prostoru pro zápasy
 - **Střelci (levý sloupec)**: jméno hráče + pod ním název týmu menším fontem (`S.label`, muted barva)
 - Props: `tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit`

@@ -147,9 +147,9 @@ export default function App() {
         tipsEnabled={tournament?.tips_enabled ?? false}
       />
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-        {tab === 'overview'  && <Overview tournament={tournament} teams={teams} matches={matches} groups={groups} goals={goals} announcements={announcements} onTab={navigateTab} />}
+        {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} />}
-        {tab === 'results'   && <Results matches={matches} teams={teams} />}
+        {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
         {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} players={players} teams={teams} />}
         {tab === 'bracket'   && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}

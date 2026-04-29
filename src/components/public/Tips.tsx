@@ -210,7 +210,12 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
     setSaving(prev => ({ ...prev, [tipType]: true }))
     const existing = specialTips.find(t => t.tip_type === tipType)
     if (existing) {
-      await supabase.from('special_tips').update({ predicted_team_id: teamId }).eq('id', existing.id)
+      // Reset evaluated/points_earned — tip se mění, dosavadní vyhodnocení je neplatné
+      await supabase.from('special_tips').update({
+        predicted_team_id: teamId,
+        evaluated: false,
+        points_earned: 0,
+      }).eq('id', existing.id)
     } else {
       await supabase.from('special_tips').insert({
         tipster_id: tipsterId, tip_type: tipType, predicted_team_id: teamId, points_earned: 0, evaluated: false,
@@ -379,6 +384,14 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
     return () => clearInterval(id)
   }, [])
 
+  // Varování při zavření/refreshi stránky s neuloženými tipy
+  useEffect(() => {
+    if (dirty.size === 0) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [dirty])
+
   useEffect(() => {
     setInputs(prev => {
       const next = { ...prev }
@@ -525,6 +538,16 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
           </div>
         </div>
       ))}
+      {dirty.size > 0 && (
+        <div style={{
+          background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.5)',
+          borderRadius: 8, padding: '.5rem .85rem', marginBottom: '.55rem',
+          fontSize: '.76rem', fontWeight: 600, color: '#92400e',
+          display: 'flex', alignItems: 'center', gap: '.5rem',
+        }}>
+          ⚠️ Máš neuložené tipy! Stiskni tlačítko níže před odchodem ze záložky.
+        </div>
+      )}
       <button type="button" className="btn btn-p btn-full" onClick={saveAll} style={{ opacity: saving ? .7 : 1 }}>
         {saving ? 'Ukládám…' : '💾 Uložit tipy na skupiny'}
       </button>
@@ -547,6 +570,14 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
   const [inputs, setInputs] = useState<Record<string, { home: string; away: string }>>({})
   const [dirty, setDirty] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
+
+  // Varování při zavření/refreshi stránky s neuloženými playoff tipy
+  useEffect(() => {
+    if (dirty.size === 0) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [dirty])
 
   useEffect(() => {
     setInputs(prev => {
@@ -694,6 +725,16 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
           </div>
         )
       })}
+      {dirty.size > 0 && (
+        <div style={{
+          background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.5)',
+          borderRadius: 8, padding: '.5rem .85rem', marginBottom: '.55rem',
+          fontSize: '.76rem', fontWeight: 600, color: '#92400e',
+          display: 'flex', alignItems: 'center', gap: '.5rem',
+        }}>
+          ⚠️ Máš neuložené playoff tipy! Stiskni tlačítko níže před odchodem ze záložky.
+        </div>
+      )}
       <button type="button" className="btn btn-p btn-full" onClick={saveAll} style={{ opacity: saving ? .7 : 1 }}>
         {saving ? 'Ukládám…' : '💾 Uložit playoff tipy'}
       </button>
@@ -751,8 +792,7 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
         display: 'flex', gap: '.8rem', flexWrap: 'wrap',
       }}>
         <span>{isLeague ? 'Liga' : 'Skupiny'}: <strong style={{ color: 'var(--text)' }}>3</strong> / <strong style={{ color: 'var(--text)' }}>1 b.</strong></span>
-        <span>Playoff: <strong style={{ color: 'var(--text)' }}>5</strong> / <strong style={{ color: 'var(--text)' }}>2 b.</strong></span>
-        <span>Finále: <strong style={{ color: 'var(--text)' }}>8</strong> / <strong style={{ color: 'var(--text)' }}>3 b.</strong></span>
+        <span>Playoff (QF/SF/F): <strong style={{ color: 'var(--text)' }}>5</strong> / <strong style={{ color: 'var(--text)' }}>2 b.</strong></span>
         <span style={{ borderLeft: '1px solid var(--border)', paddingLeft: '.8rem' }}>
           Vítěz turnaje: <strong style={{ color: 'var(--text)' }}>10 b.</strong> · Vítěz skupiny: <strong style={{ color: 'var(--text)' }}>5 b.</strong> · Poslední skupiny: <strong style={{ color: 'var(--text)' }}>3 b.</strong>
         </span>

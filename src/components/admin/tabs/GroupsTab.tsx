@@ -65,6 +65,8 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   const [leagueStart, setLeagueStart] = useState('')
   const [leagueDur, setLeagueDur] = useState(String(tournament?.match_duration ?? 20))
   const [leagueBreak, setLeagueBreak] = useState(String(tournament?.round_break ?? 5))
+  const [leagueBreakWindowStart, setLeagueBreakWindowStart] = useState('')
+  const [leagueBreakWindowDur, setLeagueBreakWindowDur] = useState('60')
   const [leagueGenerating, setLeagueGenerating] = useState(false)
 
   const leagueGroup = groups.find(g => g.name === 'Liga')
@@ -113,6 +115,8 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
         leagueTeamIds, leagueStart,
         parseInt(leagueDur) || 20,
         parseInt(leagueBreak) || 5,
+        leagueBreakWindowStart || undefined,
+        leagueBreakWindowStart ? (parseInt(leagueBreakWindowDur) || 60) : undefined,
       )
 
       const matchRows = schedule.map(m => ({
@@ -257,10 +261,38 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
                 onChange={e => setLeagueDur(e.target.value)} />
             </div>
             <div className="field-group">
-              <label className="field-label">Přestávka (min)</label>
+              <label className="field-label">Přestávka mezi zápasy (min)</label>
               <input className="field-input" type="number" min="0" value={leagueBreak}
                 onChange={e => setLeagueBreak(e.target.value)} />
             </div>
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Okno přestávky (oběd apod.) — volitelné</label>
+            <div className="field-row" style={{ marginTop: '.3rem' }}>
+              <div className="field-group" style={{ marginBottom: 0 }}>
+                <label className="field-label" style={{ fontSize: '.7rem' }}>Začátek</label>
+                <input className="field-input" type="time" value={leagueBreakWindowStart}
+                  onChange={e => setLeagueBreakWindowStart(e.target.value)}
+                  placeholder="12:00" />
+              </div>
+              <div className="field-group" style={{ marginBottom: 0 }}>
+                <label className="field-label" style={{ fontSize: '.7rem' }}>Délka (min)</label>
+                <input className="field-input" type="number" min="1" value={leagueBreakWindowDur}
+                  onChange={e => setLeagueBreakWindowDur(e.target.value)}
+                  disabled={!leagueBreakWindowStart} />
+              </div>
+            </div>
+            {leagueBreakWindowStart && (
+              <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: '.3rem' }}>
+                Zápasy, které by zasáhly do tohoto okna, se přesunou na jeho konec.
+                {' '}
+                <button type="button" onClick={() => setLeagueBreakWindowStart('')}
+                  style={{ fontSize: '.7rem', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                  Odebrat
+                </button>
+              </div>
+            )}
           </div>
 
           <button type="button" className="btn btn-p" onClick={generateLeague} style={{ opacity: leagueGenerating ? 0.6 : 1 }}>
