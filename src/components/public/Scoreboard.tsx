@@ -382,7 +382,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
 }
 
 // ── League match cell (one of 2 simultaneous matches) ─────────────────────────
-function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
+function MatchCell({ match, teams, refereeName }: { match: Match; teams: Team[]; refereeName?: string }) {
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
   const tt = (id: string) => teams.find(t => t.id === id)
   const hw = match.played && match.home_score > match.away_score
@@ -395,13 +395,18 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
         </span>
         {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={14} />}
       </div>
-      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
+      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em', display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
         {match.played ? (
           <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>
             {match.home_score}:{match.away_score}
           </span>
         ) : (
           <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.small, color: C.muted }}>VS</span>
+        )}
+        {refereeName && (
+          <span style={{ fontSize: 'clamp(5px,0.42vw,7px)', color: C.muted, opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '5em' }}>
+            ⚖{refereeName.slice(0, 10)}
+          </span>
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
@@ -415,7 +420,8 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
 }
 
 // ── League matches — all 36 grouped by time slot, 2 side by side ──────────────
-function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] }) {
+function LeagueMatchesCol({ matches, teams, referees = [] }: { matches: Match[]; teams: Team[]; referees?: Referee[] }) {
+  const refName = (m: Match) => m.referee_id ? referees.find(r => r.id === m.referee_id)?.name : undefined
   // Group by scheduled_time
   const slotsMap = new Map<string, Match[]>()
   for (const m of [...matches].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
@@ -456,11 +462,11 @@ function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] 
               {time || '—'}
             </div>
             {/* Zápas 1 — Hřiště A */}
-            <MatchCell match={m1} teams={teams} />
+            <MatchCell match={m1} teams={teams} refereeName={refName(m1)} />
             {/* Oddělovač */}
             <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
             {/* Zápas 2 — Hřiště B */}
-            {m2 ? <MatchCell match={m2} teams={teams} /> : <div style={{ flex: 1 }} />}
+            {m2 ? <MatchCell match={m2} teams={teams} refereeName={refName(m2)} /> : <div style={{ flex: 1 }} />}
           </div>
         )
       })}
@@ -494,7 +500,7 @@ function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots, tourn
   )
 
   if (isLeague) {
-    return <LeagueMatchesCol matches={groupMatches} teams={teams} />
+    return <LeagueMatchesCol matches={groupMatches} teams={teams} referees={referees} />
   }
 
   return (
