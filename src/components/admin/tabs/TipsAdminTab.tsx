@@ -87,18 +87,23 @@ async function recalcAllTips() {
   await recalcTipsterPoints()
 }
 
-// Vyhodnotí jeden tip_type s daným správným týmem
-async function evaluateSpecialTip(tipType: string, correctTeamId: string) {
+// Vyhodnotí jeden tip_type s daným správným týmem; vrací true pokud něco skutečně změnil
+async function evaluateSpecialTip(tipType: string, correctTeamId: string): Promise<boolean> {
   const pts = getPoints(tipType)
   const { data: allTips } = await supabase
-    .from('special_tips').select('id, predicted_team_id').eq('tip_type', tipType)
-  if (!allTips?.length) return
+    .from('special_tips').select('id, predicted_team_id, evaluated, points_earned').eq('tip_type', tipType)
+  if (!allTips?.length) return false
+  let anyChanged = false
   for (const t of allTips) {
     const earned = t.predicted_team_id === correctTeamId ? pts : 0
-    await supabase.from('special_tips')
-      .update({ evaluated: true, points_earned: earned })
-      .eq('id', t.id)
+    if (!t.evaluated || t.points_earned !== earned) {
+      await supabase.from('special_tips')
+        .update({ evaluated: true, points_earned: earned })
+        .eq('id', t.id)
+      anyChanged = true
+    }
   }
+  return anyChanged
 }
 
 // ── EvalRow: ruční override (nebo informační řádek po auto-vyhodnocení) ─────────
@@ -245,11 +250,11 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
         setGroupStatus(s => ({ ...s, [group.id]: 'running' }))
         setGroupWinners(w => ({ ...w, [group.id]: { winner: winnerName, last: lastName } }))
 
-        await evaluateSpecialTip(`group_winner:${group.id}`, winnerId)
-        await evaluateSpecialTip(`group_last:${group.id}`, lastId)
+        const changedW = await evaluateSpecialTip(`group_winner:${group.id}`, winnerId)
+        const changedL = await evaluateSpecialTip(`group_last:${group.id}`, lastId)
 
         setGroupStatus(s => ({ ...s, [group.id]: 'done' }))
-        anyEvaluated = true
+        if (changedW || changedL) anyEvaluated = true
       }
 
       if (anyEvaluated) {

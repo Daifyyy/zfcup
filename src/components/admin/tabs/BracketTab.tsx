@@ -9,6 +9,7 @@ import type { Match } from '../../../hooks/useMatches'
 import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { BracketGoal } from '../../../hooks/useBracketGoals'
 import type { Tournament } from '../../../hooks/useTournament'
+import type { Referee } from '../../../hooks/useReferees'
 
 interface Props {
   teams: Team[]
@@ -18,6 +19,7 @@ interface Props {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   bracketGoals: BracketGoal[]
+  referees?: Referee[]
   refetchBracket: () => Promise<void> | void
   refetchBracketGoals: () => void
   tournament: Tournament | null
@@ -26,17 +28,19 @@ interface Props {
 
 // ── Slot Editor (skóre + góly v jednom panelu, stejný layout jako MatchesTab) ──
 function SlotEditor({
-  slot, teams, players, bracketGoals, refetchBracketGoals, showToast, onSave,
+  slot, teams, players, bracketGoals, referees, refetchBracketGoals, showToast, onSave,
 }: {
   slot: BracketSlot
   teams: Team[]
   players: Player[]
   bracketGoals: BracketGoal[]
+  referees: Referee[]
   refetchBracketGoals: () => void
   showToast: (m: string) => void
   onSave: (data: Partial<BracketSlot>) => Promise<void>
 }) {
   const [s, setS] = useState({ ...slot, scheduled_time: slot.scheduled_time ?? '' })
+  const [refereeId, setRefereeId] = useState<string>(slot.referee_id ?? '')
   const [saving, setSaving] = useState(false)
 
   const homePlayers = players.filter(p => p.team_id === s.home_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -101,6 +105,7 @@ function SlotEditor({
       home_score: s.home_score, away_score: s.away_score,
       played: autoPlayed,
       scheduled_time: s.scheduled_time || null,
+      referee_id: refereeId || null,
     })
     setSaving(false)
   }
@@ -182,6 +187,18 @@ function SlotEditor({
         </div>
       </div>
 
+      {/* Rozhodčí */}
+      {referees.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', marginBottom: '.65rem' }}>
+          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>⚖</span>
+          <select className="field-input field-select" value={refereeId} onChange={e => setRefereeId(e.target.value)}
+            style={{ fontSize: '.82rem', padding: '.25rem .45rem', flex: 1 }}>
+            <option value="">— Bez rozhodčího —</option>
+            {referees.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        </div>
+      )}
+
       {/* Góly hráčů — inline */}
       {(homePlayers.length > 0 || awayPlayers.length > 0) && (
         <div style={{ marginBottom: '.75rem' }}>
@@ -210,7 +227,7 @@ function SlotEditor({
 
 // ── Round Card ────────────────────────────────────────────────────────────────
 function RoundCard({
-  round, rSlots, teams, players, bracketGoals, refetchBracketGoals,
+  round, rSlots, teams, players, bracketGoals, referees, refetchBracketGoals,
   showToast, matchDuration, onSave, onRemove, onApplyTimes,
 }: {
   round: BracketRound
@@ -218,6 +235,7 @@ function RoundCard({
   teams: Team[]
   players: Player[]
   bracketGoals: BracketGoal[]
+  referees: Referee[]
   refetchBracketGoals: () => void
   showToast: (m: string) => void
   matchDuration: number
@@ -300,7 +318,7 @@ function RoundCard({
               {isOpen && (
                 <SlotEditor
                   slot={slot} teams={teams} players={players}
-                  bracketGoals={bracketGoals} refetchBracketGoals={refetchBracketGoals}
+                  bracketGoals={bracketGoals} referees={referees} refetchBracketGoals={refetchBracketGoals}
                   showToast={showToast}
                   onSave={data => onSave(slot.id, data) as Promise<void>}
                 />
@@ -314,7 +332,7 @@ function RoundCard({
 }
 
 // ── Main BracketTab ───────────────────────────────────────────────────────────
-export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, refetchBracket, refetchBracketGoals, tournament, showToast }: Props) {
+export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, referees = [], refetchBracket, refetchBracketGoals, tournament, showToast }: Props) {
   const [name, setName] = useState('')
   const [slotCount, setSlotCount] = useState('2')
   const [generating, setGenerating] = useState(false)
@@ -685,6 +703,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
             teams={teams}
             players={players}
             bracketGoals={bracketGoals}
+            referees={referees}
             refetchBracketGoals={refetchBracketGoals}
             showToast={showToast}
             matchDuration={tournament?.match_duration ?? 20}

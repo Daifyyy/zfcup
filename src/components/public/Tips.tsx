@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useTipsters } from '../../hooks/useTipsters'
 import { useTips } from '../../hooks/useTips'
@@ -327,7 +327,7 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
       <div style={groupHeader}>Speciální tipy</div>
       {anyMatchPlayed && !anyPlayoffPlayed && (
         <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.5rem', padding: '.3rem .8rem', background: 'rgba(0,0,0,.03)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-          🔒 Skupinové tipy jsou uzamčeny. Tip na vítěze turnaje lze stále změnit (zamkne se se začátkem play-off).
+          🔒 Skupinové tipy jsou uzamčeny. Tip na vítěze turnaje lze stále změnit (zamkne se po nasazení týmů do play-off).
         </div>
       )}
       {anyPlayoffPlayed && (
@@ -340,7 +340,7 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
       </div>
       {!anyMatchPlayed && (
         <div style={{ fontSize: '.67rem', color: 'var(--muted)', padding: '0 .2rem' }}>
-          Skupinové tipy se uzamknou po prvním zápase. Vítěz turnaje se zamkne se začátkem play-off.
+          Skupinové tipy se uzamknou po prvním zápase. Vítěz turnaje se zamkne po nasazení týmů do play-off.
         </div>
       )}
     </div>
@@ -472,11 +472,14 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
               const aw = m.played && m.away_score > m.home_score
               const timeLocked = !m.played && isMatchTimePassed(m.scheduled_time, lockFromDate)
               const isLocked = m.played || timeLocked
+              const isDirty = dirty.has(m.id) && !isLocked
+              const showBorder = i < ms.length - 1
               return (
-                <div key={m.id} style={{
+                <Fragment key={m.id}>
+                <div style={{
                   display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
                   gap: '.5rem', padding: '.6rem .9rem',
-                  borderBottom: i < ms.length - 1 ? '1px solid var(--border)' : 'none',
+                  borderBottom: (!isDirty && showBorder) ? '1px solid var(--border)' : 'none',
                   background: isLocked ? 'rgba(0,0,0,.015)' : 'transparent',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.4rem', minWidth: 0 }}>
@@ -533,6 +536,12 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
                     <span style={{ fontSize: '.82rem', fontWeight: aw ? 700 : 500, color: aw ? 'var(--accent)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tn(m.away_id)}</span>
                   </div>
                 </div>
+                {isDirty && (
+                  <div style={{ padding: '2px .9rem 6px', fontSize: '.68rem', color: '#b45309', borderBottom: showBorder ? '1px solid var(--border)' : 'none' }}>
+                    ● neuloženo — klikni Uložit vše
+                  </div>
+                )}
+                </Fragment>
               )
             })}
           </div>
@@ -652,12 +661,15 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                 const aw = s.played && s.away_score > s.home_score
                 const timeLocked = !!s.home_id && !!s.away_id && !s.played && isMatchTimePassed(s.scheduled_time, lockFromDate)
                 const canTip = !!s.home_id && !!s.away_id && !s.played && !timeLocked
+                const isDirty = dirty.has(s.id) && canTip
+                const showBorder = i < slots.length - 1
 
                 return (
-                  <div key={s.id} style={{
+                  <Fragment key={s.id}>
+                  <div style={{
                     display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
                     gap: '.5rem', padding: '.6rem .9rem',
-                    borderBottom: i < slots.length - 1 ? '1px solid var(--border)' : 'none',
+                    borderBottom: (!isDirty && showBorder) ? '1px solid var(--border)' : 'none',
                     background: s.played || timeLocked ? 'rgba(0,0,0,.015)' : !canTip ? 'rgba(0,0,0,.02)' : 'transparent',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.4rem', minWidth: 0 }}>
@@ -719,6 +731,12 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                       </span>
                     </div>
                   </div>
+                  {isDirty && (
+                    <div style={{ padding: '2px .9rem 6px', fontSize: '.68rem', color: '#b45309', borderBottom: showBorder ? '1px solid var(--border)' : 'none' }}>
+                      ● neuloženo — klikni Uložit vše
+                    </div>
+                  )}
+                  </Fragment>
                 )
               })}
             </div>
@@ -813,7 +831,7 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
             groups={groups} teams={teams} tipsterId={tipsterId}
             specialTips={specialTips} showToast={showToast}
             anyMatchPlayed={groupMatches.some(m => m.played)}
-            anyPlayoffPlayed={bracketSlots.some(s => s.played)}
+            anyPlayoffPlayed={bracketSlots.some(s => s.home_id != null || s.away_id != null)}
             isLeague={isLeague}
           />
           <GroupTipsSection

@@ -9,6 +9,7 @@ import { useGoals } from './hooks/useGoals'
 import { useBracket } from './hooks/useBracket'
 import { useBracketGoals } from './hooks/useBracketGoals'
 import { useAnnouncements } from './hooks/useAnnouncements'
+import { useReferees } from './hooks/useReferees'
 import Header from './components/layout/Header'
 import BottomNav from './components/layout/BottomNav'
 import Overview from './components/public/Overview'
@@ -47,6 +48,7 @@ export default function App() {
   const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket()
   const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals()
   const { announcements } = useAnnouncements()
+  const { referees, refetch: refetchReferees } = useReferees()
 
   // ── Auth ──────────────────────────────────────────────
   useEffect(() => {
@@ -127,6 +129,7 @@ export default function App() {
             bracketGoals={bracketGoals}
             bracketRounds={bracketRounds}
             bracketSlots={bracketSlots}
+            referees={referees}
             onExit={() => setScoreboard(false)}
           />
         )}
@@ -149,7 +152,7 @@ export default function App() {
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} />}
-        {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} />}
+        {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
         {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} players={players} teams={teams} />}
         {tab === 'bracket'   && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
@@ -167,6 +170,7 @@ export default function App() {
           bracketGoals={bracketGoals}
           bracketRounds={bracketRounds}
           bracketSlots={bracketSlots}
+          referees={referees}
           onExit={() => setScoreboard(false)}
         />
       )}
@@ -176,6 +180,7 @@ export default function App() {
           session={session}
           tournament={tournament}
           bracketGoals={bracketGoals}
+          referees={referees}
           refetchTournament={refetchTournament}
           refetchTeams={refetchTeams}
           refetchPlayers={refetchPlayers}
@@ -184,6 +189,7 @@ export default function App() {
           refetchGoals={refetchGoals}
           refetchBracket={refetchBracket}
           refetchBracketGoals={refetchBracketGoals}
+          refetchReferees={refetchReferees}
           onClose={() => setAdminOpen(false)}
         />
       )}

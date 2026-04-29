@@ -7,6 +7,7 @@ import type { Goal } from '../../../hooks/useGoals'
 import type { Group } from '../../../hooks/useGroups'
 import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { Tournament } from '../../../hooks/useTournament'
+import type { Referee } from '../../../hooks/useReferees'
 import { calcGroupStandings } from '../../../lib/standings'
 import { exportSchedule, exportRefCards } from '../../../lib/exportExcel'
 
@@ -19,6 +20,7 @@ interface Props {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   tournament: Tournament | null
+  referees?: Referee[]
   refetchMatches: () => void
   refetchGoals: () => void
   showToast: (msg: string) => void
@@ -38,12 +40,13 @@ const DEF_FORM: MatchForm = { round: '', home_id: '', away_id: '', home_score: '
 
 // ── Inline editor: skóre + góly v jednom panelu ────────────────────────────
 function InlineMatchEditor({
-  match, teams, players, goals, showToast, onClose, refetchMatches, refetchGoals,
+  match, teams, players, goals, referees, showToast, onClose, refetchMatches, refetchGoals,
 }: {
   match: Match
   teams: Team[]
   players: Player[]
   goals: Goal[]
+  referees: Referee[]
   showToast: (m: string) => void
   onClose: () => void
   refetchMatches: () => void
@@ -53,6 +56,7 @@ function InlineMatchEditor({
   const [awayScore, setAwayScore] = useState(match.away_score ?? 0)
   const [played, setPlayed] = useState(Boolean(match.played))
   const [scheduledTime, setScheduledTime] = useState(match.scheduled_time || '')
+  const [refereeId, setRefereeId] = useState<string>(match.referee_id ?? '')
   const [saving, setSaving] = useState(false)
 
   const homePlayers = players.filter(p => p.team_id === match.home_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -95,6 +99,7 @@ function InlineMatchEditor({
       played: autoPlayed,
       scheduled_time: scheduledTime || '',
       round: match.round || '',
+      referee_id: refereeId || null,
     }).eq('id', match.id)
 
     if (matchErr) { showToast('Chyba skóre: ' + matchErr.message); setSaving(false); return }
@@ -198,6 +203,18 @@ function InlineMatchEditor({
         </div>
       </div>
 
+      {/* Rozhodčí */}
+      {referees.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', marginBottom: '.65rem' }}>
+          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>⚖</span>
+          <select className="field-input field-select" value={refereeId} onChange={e => setRefereeId(e.target.value)}
+            style={{ fontSize: '.82rem', padding: '.25rem .45rem', flex: 1 }}>
+            <option value="">— Bez rozhodčího —</option>
+            {referees.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        </div>
+      )}
+
       {/* Góly hráčů */}
       <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem' }}>
         ⚽ Góly hráčů
@@ -233,7 +250,7 @@ function InlineMatchEditor({
   )
 }
 
-export default function MatchesTab({ teams, players, matches, goals, groups, bracketRounds, bracketSlots, tournament, refetchMatches, refetchGoals, showToast }: Props) {
+export default function MatchesTab({ teams, players, matches, goals, groups, bracketRounds, bracketSlots, tournament, referees = [], refetchMatches, refetchGoals, showToast }: Props) {
   const [form, setForm] = useState<MatchForm>(DEF_FORM)
   const [inlineEditId, setInlineEditId] = useState<string | null>(null)
   const [seeding, setSeeding] = useState(false)
@@ -396,7 +413,7 @@ export default function MatchesTab({ teams, players, matches, goals, groups, bra
           <button
             type="button"
             className="btn btn-d btn-sm"
-            onClick={() => exportSchedule(matches, groups, teams)}
+            onClick={() => exportSchedule(matches, groups, teams, tournament ? { match_duration: tournament.match_duration ?? 20, round_break: tournament.round_break ?? 5 } : undefined)}
           >
             📥 Exportovat rozpis (Excel)
           </button>
@@ -455,6 +472,7 @@ export default function MatchesTab({ teams, players, matches, goals, groups, bra
                         teams={teams}
                         players={players}
                         goals={goals}
+                        referees={referees}
                         showToast={showToast}
                         onClose={() => setInlineEditId(null)}
                         refetchMatches={refetchMatches}

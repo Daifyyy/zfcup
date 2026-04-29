@@ -11,6 +11,7 @@ export interface Match {
   away_score: number
   played: boolean
   scheduled_time: string
+  referee_id?: string | null
 }
 
 export function useMatches() {

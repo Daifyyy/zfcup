@@ -19,19 +19,47 @@ function roleBadge(role: string | null) {
   return ''
 }
 
-export function exportSchedule(matches: Match[], groups: Group[], teams: Team[]) {
+function timeToMin(t: string): number {
+  const m = t.match(/(\d{1,2}):(\d{2})/)
+  if (!m) return NaN
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10)
+}
+
+export function exportSchedule(
+  matches: Match[],
+  groups: Group[],
+  teams: Team[],
+  tournament?: { match_duration: number; round_break: number },
+) {
   const header = ['Čas', 'Skupina / Kolo', 'Domácí', 'Hosté', 'Výsledek']
-  const rows = [...matches]
-    .sort((a, b) => (a.scheduled_time || '').localeCompare(b.scheduled_time || ''))
-    .map(m => [
+  const sorted = [...matches].sort((a, b) =>
+    (a.scheduled_time || '').localeCompare(b.scheduled_time || ''),
+  )
+
+  const gapThreshold = tournament
+    ? (tournament.match_duration + tournament.round_break + 2)
+    : Infinity
+
+  const dataRows: string[][] = []
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0) {
+      const prevTime = timeToMin(sorted[i - 1].scheduled_time || '')
+      const currTime = timeToMin(sorted[i].scheduled_time || '')
+      if (!isNaN(prevTime) && !isNaN(currTime) && (currTime - prevTime) > gapThreshold) {
+        dataRows.push(['— — — přestávka — — —', '', '', '', ''])
+      }
+    }
+    const m = sorted[i]
+    dataRows.push([
       m.scheduled_time || '',
       groupName(m, groups),
       teamName(m.home_id, teams),
       teamName(m.away_id, teams),
       m.played ? `${m.home_score}:${m.away_score}` : '',
     ])
+  }
 
-  const ws = XLSX.utils.aoa_to_sheet([header, ...rows])
+  const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows])
   ws['!cols'] = [{ wch: 8 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 10 }]
 
   const wb = XLSX.utils.book_new()

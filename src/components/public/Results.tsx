@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Match } from '../../hooks/useMatches'
 import type { Team } from '../../hooks/useTeams'
 import type { Tournament } from '../../hooks/useTournament'
+import type { Referee } from '../../hooks/useReferees'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
 
@@ -9,10 +10,11 @@ interface Props {
   matches: Match[]
   teams: Team[]
   tournament?: Tournament | null
+  referees?: Referee[]
 }
 
 // Sdílený layout jednoho zápasu
-function MatchRow({ m, teams }: { m: Match; teams: Team[] }) {
+function MatchRow({ m, teams, refereeName }: { m: Match; teams: Team[]; refereeName?: string }) {
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
   const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
   const hw = m.played && m.home_score > m.away_score
@@ -59,6 +61,11 @@ function MatchRow({ m, teams }: { m: Match; teams: Team[] }) {
           {m.played ? '✓' : '—'}
         </span>
       </div>
+      {refereeName && (
+        <div style={{ gridColumn: '1 / -1', fontSize: '.68rem', color: 'var(--muted)', padding: '0 .5rem .4rem', marginTop: '-.15rem' }}>
+          ⚖ {refereeName}
+        </div>
+      )}
     </div>
   )
 }
@@ -77,9 +84,10 @@ const SECTION_HEADER = {
   borderRadius: '0 8px 8px 0',
 }
 
-export default function Results({ matches, teams, tournament }: Props) {
+export default function Results({ matches, teams, tournament, referees = [] }: Props) {
   const [teamFilter, setTeamFilter] = useState('all')
   const isLeague = tournament?.format === 'league'
+  const refName = (m: Match) => m.referee_id ? referees.find(r => r.id === m.referee_id)?.name : undefined
 
   if (!matches.length) return <Empty icon="📋" text="Žádné zápasy." />
 
@@ -130,7 +138,7 @@ export default function Results({ matches, teams, tournament }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.55rem', marginBottom: '.5rem' }}>
               {ms.map((m, i) => (
                 <div key={m.id} style={{ position: 'relative' }}>
-                  <MatchRow m={m} teams={teams} />
+                  <MatchRow m={m} teams={teams} refereeName={refName(m)} />
                   {/* Badge hřiště */}
                   {ms.length >= 2 && (
                     <span style={{
@@ -180,7 +188,7 @@ export default function Results({ matches, teams, tournament }: Props) {
         <div key={round}>
           <div style={SECTION_HEADER}>{round}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.55rem', marginBottom: '.5rem' }}>
-            {ms.map(m => <MatchRow key={m.id} m={m} teams={teams} />)}
+            {ms.map(m => <MatchRow key={m.id} m={m} teams={teams} refereeName={refName(m)} />)}
           </div>
         </div>
       ))}

@@ -10,6 +10,7 @@ import type { Goal } from '../../hooks/useGoals'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { Announcement } from '../../hooks/useAnnouncements'
+import type { Referee } from '../../hooks/useReferees'
 import InfoTab from './tabs/InfoTab'
 import AnnouncementsTab from './tabs/AnnouncementsTab'
 import TeamsTab from './tabs/TeamsTab'
@@ -19,13 +20,15 @@ import ScorersTab from './tabs/ScorersTab'
 import BracketTab from './tabs/BracketTab'
 import SettingsTab from './tabs/SettingsTab'
 import TipsAdminTab from './tabs/TipsAdminTab'
+import RefereesTab from './tabs/RefereesTab'
 
-type ATab = 'info' | 'announcements' | 'teams' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'settings'
+type ATab = 'info' | 'announcements' | 'teams' | 'referees' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'settings'
 
 const ADMIN_TABS: [ATab, string][] = [
   ['info',          'Info'],
   ['announcements', 'Informace'],
   ['teams',         'Týmy'],
+  ['referees',      'Rozhodčí'],
   ['groups',        'Skupiny'],
   ['scorers',       'Střelci'],
   ['matches',       'Zápasy'],
@@ -49,6 +52,7 @@ interface Props {
   bracketSlots: BracketSlot[]
   announcements: Announcement[]
   bracketGoals: BracketGoal[]
+  referees: Referee[]
   refetchTournament: () => void
   refetchTeams: () => void
   refetchPlayers: () => void
@@ -57,6 +61,7 @@ interface Props {
   refetchGoals: () => void
   refetchBracket: () => void
   refetchBracketGoals: () => void
+  refetchReferees: () => void
   showToast: (msg: string) => void
   onClose: () => void
 }
@@ -208,6 +213,7 @@ export default function AdminPanel(props: Props) {
               {aTab === 'info'          && <InfoTab {...tabProps} />}
               {aTab === 'announcements' && <AnnouncementsTab {...tabProps} />}
               {aTab === 'teams'         && <TeamsTab {...tabProps} />}
+              {aTab === 'referees'      && <RefereesTab referees={props.referees} refetchReferees={props.refetchReferees} showToast={showToast} />}
               {aTab === 'groups'        && <GroupsTab {...tabProps} />}
               {aTab === 'matches'       && <MatchesTab {...tabProps} />}
               {aTab === 'scorers'       && <ScorersTab {...tabProps} />}
