@@ -382,7 +382,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
 }
 
 // ── League match cell (one of 2 simultaneous matches) ─────────────────────────
-function MatchCell({ match, teams, refereeName }: { match: Match; teams: Team[]; refereeName?: string }) {
+function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
   const tt = (id: string) => teams.find(t => t.id === id)
   const hw = match.played && match.home_score > match.away_score
@@ -395,18 +395,13 @@ function MatchCell({ match, teams, refereeName }: { match: Match; teams: Team[];
         </span>
         {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={14} />}
       </div>
-      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em', display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.1 }}>
+      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
         {match.played ? (
           <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>
             {match.home_score}:{match.away_score}
           </span>
         ) : (
           <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.small, color: C.muted }}>VS</span>
-        )}
-        {refereeName && (
-          <span style={{ fontSize: 'clamp(5px,0.42vw,7px)', color: C.muted, opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '5em' }}>
-            ⚖{refereeName.slice(0, 10)}
-          </span>
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
@@ -462,11 +457,27 @@ function LeagueMatchesCol({ matches, teams, referees = [] }: { matches: Match[];
               {time || '—'}
             </div>
             {/* Zápas 1 — Hřiště A */}
-            <MatchCell match={m1} teams={teams} refereeName={refName(m1)} />
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
+              {refName(m1) && (
+                <span style={{ fontSize: 'clamp(5px,0.4vw,7px)', color: C.muted, opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '3.5em', flexShrink: 0 }}>
+                  ⚖{refName(m1)!.slice(0, 10)}
+                </span>
+              )}
+              <MatchCell match={m1} teams={teams} />
+            </div>
             {/* Oddělovač */}
             <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
             {/* Zápas 2 — Hřiště B */}
-            {m2 ? <MatchCell match={m2} teams={teams} refereeName={refName(m2)} /> : <div style={{ flex: 1 }} />}
+            {m2 ? (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
+                {refName(m2) && (
+                  <span style={{ fontSize: 'clamp(5px,0.4vw,7px)', color: C.muted, opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '3.5em', flexShrink: 0 }}>
+                    ⚖{refName(m2)!.slice(0, 10)}
+                  </span>
+                )}
+                <MatchCell match={m2} teams={teams} />
+              </div>
+            ) : <div style={{ flex: 1 }} />}
           </div>
         )
       })}
