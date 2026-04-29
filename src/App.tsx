@@ -170,7 +170,6 @@ export default function App() {
           bracketGoals={bracketGoals}
           bracketRounds={bracketRounds}
           bracketSlots={bracketSlots}
-          referees={referees}
           onExit={() => setScoreboard(false)}
         />
       )}

@@ -11,7 +11,6 @@ import type { Match } from '../../hooks/useMatches'
 import type { Goal } from '../../hooks/useGoals'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
-import type { Referee } from '../../hooks/useReferees'
 
 interface Props {
   tournament: Tournament | null
@@ -23,7 +22,6 @@ interface Props {
   bracketGoals: BracketGoal[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
-  referees?: Referee[]
   onExit: () => void
 }
 
@@ -219,10 +217,9 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
 }
 
 // ── Single-group matches sub-column ───────────────────────────────────────────
-function GroupMatchesSubCol({ groupName, matches, teams, referees = [] }: { groupName: string; matches: Match[]; teams: Team[]; referees?: Referee[] }) {
+function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; matches: Match[]; teams: Team[] }) {
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
   const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
-  const refName = (m: Match) => m.referee_id ? referees.find(r => r.id === m.referee_id)?.name : undefined
 
   return (
     <div style={{ padding: '.5rem .65rem', display: 'flex', flexDirection: 'column', gap: '.3rem', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
@@ -253,13 +250,8 @@ function GroupMatchesSubCol({ groupName, matches, teams, referees = [] }: { grou
             flexShrink: 0,
           }}>
             {/* Čas */}
-            <div style={{ fontSize: S.label, color: m.played ? C.muted : C.accent, fontWeight: m.played ? 400 : 700, flexShrink: 0, minWidth: '3.2em', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
-              <span>{m.scheduled_time || ''}</span>
-              {refName(m) && (
-                <span style={{ fontSize: 'clamp(5px,0.42vw,7px)', opacity: 0.65, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '4em' }}>
-                  ⚖{refName(m)!.slice(0, 10)}
-                </span>
-              )}
+            <div style={{ fontSize: S.label, color: m.played ? C.muted : C.accent, fontWeight: m.played ? 400 : 700, flexShrink: 0, minWidth: '3.2em', textAlign: 'center' }}>
+              {m.scheduled_time || ''}
             </div>
             {/* Home */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.25rem', minWidth: 0 }}>
@@ -415,8 +407,7 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
 }
 
 // ── League matches — all 36 grouped by time slot, 2 side by side ──────────────
-function LeagueMatchesCol({ matches, teams, referees = [] }: { matches: Match[]; teams: Team[]; referees?: Referee[] }) {
-  const refName = (m: Match) => m.referee_id ? referees.find(r => r.id === m.referee_id)?.name : undefined
+function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] }) {
   // Group by scheduled_time
   const slotsMap = new Map<string, Match[]>()
   for (const m of [...matches].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
@@ -439,14 +430,12 @@ function LeagueMatchesCol({ matches, teams, referees = [] }: { matches: Match[];
         const m1 = slotMatches[0]
         const m2 = slotMatches[1] ?? null
         const allPlayed = slotMatches.every(m => m.played)
-        const r1 = refName(m1)
-        const r2 = m2 ? refName(m2) : undefined
-        const hasRef = !!(r1 || r2)
         return (
           <div key={time || si} style={{
             flex: 1,
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '.5rem',
             padding: '.15rem .4rem',
             borderRadius: 5,
             background: allPlayed ? C.col : '#eff6ff',
@@ -454,32 +443,16 @@ function LeagueMatchesCol({ matches, teams, referees = [] }: { matches: Match[];
             minHeight: 0,
             overflow: 'hidden',
           }}>
-            {/* Hlavní řádek: čas + zápasy */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '.5rem', minHeight: 0 }}>
-              {/* Čas */}
-              <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>
-                {time || '—'}
-              </div>
-              {/* Zápas 1 — Hřiště A */}
-              <MatchCell match={m1} teams={teams} />
-              {/* Oddělovač */}
-              <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
-              {/* Zápas 2 — Hřiště B */}
-              {m2 ? <MatchCell match={m2} teams={teams} /> : <div style={{ flex: 1 }} />}
+            {/* Čas */}
+            <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>
+              {time || '—'}
             </div>
-            {/* Subřádek rozhodčích */}
-            {hasRef && (
-              <div style={{ display: 'flex', gap: '.5rem', flexShrink: 0, paddingBottom: '.1rem', fontSize: 'clamp(8px,0.62vw,11px)', color: C.muted, fontStyle: 'italic' }}>
-                <div style={{ minWidth: '3.1em', flexShrink: 0 }} />
-                <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r1 ? `⚖ ${r1}` : ''}
-                </div>
-                <div style={{ width: 1, flexShrink: 0 }} />
-                <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r2 ? `⚖ ${r2}` : ''}
-                </div>
-              </div>
-            )}
+            {/* Zápas 1 — Hřiště A */}
+            <MatchCell match={m1} teams={teams} />
+            {/* Oddělovač */}
+            <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
+            {/* Zápas 2 — Hřiště B */}
+            {m2 ? <MatchCell match={m2} teams={teams} /> : <div style={{ flex: 1 }} />}
           </div>
         )
       })}
@@ -488,14 +461,13 @@ function LeagueMatchesCol({ matches, teams, referees = [] }: { matches: Match[];
 }
 
 // ── Matches column — 2 skupiny nebo playoff ────────────────────────────────────
-function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots, tournament, referees = [] }: {
+function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots, tournament }: {
   matches: Match[]
   teams: Team[]
   groups: Group[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   tournament: Tournament | null
-  referees?: Referee[]
 }) {
   const isLeague = tournament?.format === 'league'
   const groupMatches = matches.filter(m => m.group_id !== null)
@@ -513,7 +485,7 @@ function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots, tourn
   )
 
   if (isLeague) {
-    return <LeagueMatchesCol matches={groupMatches} teams={teams} referees={referees} />
+    return <LeagueMatchesCol matches={groupMatches} teams={teams} />
   }
 
   return (
@@ -527,7 +499,7 @@ function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots, tourn
         const gMatches = groupMatches.filter(m => m.group_id === group.id)
         return (
           <div key={group.id} style={{ borderLeft: i > 0 ? `1px solid ${C.border}` : 'none', overflow: 'hidden', height: '100%' }}>
-            <GroupMatchesSubCol groupName={group.name} matches={gMatches} teams={teams} referees={referees} />
+            <GroupMatchesSubCol groupName={group.name} matches={gMatches} teams={teams} />
           </div>
         )
       })}
@@ -649,7 +621,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
 }
 
 // ── Main Scoreboard ───────────────────────────────────────────────────────────
-export default function Scoreboard({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, referees = [], onExit }: Props) {
+export default function Scoreboard({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit }: Props) {
   const clock = useClock()
 
   useEffect(() => {
@@ -779,7 +751,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
           <StandingsCol groups={groups} matches={matches} teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} tournament={tournament} />
         </div>
         <div style={{ background: '#f8faff', overflow: 'hidden' }}>
-          <MatchesCol matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} referees={referees} />
+          <MatchesCol matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} />
         </div>
       </div>
     </div>
