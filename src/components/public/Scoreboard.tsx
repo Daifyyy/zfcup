@@ -439,12 +439,14 @@ function LeagueMatchesCol({ matches, teams, referees = [] }: { matches: Match[];
         const m1 = slotMatches[0]
         const m2 = slotMatches[1] ?? null
         const allPlayed = slotMatches.every(m => m.played)
+        const r1 = refName(m1)
+        const r2 = m2 ? refName(m2) : undefined
+        const hasRef = !!(r1 || r2)
         return (
           <div key={time || si} style={{
             flex: 1,
             display: 'flex',
-            alignItems: 'center',
-            gap: '.5rem',
+            flexDirection: 'column',
             padding: '.15rem .4rem',
             borderRadius: 5,
             background: allPlayed ? C.col : '#eff6ff',
@@ -452,32 +454,32 @@ function LeagueMatchesCol({ matches, teams, referees = [] }: { matches: Match[];
             minHeight: 0,
             overflow: 'hidden',
           }}>
-            {/* Čas */}
-            <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>
-              {time || '—'}
-            </div>
-            {/* Zápas 1 — Hřiště A */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
-              {refName(m1) && (
-                <span style={{ fontSize: 'clamp(5px,0.4vw,7px)', color: C.muted, opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '3.5em', flexShrink: 0 }}>
-                  ⚖{refName(m1)!.slice(0, 10)}
-                </span>
-              )}
-              <MatchCell match={m1} teams={teams} />
-            </div>
-            {/* Oddělovač */}
-            <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
-            {/* Zápas 2 — Hřiště B */}
-            {m2 ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
-                {refName(m2) && (
-                  <span style={{ fontSize: 'clamp(5px,0.4vw,7px)', color: C.muted, opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '3.5em', flexShrink: 0 }}>
-                    ⚖{refName(m2)!.slice(0, 10)}
-                  </span>
-                )}
-                <MatchCell match={m2} teams={teams} />
+            {/* Hlavní řádek: čas + zápasy */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '.5rem', minHeight: 0 }}>
+              {/* Čas */}
+              <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>
+                {time || '—'}
               </div>
-            ) : <div style={{ flex: 1 }} />}
+              {/* Zápas 1 — Hřiště A */}
+              <MatchCell match={m1} teams={teams} />
+              {/* Oddělovač */}
+              <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
+              {/* Zápas 2 — Hřiště B */}
+              {m2 ? <MatchCell match={m2} teams={teams} /> : <div style={{ flex: 1 }} />}
+            </div>
+            {/* Subřádek rozhodčích */}
+            {hasRef && (
+              <div style={{ display: 'flex', gap: '.5rem', flexShrink: 0, paddingBottom: '.1rem', fontSize: 'clamp(8px,0.62vw,11px)', color: C.muted, fontStyle: 'italic' }}>
+                <div style={{ minWidth: '3.1em', flexShrink: 0 }} />
+                <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {r1 ? `⚖ ${r1}` : ''}
+                </div>
+                <div style={{ width: 1, flexShrink: 0 }} />
+                <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {r2 ? `⚖ ${r2}` : ''}
+                </div>
+              </div>
+            )}
           </div>
         )
       })}
