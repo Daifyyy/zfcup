@@ -216,23 +216,22 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
         evaluated: false,
         points_earned: 0,
       }).eq('id', existing.id)
-      // Pokud měl tip body z dřívějšího vyhodnocení, přepočítej total_points tipéra.
-      // Fetch proběhne PO updatu → special_tips vrátí points_earned: 0 pro tento tip.
-      if ((existing.points_earned ?? 0) > 0) {
-        const [{ data: t1 }, { data: t2 }, { data: t3 }] = await Promise.all([
-          supabase.from('tips').select('points_earned').eq('tipster_id', tipsterId!),
-          supabase.from('bracket_tips').select('points_earned').eq('tipster_id', tipsterId!),
-          supabase.from('special_tips').select('points_earned').eq('tipster_id', tipsterId!),
-        ])
-        const total = [...(t1 ?? []), ...(t2 ?? []), ...(t3 ?? [])]
-          .reduce((s, r) => s + (r.points_earned ?? 0), 0)
-        await supabase.from('tipsters').update({ total_points: total }).eq('id', tipsterId!)
-      }
     } else {
       await supabase.from('special_tips').insert({
         tipster_id: tipsterId, tip_type: tipType, predicted_team_id: teamId, points_earned: 0, evaluated: false,
       })
     }
+    // Vždy přepočítej total_points — opraví zastaralou hodnotu v tipsters
+    // (ať byl tip uložen poprvé nebo změněn po dřívějším vyhodnocení).
+    // Fetch special_tips proběhne PO insert/update → vrátí aktuální points_earned: 0.
+    const [{ data: t1 }, { data: t2 }, { data: t3 }] = await Promise.all([
+      supabase.from('tips').select('points_earned').eq('tipster_id', tipsterId!),
+      supabase.from('bracket_tips').select('points_earned').eq('tipster_id', tipsterId!),
+      supabase.from('special_tips').select('points_earned').eq('tipster_id', tipsterId!),
+    ])
+    const recalcTotal = [...(t1 ?? []), ...(t2 ?? []), ...(t3 ?? [])]
+      .reduce((s, r) => s + (r.points_earned ?? 0), 0)
+    await supabase.from('tipsters').update({ total_points: recalcTotal }).eq('id', tipsterId!)
     // Mark as saved immediately — don't wait for realtime to clear the save button
     setSavedSelections(prev => ({ ...prev, [tipType]: teamId }))
     setSaving(prev => ({ ...prev, [tipType]: false }))
