@@ -85,6 +85,8 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
               <div style={{ fontSize: 'var(--fs-label)', color: 'var(--muted)', marginTop: '.3rem' }}>
                 Shoda bodů: {group.tiebreaker === 'h2h_first'
                   ? 'vzájemný zápas → gólový rozdíl → vstřelené góly'
+                  : group.tiebreaker === 'score_then_h2h'
+                  ? 'gólový rozdíl → vstřelené góly → vzájemný zápas'
                   : 'gólový rozdíl → vstřelené góly'}
               </div>
             </div>

@@ -113,7 +113,11 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                     {group.name}
                     {isLeague && (
                       <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: S.label, fontWeight: 400, color: C.muted, letterSpacing: 0, marginLeft: '.4em' }}>
-                        (shoda: vzáj. zápas → gól. rozdíl → vstřelené góly)
+                        {group.tiebreaker === 'h2h_first'
+                          ? '(shoda: vzáj. zápas → gól. rozdíl → vstřelené)'
+                          : group.tiebreaker === 'score_then_h2h'
+                          ? '(shoda: gól. rozdíl → vstřelené → vzáj. zápas)'
+                          : '(shoda: gól. rozdíl → vstřelené góly)'}
                       </span>
                     )}
                   </div>
