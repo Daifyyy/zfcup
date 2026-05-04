@@ -8,16 +8,6 @@ function teamName(id: string, teams: Team[]) {
   return teams.find(t => t.id === id)?.name ?? '?'
 }
 
-function groupName(m: Match, groups: Group[]) {
-  return m.group_id ? (groups.find(g => g.id === m.group_id)?.name ?? m.round) : m.round
-}
-
-function roleBadge(role: string | null) {
-  if (role === 'captain') return 'K'
-  if (role === 'goalkeeper') return 'B'
-  if (role === 'both') return 'K+B'
-  return ''
-}
 
 function timeToMin(t: string): number {
   const m = t.match(/(\d{1,2}):(\d{2})/)
@@ -31,7 +21,7 @@ export function exportSchedule(
   teams: Team[],
   tournament?: { match_duration: number; round_break: number },
 ) {
-  const header = ['Čas', 'Skupina / Kolo', 'Domácí', 'Hosté', 'Výsledek']
+  const header = ['Čas', 'Domácí', 'Hosté', 'Výsledek']
   const sorted = [...matches].sort((a, b) =>
     (a.scheduled_time || '').localeCompare(b.scheduled_time || ''),
   )
@@ -52,7 +42,6 @@ export function exportSchedule(
     const m = sorted[i]
     dataRows.push([
       m.scheduled_time || '',
-      groupName(m, groups),
       teamName(m.home_id, teams),
       teamName(m.away_id, teams),
       m.played ? `${m.home_score}:${m.away_score}` : '',
@@ -60,7 +49,7 @@ export function exportSchedule(
   }
 
   const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows])
-  ws['!cols'] = [{ wch: 8 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 10 }]
+  ws['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 22 }, { wch: 10 }]
 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Rozpis')
@@ -98,7 +87,6 @@ export function exportRefCards(matches: Match[], groups: Group[], teams: Team[],
     const m = sorted[mi]
     const hn = teamName(m.home_id, teams)
     const an = teamName(m.away_id, teams)
-    const gn = groupName(m, groups)
     const time = m.scheduled_time || '—'
 
     const homePl = players
@@ -110,17 +98,17 @@ export function exportRefCards(matches: Match[], groups: Group[], teams: Team[],
     const maxLen = Math.max(homePl.length, awayPl.length, 1)
 
     // Čas
-    allRows.push([`Čas: ${time}`, '', '', '', '', '', ''])
+    allRows.push([`Čas: ${time}`, '', '', '', ''])
     rowHeights.push({ hpt: 14 })
     ri++
 
     // Team names
-    allRows.push([hn, '', '', '', an, '', ''])
+    allRows.push([hn, '', '', an, ''])
     rowHeights.push({ hpt: 14 })
     ri++
 
     // Column headers
-    allRows.push(['Hráč', 'Rol', 'Góly', '', 'Hráč', 'Rol', 'Góly'])
+    allRows.push(['Hráč', 'Góly', '', 'Hráč', 'Góly'])
     rowHeights.push({ hpt: 10 })
     ri++
 
@@ -129,9 +117,9 @@ export function exportRefCards(matches: Match[], groups: Group[], teams: Team[],
       const hp = homePl[i]
       const ap = awayPl[i]
       allRows.push([
-        hp?.name ?? '', hp ? roleBadge(hp.role) : '', '',
+        hp?.name ?? '', '',
         '',
-        ap?.name ?? '', ap ? roleBadge(ap.role) : '', '',
+        ap?.name ?? '', '',
       ])
       rowHeights.push({ hpt: 11 })
       ri++
@@ -145,10 +133,10 @@ export function exportRefCards(matches: Match[], groups: Group[], teams: Team[],
 
   const ws = XLSX.utils.aoa_to_sheet(allRows)
 
-  // Column widths: 20 + 3 + 5 + 1 + 20 + 3 + 5 = 57 wch × 2.65mm × 90% ≈ 136mm → fits A6 landscape
+  // Column widths: 24 + 6 + 1 + 24 + 6 = 61 wch → fits A6 landscape
   ws['!cols'] = [
-    { wch: 20 }, { wch: 3 }, { wch: 5 }, { wch: 1 },
-    { wch: 20 }, { wch: 3 }, { wch: 5 },
+    { wch: 24 }, { wch: 6 }, { wch: 1 },
+    { wch: 24 }, { wch: 6 },
   ]
 
   ws['!rows'] = rowHeights
