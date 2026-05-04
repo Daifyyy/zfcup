@@ -56,7 +56,7 @@ function generatePairs(teamIds: string[], schedule: 'once' | 'twice') {
 
 export default function GroupsTab({ teams, groups, matches, tournament, refetchGroups, refetchMatches, showToast }: Props) {
   const [form, setForm] = useState<GroupForm>({
-    name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_first',
+    name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_then_h2h',
     start_time: '', match_duration: '20', break_between: '5',
   })
 
@@ -104,7 +104,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
         name: 'Liga',
         team_ids: leagueTeamIds,
         schedule: 'once',
-        tiebreaker: 'h2h_first',
+        tiebreaker: 'score_then_h2h',
         start_time: leagueStart,
         match_duration: parseInt(leagueDur) || 20,
         break_between: parseInt(leagueBreak) || 5,
@@ -188,7 +188,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
     const { error: mErr } = await supabase.from('matches').insert(matchRows)
     if (mErr) { showToast('Skupina vytvořena, chyba při generování zápasů: ' + mErr.message); return }
 
-    setForm({ name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_first', start_time: '', match_duration: '20', break_between: '5' })
+    setForm({ name: '', teamIds: [], schedule: 'once', tiebreaker: 'score_then_h2h', start_time: '', match_duration: '20', break_between: '5' })
     showToast(`Skupina přidána, vygenerováno ${matchRows.length} zápasů ✓`)
     refetchGroups(); refetchMatches()
   }
