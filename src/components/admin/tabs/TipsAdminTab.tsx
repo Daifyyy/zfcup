@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useTipsters } from '../../../hooks/useTipsters'
 import { calcGroupStandings } from '../../../lib/standings'
+import { evaluateSpecialTip, recalcTipsterPoints } from '../../../lib/tipsEval'
 import type { Team } from '../../../hooks/useTeams'
 import type { Group } from '../../../hooks/useGroups'
 import type { Match } from '../../../hooks/useMatches'
@@ -19,34 +20,11 @@ interface Props {
   bracketRounds: BracketRound[]
 }
 
-const SPECIAL_POINTS: Record<string, number> = {
-  tournament_winner: 10,
-  group_winner: 5,
-  group_last: 3,
-}
-
 function getPoints(tipType: string): number {
-  if (tipType === 'tournament_winner') return SPECIAL_POINTS.tournament_winner
-  if (tipType.startsWith('group_winner:')) return SPECIAL_POINTS.group_winner
-  if (tipType.startsWith('group_last:')) return SPECIAL_POINTS.group_last
+  if (tipType === 'tournament_winner') return 10
+  if (tipType.startsWith('group_winner:')) return 5
+  if (tipType.startsWith('group_last:')) return 3
   return 0
-}
-
-async function recalcTipsterPoints() {
-  const { data: tipsters } = await supabase.from('tipsters').select('id')
-  if (!tipsters) return
-  for (const tipster of tipsters) {
-    const [{ data: tips }, { data: bTips }, { data: sTips }] = await Promise.all([
-      supabase.from('tips').select('points_earned').eq('tipster_id', tipster.id),
-      supabase.from('bracket_tips').select('points_earned').eq('tipster_id', tipster.id),
-      supabase.from('special_tips').select('points_earned').eq('tipster_id', tipster.id),
-    ])
-    const total =
-      (tips ?? []).reduce((s, r) => s + (r.points_earned ?? 0), 0) +
-      (bTips ?? []).reduce((s, r) => s + (r.points_earned ?? 0), 0) +
-      (sTips ?? []).reduce((s, r) => s + (r.points_earned ?? 0), 0)
-    await supabase.from('tipsters').update({ total_points: total }).eq('id', tipster.id)
-  }
 }
 
 async function recalcAllTips() {
@@ -85,25 +63,6 @@ async function recalcAllTips() {
   }
 
   await recalcTipsterPoints()
-}
-
-// Vyhodnotí jeden tip_type s daným správným týmem; vrací true pokud něco skutečně změnil
-async function evaluateSpecialTip(tipType: string, correctTeamId: string): Promise<boolean> {
-  const pts = getPoints(tipType)
-  const { data: allTips } = await supabase
-    .from('special_tips').select('id, predicted_team_id, evaluated, points_earned').eq('tip_type', tipType)
-  if (!allTips?.length) return false
-  let anyChanged = false
-  for (const t of allTips) {
-    const earned = t.predicted_team_id === correctTeamId ? pts : 0
-    if (!t.evaluated || t.points_earned !== earned) {
-      await supabase.from('special_tips')
-        .update({ evaluated: true, points_earned: earned })
-        .eq('id', t.id)
-      anyChanged = true
-    }
-  }
-  return anyChanged
 }
 
 // ── EvalRow: ruční override (nebo informační řádek po auto-vyhodnocení) ─────────
@@ -215,16 +174,12 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
   const [showGuide, setShowGuide] = useState(false)
   const [groupStatus, setGroupStatus] = useState<Record<string, GroupEvalStatus>>({})
   const [groupWinners, setGroupWinners] = useState<Record<string, { winner: string; last: string }>>({})
-  const autoRunRef = useRef(false)
-  const tournamentAutoRunRef = useRef(false)
   // ID vítěze finále detekovaného automaticky
   const [autoTournamentWinnerId, setAutoTournamentWinnerId] = useState<string | null>(null)
 
-  // Auto-vyhodnocení skupin při načtení / změně dat
+  // Záložní auto-vyhodnocení skupin při načtení záložky Tipovačka
   useEffect(() => {
     if (!groups.length || !matches.length) return
-    if (autoRunRef.current) return
-    autoRunRef.current = true
 
     const runAutoEval = async () => {
       let anyEvaluated = false
@@ -266,10 +221,9 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
     runAutoEval()
   }, [groups.length, matches.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-vyhodnocení vítěze turnaje po odehrání finále
+  // Záložní auto-vyhodnocení vítěze turnaje při načtení záložky Tipovačka
   useEffect(() => {
     if (!bracketSlots.length || !bracketRounds.length) return
-    if (tournamentAutoRunRef.current) return
 
     const maxPos = Math.max(...bracketRounds.map(r => r.position))
     const finalRound = bracketRounds.find(r =>
@@ -278,19 +232,20 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
     if (!finalRound) return
     const finalSlot = bracketSlots.find(s => s.round_id === finalRound.id && s.played)
     if (!finalSlot || !finalSlot.home_id || !finalSlot.away_id) return
-    if (finalSlot.home_score === finalSlot.away_score) return // remíza ve finále
+    if (finalSlot.home_score === finalSlot.away_score) return
 
     const winnerId = finalSlot.home_score > finalSlot.away_score
       ? finalSlot.home_id
       : finalSlot.away_id
 
-    tournamentAutoRunRef.current = true
     setAutoTournamentWinnerId(winnerId)
 
     const run = async () => {
-      await evaluateSpecialTip('tournament_winner', winnerId)
-      await recalcTipsterPoints()
-      showToast('Vítěz turnaje auto-vyhodnocen ✓')
+      const changed = await evaluateSpecialTip('tournament_winner', winnerId)
+      if (changed) {
+        await recalcTipsterPoints()
+        showToast('Vítěz turnaje auto-vyhodnocen ✓')
+      }
     }
     run()
   }, [bracketSlots, bracketRounds]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -312,9 +267,9 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
     ])
     const err = r1.error ?? r2.error ?? r3.error ?? r4.error
     if (err) { showToast('Chyba reset: ' + err.message); return }
-    autoRunRef.current = false
-    tournamentAutoRunRef.current = false
     setAutoTournamentWinnerId(null)
+    setGroupStatus({})
+    setGroupWinners({})
     showToast('Tipy resetovány ✓')
   }
 

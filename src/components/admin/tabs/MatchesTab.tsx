@@ -10,6 +10,7 @@ import type { Tournament } from '../../../hooks/useTournament'
 import type { Referee } from '../../../hooks/useReferees'
 import { calcGroupStandings } from '../../../lib/standings'
 import { exportSchedule, exportRefCards } from '../../../lib/exportExcel'
+import { checkGroupSpecialTips } from '../../../lib/tipsEval'
 
 interface Props {
   teams: Team[]
@@ -40,9 +41,10 @@ const DEF_FORM: MatchForm = { round: '', home_id: '', away_id: '', home_score: '
 
 // ── Inline editor: skóre + góly v jednom panelu ────────────────────────────
 function InlineMatchEditor({
-  match, teams, players, goals, referees, showToast, onClose, refetchMatches, refetchGoals,
+  match, group, teams, players, goals, referees, showToast, onClose, refetchMatches, refetchGoals,
 }: {
   match: Match
+  group: Group | null
   teams: Team[]
   players: Player[]
   goals: Goal[]
@@ -119,6 +121,10 @@ function InlineMatchEditor({
 
     refetchMatches()
     refetchGoals()
+    // Po uložení výsledku skupinového zápasu zkontrolovat zda je skupina dokončena
+    if (autoPlayed && match.group_id && group) {
+      await checkGroupSpecialTips(match.group_id, group)
+    }
     showToast('Uloženo ✓')
     setSaving(false)
     onClose()
@@ -469,6 +475,7 @@ export default function MatchesTab({ teams, players, matches, goals, groups, bra
                     {isOpen && (
                       <InlineMatchEditor
                         match={m}
+                        group={groups.find(g => g.id === m.group_id) ?? null}
                         teams={teams}
                         players={players}
                         goals={goals}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { calcGroupStandings } from '../../../lib/standings'
 import { addMinutes } from '../../../lib/constants'
+import { checkTournamentWinner } from '../../../lib/tipsEval'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
@@ -537,12 +538,20 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     const hasBothTeams = data.home_id && data.away_id
     if (!isDecisive || !hasBothTeams) { await refetchBracket(); showToast('Uloženo ✓'); return }
 
+    // Helper volaný na konci každé větve — vyhodnotí vítěze turnaje po odehrání finále
+    const evalTournamentWinner = () => checkTournamentWinner(bracketRounds)
+
     const slot = bracketSlots.find(s => s.id === slotId)
     const currentRound = slot ? bracketRounds.find(r => r.id === slot.round_id) : null
     if (!slot || !currentRound) { await refetchBracket(); showToast('Uloženo ✓'); return }
 
     const maxPos = Math.max(...bracketRounds.map(r => r.position))
-    if (currentRound.position >= maxPos - 1) { await refetchBracket(); showToast('Uloženo ✓'); return }
+    if (currentRound.position >= maxPos - 1) {
+      await refetchBracket()
+      await evalTournamentWinner()
+      showToast('Uloženo ✓')
+      return
+    }
 
     const homeWins = (data.home_score ?? 0) > (data.away_score ?? 0)
     const winner = homeWins ? data.home_id! : data.away_id!

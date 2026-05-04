@@ -96,12 +96,22 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
     if (!confirm('Opravdu smazat VŠECHNA data? Tuto akci nelze vrátit!')) return
     if (!confirm('Opravdu? Poslední potvrzení — smazat vše?')) return
 
-    const tables = ['goals', 'matches', 'bracket_slots', 'bracket_rounds', 'players', 'teams', 'groups', 'announcements']
+    const NULL_ID = '00000000-0000-0000-0000-000000000000'
+    const tables = [
+      'bracket_goals', 'goals',
+      'tips', 'bracket_tips', 'special_tips',
+      'bracket_slots', 'bracket_rounds',
+      'matches', 'groups',
+      'players', 'teams',
+      'announcements',
+    ]
     for (const table of tables) {
-      await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      const { error } = await supabase.from(table).delete().neq('id', NULL_ID)
+      if (error) { showToast('Chyba (' + table + '): ' + error.message); return }
     }
+    await supabase.from('tipsters').update({ total_points: 0 }).neq('id', NULL_ID)
     await supabase.from('tournament').update({ name: '', subtitle: '', date: '', venue: '', description: '' })
-      .neq('id', '00000000-0000-0000-0000-000000000000')
+      .neq('id', NULL_ID)
     showToast('Vše smazáno')
   }
 
