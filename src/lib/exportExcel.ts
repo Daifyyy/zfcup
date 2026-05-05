@@ -30,29 +30,53 @@ export function exportSchedule(
     ? (tournament.match_duration + tournament.round_break + 2)
     : Infinity
 
-  const dataRows: string[][] = []
-  for (let i = 0; i < sorted.length; i++) {
-    if (i > 0) {
-      const prevTime = timeToMin(sorted[i - 1].scheduled_time || '')
-      const currTime = timeToMin(sorted[i].scheduled_time || '')
-      if (!isNaN(prevTime) && !isNaN(currTime) && (currTime - prevTime) > gapThreshold) {
-        dataRows.push(['— — — přestávka — — —', '', '', '', ''])
-      }
-    }
-    const m = sorted[i]
-    dataRows.push([
-      m.scheduled_time || '',
-      teamName(m.home_id, teams),
-      teamName(m.away_id, teams),
-      m.played ? `${m.home_score}:${m.away_score}` : '',
-    ])
+  // Group matches by time — first in group = field A, second = field B
+  const byTime = new Map<string, Match[]>()
+  for (const m of sorted) {
+    const t = m.scheduled_time || ''
+    if (!byTime.has(t)) byTime.set(t, [])
+    byTime.get(t)!.push(m)
   }
 
-  const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows])
-  ws['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 22 }, { wch: 10 }]
+  const buildFieldRows = (fieldIndex: 0 | 1): string[][] => {
+    const rows: string[][] = []
+    const times = Array.from(byTime.keys()).sort((a, b) => a.localeCompare(b))
+    let prevTime: number | null = null
+
+    for (const t of times) {
+      const group = byTime.get(t)!
+      const m = group[fieldIndex]
+      const currTime = timeToMin(t)
+
+      if (prevTime !== null && !isNaN(prevTime) && !isNaN(currTime) && (currTime - prevTime) > gapThreshold) {
+        rows.push(['— — — přestávka — — —', '', '', ''])
+      }
+
+      if (m) {
+        rows.push([
+          m.scheduled_time || '',
+          teamName(m.home_id, teams),
+          teamName(m.away_id, teams),
+          m.played ? `${m.home_score}:${m.away_score}` : '',
+        ])
+      }
+
+      prevTime = currTime
+    }
+
+    return rows
+  }
+
+  const colWidths = [{ wch: 8 }, { wch: 22 }, { wch: 22 }, { wch: 10 }]
 
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Rozpis')
+
+  for (const [label, fieldIndex] of [['Hřiště A', 0], ['Hřiště B', 1]] as [string, 0 | 1][]) {
+    const ws = XLSX.utils.aoa_to_sheet([header, ...buildFieldRows(fieldIndex)])
+    ws['!cols'] = colWidths
+    XLSX.utils.book_append_sheet(wb, ws, label)
+  }
+
   XLSX.writeFile(wb, 'zf-cup-rozpis.xlsx')
 }
 

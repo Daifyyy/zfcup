@@ -14,7 +14,15 @@
       "Bash(npx tsc:*)",
       "Bash(cd:*)",
       "Bash(node_modules/.bin/vite build:*)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(node -e \"require\\('xlsx'\\); console.log\\('xlsx OK'\\)\")",
+      "Bash(node --input-type=module)",
+      "Bash(node scripts/test-tipovacka.mjs)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)",
+      "PowerShell(.\\\\node_modules\\\\.bin\\\\tsc --noEmit 2>&1 | Select-Object -First 80)",
+      "PowerShell(npm run *)"
     ]
   }
 }
