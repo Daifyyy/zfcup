@@ -106,18 +106,16 @@ function InlineMatchEditor({
 
     if (matchErr) { showToast('Chyba skóre: ' + matchErr.message); setSaving(false); return }
 
-    // 2) Uložit góly hráčů
-    for (const [player_id, count] of Object.entries(counts)) {
-      if (count > 0) {
-        const { error } = await supabase.from('goals').upsert(
-          { player_id, match_id: match.id, count },
-          { onConflict: 'player_id,match_id' }
-        )
-        if (error) { showToast('Chyba gólů: ' + error.message); setSaving(false); return }
-      } else {
-        await supabase.from('goals').delete().match({ player_id, match_id: match.id })
-      }
-    }
+    // 2) Uložit góly hráčů — paralelně
+    const goalResults = await Promise.all(
+      Object.entries(counts).map(([player_id, count]) =>
+        count > 0
+          ? supabase.from('goals').upsert({ player_id, match_id: match.id, count }, { onConflict: 'player_id,match_id' })
+          : supabase.from('goals').delete().match({ player_id, match_id: match.id })
+      )
+    )
+    const goalErr = goalResults.find(r => r.error)?.error
+    if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); setSaving(false); return }
 
     refetchMatches()
     refetchGoals()

@@ -21,32 +21,46 @@ export async function evaluateSpecialTip(tipType: string, correctTeamId: string)
     .from('special_tips').select('id, predicted_team_id, evaluated, points_earned').eq('tip_type', tipType)
   if (!allTips?.length) return false
 
-  let anyChanged = false
-  for (const t of allTips) {
-    const earned = t.predicted_team_id === correctTeamId ? pts : 0
-    if (!t.evaluated || t.points_earned !== earned) {
-      await supabase.from('special_tips')
-        .update({ evaluated: true, points_earned: earned })
-        .eq('id', t.id)
-      anyChanged = true
-    }
-  }
-  return anyChanged
+  // Batch update: 2 dotazy místo N sekvenčních
+  const correctIds = allTips
+    .filter(t => t.predicted_team_id === correctTeamId && (!t.evaluated || t.points_earned !== pts))
+    .map(t => t.id)
+  const wrongIds = allTips
+    .filter(t => t.predicted_team_id !== correctTeamId && (!t.evaluated || t.points_earned !== 0))
+    .map(t => t.id)
+
+  if (!correctIds.length && !wrongIds.length) return false
+
+  const ops: Promise<unknown>[] = []
+  if (correctIds.length)
+    ops.push(supabase.from('special_tips').update({ evaluated: true, points_earned: pts }).in('id', correctIds))
+  if (wrongIds.length)
+    ops.push(supabase.from('special_tips').update({ evaluated: true, points_earned: 0 }).in('id', wrongIds))
+  await Promise.all(ops)
+  return true
 }
 
 export async function recalcTipsterPoints(): Promise<void> {
+  // Pokus o RPC funkci (1 dotaz místo 4N) — funguje po spuštění 06_indexes.sql
+  const { error: rpcErr } = await supabase.rpc('recalc_all_tipster_points')
+  if (!rpcErr) return
+
+  // Fallback: 3 SELECT (vše najednou) + N paralelních UPDATE
   const { data: tipsters } = await supabase.from('tipsters').select('id')
   if (!tipsters?.length) return
-  await Promise.all(tipsters.map(async (tipster) => {
-    const [{ data: t1 }, { data: t2 }, { data: t3 }] = await Promise.all([
-      supabase.from('tips').select('points_earned').eq('tipster_id', tipster.id),
-      supabase.from('bracket_tips').select('points_earned').eq('tipster_id', tipster.id),
-      supabase.from('special_tips').select('points_earned').eq('tipster_id', tipster.id),
-    ])
-    const total = [...(t1 ?? []), ...(t2 ?? []), ...(t3 ?? [])]
-      .reduce((s, r) => s + (r.points_earned ?? 0), 0)
-    await supabase.from('tipsters').update({ total_points: total }).eq('id', tipster.id)
-  }))
+  const [{ data: allTips }, { data: allBt }, { data: allSt }] = await Promise.all([
+    supabase.from('tips').select('tipster_id, points_earned'),
+    supabase.from('bracket_tips').select('tipster_id, points_earned'),
+    supabase.from('special_tips').select('tipster_id, points_earned'),
+  ])
+  type Row = { tipster_id: string; points_earned: number }
+  const sumFor = (rows: Row[] | null, id: string) =>
+    (rows ?? []).filter(r => r.tipster_id === id).reduce((s, r) => s + (r.points_earned ?? 0), 0)
+  await Promise.all(tipsters.map(({ id }) =>
+    supabase.from('tipsters')
+      .update({ total_points: sumFor(allTips as Row[], id) + sumFor(allBt as Row[], id) + sumFor(allSt as Row[], id) })
+      .eq('id', id)
+  ))
 }
 
 // Zkontroluje zda je skupina dokončena a vyhodnotí group_winner + group_last special tipy.
