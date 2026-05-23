@@ -34,7 +34,7 @@ export function useMatches() {
       .channel('matches')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, fetch)
       .subscribe()
-    const poll = setInterval(fetch, 10_000)
+    const poll = setInterval(fetch, 30_000)
 
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])

@@ -24,7 +24,7 @@ export function useBracketGoals() {
       .channel('bracket_goals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bracket_goals' }, fetch)
       .subscribe()
-    const poll = setInterval(fetch, 10_000)
+    const poll = setInterval(fetch, 30_000)
 
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])

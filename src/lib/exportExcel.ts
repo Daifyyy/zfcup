@@ -21,7 +21,6 @@ export function exportSchedule(
   teams: Team[],
   tournament?: { match_duration: number; round_break: number },
 ) {
-  const header = ['Čas', 'Domácí', 'Hosté', 'Výsledek']
   const sorted = [...matches].sort((a, b) =>
     (a.scheduled_time || '').localeCompare(b.scheduled_time || ''),
   )
@@ -67,16 +66,21 @@ export function exportSchedule(
     return rows
   }
 
-  const colWidths = [{ wch: 8 }, { wch: 22 }, { wch: 22 }, { wch: 10 }]
-
-  const wb = XLSX.utils.book_new()
+  const header = ['Čas', 'Domácí', 'Hosté', 'Výsledek']
+  const allRows: string[][] = []
 
   for (const [label, fieldIndex] of [['Hřiště A', 0], ['Hřiště B', 1]] as [string, 0 | 1][]) {
-    const ws = XLSX.utils.aoa_to_sheet([header, ...buildFieldRows(fieldIndex)])
-    ws['!cols'] = colWidths
-    XLSX.utils.book_append_sheet(wb, ws, label)
+    allRows.push([label, '', '', ''])
+    allRows.push(header)
+    allRows.push(...buildFieldRows(fieldIndex))
+    allRows.push(['', '', '', ''])
   }
 
+  const ws = XLSX.utils.aoa_to_sheet(allRows)
+  ws['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 22 }, { wch: 10 }]
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Rozpis')
   XLSX.writeFile(wb, 'zf-cup-rozpis.xlsx')
 }
 

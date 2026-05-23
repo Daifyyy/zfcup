@@ -26,7 +26,7 @@ export function useTeams() {
       .channel('teams')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, fetch)
       .subscribe()
-    const poll = setInterval(fetch, 60_000)
+    const poll = setInterval(fetch, 120_000)
 
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])

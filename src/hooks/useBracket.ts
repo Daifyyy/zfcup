@@ -50,7 +50,7 @@ export function useBracket() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bracket_slots' }, fetch)
       .subscribe()
 
-    const poll = setInterval(fetch, 10_000)
+    const poll = setInterval(fetch, 30_000)
     return () => {
       supabase.removeChannel(subR)
       supabase.removeChannel(subS)

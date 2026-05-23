@@ -30,7 +30,7 @@ export function useGroups() {
       .channel('groups')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, fetch)
       .subscribe()
-    const poll = setInterval(fetch, 60_000)
+    const poll = setInterval(fetch, 120_000)
 
     return () => { supabase.removeChannel(sub); clearInterval(poll) }
   }, [])
