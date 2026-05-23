@@ -44,6 +44,8 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `tournament`: obsahuje `tips_enabled BOOLEAN` — řídí viditelnost záložky Tipy; `format TEXT DEFAULT 'groups'` (`'groups'` | `'league'`); `match_duration INT DEFAULT 20`; `halves SMALLINT DEFAULT 1`; `playoff_kickoff TEXT DEFAULT ''`; `round_break INT DEFAULT 5`; `tips_lock_from TEXT DEFAULT ''` — datum ve formátu `YYYY-MM-DD` pro datový zámek tipování
   - SQL migrace: `ALTER TABLE tournament ADD COLUMN IF NOT EXISTS format TEXT DEFAULT 'groups', ADD COLUMN IF NOT EXISTS match_duration INT DEFAULT 20, ADD COLUMN IF NOT EXISTS halves SMALLINT DEFAULT 1, ADD COLUMN IF NOT EXISTS playoff_kickoff TEXT DEFAULT '', ADD COLUMN IF NOT EXISTS round_break INT DEFAULT 5;`
   - SQL migrace (tips_lock_from): `ALTER TABLE tournament ADD COLUMN IF NOT EXISTS tips_lock_from TEXT DEFAULT '';`
+  - SQL migrace (scénář): `ALTER TABLE tournament ADD COLUMN IF NOT EXISTS num_teams INT DEFAULT 0, ADD COLUMN IF NOT EXISTS num_groups INT DEFAULT 2, ADD COLUMN IF NOT EXISTS advancing_per_group INT DEFAULT 2;`
+  - `num_teams`, `num_groups`, `advancing_per_group` — nastavení scénáře (průvodce v SettingsTab); `advancing_per_group` řídí počet postupujících z každé skupiny v BracketTab místo starého auto-výpočtu dle počtu týmů
 
 ## Pravidla kódování
 - Komponenty do `src/components/`, stránky (záložky) jsou inline v App.tsx
@@ -135,6 +137,23 @@ Záložky aktivně používané při turnaji (**Zápasy, Play-off, Tipovačka**)
 - V liga módu: `match_duration`, `halves`, `playoff_kickoff`, `round_break` jsou viditelné a editovatelné
 
 ## Bracket (Play-off) — architektura
+
+### Playoff formáty dle konfigurace
+`advancingPerGroup` = `tournament.advancing_per_group` (nastavitelné v SettingsTab); fallback = `avgGroupSize >= 6 ? 4 : 2`.
+`totalAdvancing = advancingPerGroup × groups.length`.
+
+| Scénář | totalAdvancing | groupFormat | Struktura |
+|--------|---------------|-------------|-----------|
+| 1 skupina | — | `sf` | top-4 → SF(2)+O3+Final |
+| 2 skupiny, top-2 (6–10 t.) | 4 | `sf` | A1vsB2, B1vsA2 → SF |
+| 3 skupiny, top-2 (12 t.) | 6 | `six` | rank 6 týmů, top-2 bye do SF, 3.vs6./4.vs5. v QF |
+| 4 skupiny, top-2 (8–12 t.) | 8 | `qf` | (A+B), (C+D) páry → QF(4)+SF |
+| 2 skupiny, top-4 (12–14 t.) | 8 | `qf` | křížové A1vsB4 atd. → QF(4)+SF |
+| Liga | 6 (vždy) | — | top-6, 3.vs6./4.vs5. v QF, 1./2. předsazeni do SF |
+
+Nasazení (`six` formát): vítězi skupin seřazeni (body→GD→vstřelené), pak runners-up → celkové pořadí 1–6.
+Auto-advance QF→SF: `isLeague || groupFormat === 'six'` → vítěz jde do SF slotu na **stejné pozici** jako `away_id`.
+
 - **Krok 1** (`generateStructure`): vytvoří `bracket_rounds` + prázdné `bracket_slots` podle počtu týmů
 - **Krok 2** (`seedTeams`): doplní týmy z tabulky skupin do prvního kola; podmínka: všechny skupinové zápasy musí být odehrané; **tlačítko bez `disabled`** — check uvnitř onClick
 - **SlotEditor**: stacked layout shodný s InlineMatchEditor (accent-dim background, týmy u steperů, pole Čas); ±stepery pro home/away score; góly **inline** (bez toggle, vždy viditelné) — seznam hráčů obou týmů s ±stepery; ukládá i `scheduled_time` (nullable) → umožňuje časový zámek tipování; `buildCounts` reinicializuje goal counts při změně `home_id`/`away_id` (useEffect dependency)
@@ -162,8 +181,7 @@ Skrytý modul pro tipování výsledků. Viditelnost řídí `tournament.tips_en
 | Kategorie | Přesný výsledek | Správný vítěz/remíza |
 |-----------|----------------|----------------------|
 | Skupiny   | 3 b.           | 1 b.                 |
-| Playoff   | 5 b.           | 2 b.                 |
-| Finále    | 8 b.           | 3 b.                 |
+| Playoff (vč. finále) | 5 b. | 2 b.              |
 
 Speciální tipy:
 - Vítěz turnaje: **10 b.**

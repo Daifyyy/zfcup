@@ -15,6 +15,9 @@ export interface Tournament {
   playoff_kickoff: string
   round_break: number
   tips_lock_from: string
+  num_teams: number
+  num_groups: number
+  advancing_per_group: number
 }
 
 export function useTournament() {
