@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 type Handler = () => void
 
 const tableHandlers = new Map<string, Set<Handler>>()
+const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
 let channel: ReturnType<typeof supabase.channel> | null = null
 let buildTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -18,7 +19,12 @@ function buildChannel() {
   let ch: any = supabase.channel('app-realtime')
   for (const table of tables) {
     ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, () => {
-      tableHandlers.get(table)?.forEach(h => h())
+      // 80ms debounce per tabulka — koalescuje burst eventů (např. při seedTeams 8+ insertů)
+      if (debounceTimers.has(table)) clearTimeout(debounceTimers.get(table)!)
+      debounceTimers.set(table, setTimeout(() => {
+        debounceTimers.delete(table)
+        tableHandlers.get(table)?.forEach(h => h())
+      }, 80))
     })
   }
   channel = ch.subscribe()

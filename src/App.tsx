@@ -111,6 +111,17 @@ export default function App() {
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
 
+  if (!tournament) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', color: 'var(--muted)' }}>
+          <div className="spinner" />
+          <p style={{ fontFamily: 'DM Sans, sans-serif', marginTop: '.75rem', fontSize: '.9rem' }}>Načítám…</p>
+        </div>
+      </div>
+    )
+  }
+
   if (kiosk) {
     return (
       <>

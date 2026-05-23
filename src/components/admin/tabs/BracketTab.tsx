@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { calcGroupStandings } from '../../../lib/standings'
 import { addMinutes } from '../../../lib/constants'
@@ -43,6 +43,7 @@ function SlotEditor({
   const [s, setS] = useState({ ...slot, scheduled_time: slot.scheduled_time ?? '' })
   const [refereeId, setRefereeId] = useState<string>(slot.referee_id ?? '')
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
 
   const homePlayers = players.filter(p => p.team_id === s.home_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const awayPlayers = players.filter(p => p.team_id === s.away_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -83,21 +84,19 @@ function SlotEditor({
   } as React.CSSProperties)
 
   const saveAll = async () => {
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
-    // 1) Save goals
+    // 1) Save goals — paralelně
     const allPlayers = [...homePlayers, ...awayPlayers]
-    for (const p of allPlayers) {
+    const goalResults = await Promise.all(allPlayers.map(p => {
       const count = counts[p.id] ?? 0
-      if (count > 0) {
-        const { error } = await supabase.from('bracket_goals').upsert(
-          { player_id: p.id, slot_id: slot.id, count },
-          { onConflict: 'player_id,slot_id' }
-        )
-        if (error) { showToast('Chyba gólů: ' + error.message); setSaving(false); return }
-      } else {
-        await supabase.from('bracket_goals').delete().match({ player_id: p.id, slot_id: slot.id })
-      }
-    }
+      return count > 0
+        ? supabase.from('bracket_goals').upsert({ player_id: p.id, slot_id: slot.id, count }, { onConflict: 'player_id,slot_id' })
+        : supabase.from('bracket_goals').delete().match({ player_id: p.id, slot_id: slot.id })
+    }))
+    const goalErr = goalResults.find(r => r.error)?.error
+    if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); savingRef.current = false; setSaving(false); return }
     refetchBracketGoals()
     // 2) Save slot + auto-advance (shows toast)
     const autoPlayed = s.played || s.home_score > 0 || s.away_score > 0
@@ -108,6 +107,7 @@ function SlotEditor({
       scheduled_time: s.scheduled_time || null,
       referee_id: refereeId || null,
     })
+    savingRef.current = false
     setSaving(false)
   }
 

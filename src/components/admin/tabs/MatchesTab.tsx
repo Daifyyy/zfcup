@@ -60,6 +60,7 @@ function InlineMatchEditor({
   const [scheduledTime, setScheduledTime] = useState(match.scheduled_time || '')
   const [refereeId, setRefereeId] = useState<string>(match.referee_id ?? '')
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
 
   const homePlayers = players.filter(p => p.team_id === match.home_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const awayPlayers = players.filter(p => p.team_id === match.away_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -91,6 +92,8 @@ function InlineMatchEditor({
   }
 
   const saveAll = async () => {
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     const autoPlayed = played || homeScore > 0 || awayScore > 0
 
@@ -104,7 +107,7 @@ function InlineMatchEditor({
       referee_id: refereeId || null,
     }).eq('id', match.id)
 
-    if (matchErr) { showToast('Chyba skóre: ' + matchErr.message); setSaving(false); return }
+    if (matchErr) { showToast('Chyba skóre: ' + matchErr.message); savingRef.current = false; setSaving(false); return }
 
     // 2) Uložit góly hráčů — paralelně
     const goalResults = await Promise.all(
@@ -115,7 +118,7 @@ function InlineMatchEditor({
       )
     )
     const goalErr = goalResults.find(r => r.error)?.error
-    if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); setSaving(false); return }
+    if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); savingRef.current = false; setSaving(false); return }
 
     refetchMatches()
     refetchGoals()
@@ -129,10 +132,11 @@ function InlineMatchEditor({
       const ligaGroup = groups.find(g => g.name === 'Liga')
       if (ligaGroup) {
         const evaluated = await checkLeagueTournamentWinner(ligaGroup)
-        if (evaluated) { showToast('Uloženo ✓ · 🏆 Vítěz ligy vyhodnocen'); setSaving(false); onClose(); return }
+        if (evaluated) { showToast('Uloženo ✓ · 🏆 Vítěz ligy vyhodnocen'); savingRef.current = false; setSaving(false); onClose(); return }
       }
     }
     showToast('Uloženo ✓')
+    savingRef.current = false
     setSaving(false)
     onClose()
   }
