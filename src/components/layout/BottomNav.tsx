@@ -7,18 +7,21 @@ const BASE_TABS: { key: Tab; icon: string; label: string }[] = [
   { key: 'standings', icon: '📊', label: 'Tabulka'   },
   { key: 'scorers',   icon: '⚽', label: 'Střelci'   },
   { key: 'bracket',   icon: '🏆', label: 'Pavouk'    },
+  { key: 'rules',     icon: '📋', label: 'Pravidla'  },
 ]
 
 interface Props {
   tab: Tab
   onTab: (t: Tab) => void
   tipsEnabled?: boolean
+  showBracket?: boolean
 }
 
-export default function BottomNav({ tab, onTab, tipsEnabled }: Props) {
+export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true }: Props) {
+  const baseTabs = showBracket ? BASE_TABS : BASE_TABS.filter(t => t.key !== 'bracket')
   const TABS = tipsEnabled
-    ? [...BASE_TABS, { key: 'tips' as Tab, icon: '🎯', label: 'Tipy' }]
-    : BASE_TABS
+    ? [...baseTabs, { key: 'tips' as Tab, icon: '🎯', label: 'Tipy' }]
+    : baseTabs
 
   return (
     <nav

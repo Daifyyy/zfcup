@@ -148,6 +148,7 @@ export function generateLeagueSchedule(
   roundBreakMin: number,
   breakWindowStart?: string,
   breakWindowDuration?: number,
+  numPitches: number = 2,
 ): LeagueMatch[] {
   // Try every rotation of the team array as starting point for the circle method.
   // Different "fixed" teams produce different pair orderings → different optimal slot splits.
@@ -172,8 +173,7 @@ export function generateLeagueSchedule(
 
   if (!startTime) {
     for (const { slotA, slotB } of bestAssignments) {
-      for (const [home_id, away_id] of slotA) result.push({ home_id, away_id, scheduled_time: '' })
-      for (const [home_id, away_id] of slotB) result.push({ home_id, away_id, scheduled_time: '' })
+      for (const [home_id, away_id] of [...slotA, ...slotB]) result.push({ home_id, away_id, scheduled_time: '' })
     }
     return result
   }
@@ -190,17 +190,18 @@ export function generateLeagueSchedule(
 
   let cur = timeToMin(startTime)
 
+  // DP result gives optimal ordering of pairs (slotA first, then slotB).
+  // Pack numPitches pairs per time slot — works for any N (1, 2, 3, 4).
   for (const { slotA, slotB } of bestAssignments) {
-    cur = skipBreak(cur)
-    const timeA = minToTime(cur)
-    cur += slotDuration
-
-    cur = skipBreak(cur)
-    const timeB = minToTime(cur)
-    cur += slotDuration
-
-    for (const [home_id, away_id] of slotA) result.push({ home_id, away_id, scheduled_time: timeA })
-    for (const [home_id, away_id] of slotB) result.push({ home_id, away_id, scheduled_time: timeB })
+    const orderedPairs = [...slotA, ...slotB]
+    const numSubSlots = Math.ceil(orderedPairs.length / numPitches)
+    for (let s = 0; s < numSubSlots; s++) {
+      cur = skipBreak(cur)
+      const slotTime = minToTime(cur)
+      cur += slotDuration
+      const batch = orderedPairs.slice(s * numPitches, (s + 1) * numPitches)
+      for (const [home_id, away_id] of batch) result.push({ home_id, away_id, scheduled_time: slotTime })
+    }
   }
 
   return result
@@ -210,7 +211,8 @@ export function leagueMatchCount(n: number): number {
   return (n * (n - 1)) / 2
 }
 
-export function leagueSlotCount(n: number): number {
+export function leagueSlotCount(n: number, numPitches = 2): number {
   const rounds = n % 2 === 0 ? n - 1 : n
-  return rounds * 2
+  const realPairs = n % 2 === 0 ? n / 2 : (n - 1) / 2
+  return rounds * Math.ceil(realPairs / numPitches)
 }

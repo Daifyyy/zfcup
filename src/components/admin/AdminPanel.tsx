@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import type { Tournament } from '../../hooks/useTournament'
@@ -89,10 +89,14 @@ export default function AdminPanel(props: Props) {
   }
 
   const tabProps = { ...props, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals }
+  const isLeagueNoPlayoff = props.tournament?.format === 'league' && !(props.tournament?.league_has_playoff ?? true)
+  const visibleAdminTabs = ADMIN_TABS.filter(([id]) => !isLeagueNoPlayoff || id !== 'bracket')
+  const mouseDownOnBackdrop = useRef(false)
 
   return (
     <div
-      onClick={e => e.target === e.currentTarget && onClose()}
+      onMouseDown={e => { mouseDownOnBackdrop.current = e.target === e.currentTarget }}
+      onClick={e => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) onClose() }}
       style={{
         position: 'fixed', inset: 0,
         background: 'rgba(0,0,0,.45)',
@@ -181,7 +185,7 @@ export default function AdminPanel(props: Props) {
               overflowX: 'auto',
               flexShrink: 0,
             }}>
-              {ADMIN_TABS.map(([key, label]) => {
+              {visibleAdminTabs.map(([key, label]) => {
                 const isActive = aTab === key
                 const isAction = ACTION_TABS.includes(key)
                 return (

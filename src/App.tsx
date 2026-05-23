@@ -19,6 +19,7 @@ import Standings from './components/public/Standings'
 import Scorers from './components/public/Scorers'
 import Bracket from './components/public/Bracket'
 import Info from './components/public/Info'
+import Rules from './components/public/Rules'
 import Tips from './components/public/Tips'
 import AdminPanel from './components/admin/AdminPanel'
 import KioskMode from './components/kiosk/KioskMode'
@@ -26,8 +27,8 @@ import Scoreboard from './components/public/Scoreboard'
 import Toast from './components/ui/Toast'
 import type { Session } from '@supabase/supabase-js'
 
-export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket' | 'info' | 'tips'
-const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket', 'info', 'tips']
+export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket' | 'info' | 'rules' | 'tips'
+const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket', 'info', 'rules', 'tips']
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview')
@@ -108,12 +109,14 @@ export default function App() {
   }, [])
 
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, showToast }
+  const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
 
   if (kiosk) {
     return (
       <>
         <KioskMode
           {...shared}
+          bracketGoals={bracketGoals}
           tournament={tournament}
           onExit={() => setKiosk(false)}
           onScoreboard={() => setScoreboard(true)}
@@ -148,6 +151,7 @@ export default function App() {
         onScoreboard={() => setScoreboard(true)}
         isAdmin={!!session}
         tipsEnabled={tournament?.tips_enabled ?? false}
+        showBracket={showBracket}
       />
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
@@ -155,8 +159,9 @@ export default function App() {
         {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
         {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} players={players} teams={teams} />}
-        {tab === 'bracket'   && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
+        {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
+        {tab === 'rules'     && <Rules tournament={tournament} />}
         {tab === 'tips'      && <Tips matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
       </main>
       {scoreboard && (
@@ -192,7 +197,7 @@ export default function App() {
           onClose={() => setAdminOpen(false)}
         />
       )}
-      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} />
+      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} />
       <Toast message={toast} show={toastShow} />
     </div>
   )

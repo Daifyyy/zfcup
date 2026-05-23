@@ -10,7 +10,7 @@ import type { Tournament } from '../../../hooks/useTournament'
 import type { Referee } from '../../../hooks/useReferees'
 import { calcGroupStandings } from '../../../lib/standings'
 import { exportSchedule, exportRefCards } from '../../../lib/exportExcel'
-import { checkGroupSpecialTips } from '../../../lib/tipsEval'
+import { checkGroupSpecialTips, checkLeagueTournamentWinner } from '../../../lib/tipsEval'
 
 interface Props {
   teams: Team[]
@@ -124,6 +124,15 @@ function InlineMatchEditor({
     // Po uložení výsledku skupinového zápasu zkontrolovat zda je skupina dokončena
     if (autoPlayed && match.group_id && group) {
       await checkGroupSpecialTips(match.group_id, group)
+    }
+    // Liga bez playoff: auto-eval vítěze turnaje dle tabulky po odehrání všech zápasů
+    const isLeagueNoPlayoff = tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true)
+    if (isLeagueNoPlayoff && autoPlayed) {
+      const ligaGroup = groups.find(g => g.name === 'Liga')
+      if (ligaGroup) {
+        const evaluated = await checkLeagueTournamentWinner(ligaGroup)
+        if (evaluated) { showToast('Uloženo ✓ · 🏆 Vítěz ligy vyhodnocen'); setSaving(false); onClose(); return }
+      }
     }
     showToast('Uloženo ✓')
     setSaving(false)
@@ -419,7 +428,7 @@ export default function MatchesTab({ teams, players, matches, goals, groups, bra
           <button
             type="button"
             className="btn btn-d btn-sm"
-            onClick={() => exportSchedule(matches, groups, teams, tournament ? { match_duration: tournament.match_duration ?? 20, round_break: tournament.round_break ?? 5 } : undefined)}
+            onClick={() => exportSchedule(matches, groups, teams, tournament?.num_pitches ?? 2, tournament ? { match_duration: tournament.match_duration ?? 20, round_break: tournament.round_break ?? 5 } : undefined)}
           >
             📥 Exportovat rozpis (Excel)
           </button>

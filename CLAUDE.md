@@ -103,6 +103,7 @@ ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAU
 - **Tipy — NEvymazávat `dirty` po save**: `setDirty(new Set())` po `saveAll()` způsobuje přepsání inputů realtime updatem. `dirty` se čistí pouze na unmount.
 - **Tipy — upsert místo insert/update**: `saveAll` používá `supabase.from('tips').upsert({...}, {onConflict: 'tipster_id,match_id'})` — předchází UNIQUE constraint violation.
 - **useBracket exportuje `refetch()`**: useRef pattern — volá se po každém `saveSlot` a `seedTeams` pro okamžitý UI update.
+- **Admin panel backdrop — drag z panelu ven**: `onClick` na backdrops by zavřel panel i při drag (mousedown uvnitř, mouseup venku). Oprava: `mouseDownOnBackdrop = useRef(false)` → `onMouseDown` nastaví flag jen když klik začal přímo na backdrops; `onClick` kontroluje oba podmínky. Viz `AdminPanel.tsx`.
 
 ## Styl a UX
 - Světlé téma: pozadí `#f8fafc`, karty bílé se shadow, akcent `#2563eb` (modrá)
@@ -362,6 +363,17 @@ CSS v `src/index.css` — třídy `.match-grid`, `.match-col-time`, `.match-col-
 
 ## Barvy týmů
 `TEAM_COLORS` v `src/lib/constants.ts` — 20 barev (červená, modrá, zelená, žlutá, oranžová, fialová, růžová, tmavě červená, tmavě zelená, šedá, tyrkysová, jantarová, indigo, malinová, limetková, teplá šedá, tmavě modrá, purpurová, hnědá, smaragdová).
+
+## Záloha DB architektury
+
+Složka `db-backup/` obsahuje SQL skripty pro kompletní rekonstrukci Supabase databáze od nuly (bez dat):
+- `01_tables.sql` — CREATE TABLE v pořadí FK závislostí
+- `02_rls.sql` — RLS ENABLE + všechny politiky (vč. anon pro tipovačku)
+- `03_triggers.sql` — `evaluate_tips()` + `evaluate_bracket_tips()` + triggery
+- `04_storage.sql` — instrukce + RLS pro Storage bucket "team-logos"
+- `05_migrations.sql` — ALTER TABLE IF NOT EXISTS pro upgrade existující DB
+
+Dokumentace aplikace pro uživatele: `docs/navod.html` — HTML návod na tisk/PDF (admin, hráči, tipéři).
 
 ## Vercel deployment — kritické upozornění
 

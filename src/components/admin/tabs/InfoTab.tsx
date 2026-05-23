@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default function InfoTab({ tournament, showToast }: Props) {
-  const [form, setForm] = useState({ name: '', subtitle: '', date: '', venue: '', description: '' })
+  const [form, setForm] = useState({ name: '', subtitle: '', date: '', venue: '', description: '', rules_content: '' })
 
   useEffect(() => {
     if (tournament) setForm({
@@ -17,6 +17,7 @@ export default function InfoTab({ tournament, showToast }: Props) {
       date: tournament.date,
       venue: tournament.venue,
       description: tournament.description,
+      rules_content: tournament.rules_content ?? '',
     })
   }, [tournament])
 
@@ -60,6 +61,23 @@ export default function InfoTab({ tournament, showToast }: Props) {
           style={{ resize: 'vertical', minHeight: 80, lineHeight: 1.5 }}
         />
       </div>
+
+      <hr className="divider" />
+      <div className="sub-title">Pravidla soutěže</div>
+      <div className="field-group">
+        <label className="field-label">Text pravidel</label>
+        <textarea
+          className="field-input"
+          value={form.rules_content}
+          onChange={f('rules_content')}
+          placeholder={'Napište pravidla soutěže…\n\nPříklad:\nZápasy trvají 2×10 minut.\nZa výhru 3 body, remízu 1 bod, prohru 0 bodů.'}
+          style={{ resize: 'vertical', minHeight: 200, lineHeight: 1.6, fontFamily: 'inherit' }}
+        />
+        <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: 4 }}>
+          Zobrazí se v záložce Pravidla. Nové řádky a odsazení jsou zachovány.
+        </div>
+      </div>
+
       <button type="button" className="btn btn-p btn-full" onClick={save}>💾 Uložit</button>
     </div>
   )

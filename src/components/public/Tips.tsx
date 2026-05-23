@@ -209,17 +209,25 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
     if (!teamId) return
     setSaving(prev => ({ ...prev, [tipType]: true }))
     const existing = specialTips.find(t => t.tip_type === tipType)
+    let saveError: { message: string } | null = null
     if (existing) {
       // Reset evaluated/points_earned — tip se mění, dosavadní vyhodnocení je neplatné
-      await supabase.from('special_tips').update({
+      const { error } = await supabase.from('special_tips').update({
         predicted_team_id: teamId,
         evaluated: false,
         points_earned: 0,
       }).eq('id', existing.id)
+      saveError = error
     } else {
-      await supabase.from('special_tips').insert({
+      const { error } = await supabase.from('special_tips').insert({
         tipster_id: tipsterId, tip_type: tipType, predicted_team_id: teamId, points_earned: 0, evaluated: false,
       })
+      saveError = error
+    }
+    if (saveError) {
+      showToast('Chyba uložení: ' + saveError.message)
+      setSaving(prev => ({ ...prev, [tipType]: false }))
+      return
     }
     // Vždy přepočítej total_points — opraví zastaralou hodnotu v tipsters
     // (ať byl tip uložen poprvé nebo změněn po dřívějším vyhodnocení).
@@ -842,7 +850,11 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
             groups={groups} teams={teams} tipsterId={tipsterId}
             specialTips={specialTips} showToast={showToast}
             anyMatchPlayed={groupMatches.some(m => m.played)}
-            anyPlayoffPlayed={bracketSlots.some(s => s.home_id != null || s.away_id != null)}
+            anyPlayoffPlayed={
+              (isLeague && !(tournament?.league_has_playoff ?? true))
+                ? groupMatches.some(m => m.played)
+                : bracketSlots.some(s => s.home_id != null || s.away_id != null)
+            }
             isLeague={isLeague}
           />
           <GroupTipsSection

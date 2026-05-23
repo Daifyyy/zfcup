@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZF Cup — Návod k aplikaci</title>
+<style>
+  /* ── Fonts ── */
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', Arial, sans-serif;
+    font-size: 10.5pt;
+    color: #1e293b;
+    background: #fff;
+    line-height: 1.6;
+  }
+
+  /* ── Print layout ── */
+  @page {
+    size: A4;
+    margin: 18mm 15mm 18mm 15mm;
+  }
+
+  @media print {
+    body { font-size: 9.5pt; }
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    .avoid-break { page-break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+
+  /* ── Screen wrapper ── */
+  .wrapper {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+  }
+
+  /* ── Cover page ── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    border-radius: 12px;
+    margin-bottom: 36px;
+    padding: 40px 30px;
+    color: #fff;
+    text-align: center;
+  }
+  .cover-title {
+    font-family: 'Bebas Neue', 'DM Sans', sans-serif;
+    font-size: 48pt;
+    letter-spacing: 3px;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .cover-sub {
+    font-size: 12pt;
+    font-weight: 600;
+    letter-spacing: 1px;
+    opacity: .85;
+    margin-bottom: 20px;
+  }
+  .cover-badge {
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.3);
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-size: 9pt;
+    letter-spacing: .5px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 36px;
+  }
+  .toc h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16pt;
+    letter-spacing: 1px;
+    color: #2563eb;
+    margin-bottom: 14px;
+  }
+  .toc ol {
+    padding-left: 20px;
+  }
+  .toc li {
+    margin-bottom: 5px;
+    font-size: 10pt;
+  }
+  .toc a {
+    color: #1e40af;
+    text-decoration: none;
+  }
+  .toc a:hover { text-decoration: underline; }
+  .toc .toc-sub {
+    padding-left: 18px;
+    margin-top: 3px;
+    list-style-type: lower-alpha;
+    font-size: 9.5pt;
+    color: #475569;
+  }
+
+  /* ── Section headings ── */
+  h1.section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26pt;
+    letter-spacing: 2px;
+    color: #1e3a8a;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 6px;
+    margin: 36px 0 18px;
+  }
+  h2.section-sub {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #1e40af;
+    margin: 22px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h2.section-sub::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    background: #2563eb;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  h3.sub-head {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #334155;
+    margin: 14px 0 6px;
+  }
+
+  /* ── Paragraphs ── */
+  p { margin-bottom: 8px; }
+
+  /* ── Info box ── */
+  .info-box {
+    background: #eff6ff;
+    border-left: 4px solid #2563eb;
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+  .tip-box {
+    background: #f0fdf4;
+    border-left: 4px solid #16a34a;
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+  .warn-box {
+    background: #fefce8;
+    border-left: 4px solid #ca8a04;
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+
+  /* ── Tab grid ── */
+  .tab-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0;
+  }
+  .tab-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 9.5pt;
+  }
+  .tab-card .tab-icon { font-size: 14pt; margin-right: 6px; }
+  .tab-card .tab-name { font-weight: 700; color: #1e40af; }
+  .tab-card .tab-desc { color: #475569; margin-top: 3px; font-size: 9pt; }
+
+  /* ── Steps ── */
+  .steps { counter-reset: step; margin: 10px 0; padding: 0; list-style: none; }
+  .steps li {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 10pt;
+  }
+  .steps li::before {
+    counter-increment: step;
+    content: counter(step);
+    min-width: 24px;
+    height: 24px;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9pt;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ── Score table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+  th {
+    background: #1e3a8a;
+    color: #fff;
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  /* ── Admin badge ── */
+  .badge {
+    display: inline-block;
+    background: #2563eb;
+    color: #fff;
+    font-size: 8pt;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge-green { background: #16a34a; }
+  .badge-amber { background: #d97706; }
+  .badge-red   { background: #dc2626; }
+
+  /* ── Inline code ── */
+  code {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: monospace;
+    font-size: 9pt;
+  }
+
+  /* ── Print button ── */
+  .print-btn {
+    position: fixed;
+    top: 20px; right: 20px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 11pt;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37,99,235,.4);
+    z-index: 999;
+  }
+  .print-btn:hover { background: #1d4ed8; }
+
+  ul, ol { padding-left: 20px; margin-bottom: 8px; }
+  li { margin-bottom: 4px; }
+
+  hr.divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 24px 0;
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Uložit jako PDF</button>
+
+<div class="wrapper">
+
+  <!-- ═══════════════════════════════════════════════════
+       OBÁLKA
+  ════════════════════════════════════════════════════ -->
+  <div class="cover">
+    <div class="cover-title">ZF CUP</div>
+    <div class="cover-sub">Návod k aplikaci</div>
+    <div class="cover-badge">⚽ Firemní fotbalový turnaj &nbsp;|&nbsp; Správa turnaje &amp; Tipovačka</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       OBSAH
+  ════════════════════════════════════════════════════ -->
+  <div class="toc">
+    <h2>Obsah</h2>
+    <ol>
+      <li><a href="#public">Veřejná část — pro hráče a diváky</a>
+        <ul class="toc-sub">
+          <li><a href="#tab-prehled">Přehled</a></li>
+          <li><a href="#tab-tymy">Týmy</a></li>
+          <li><a href="#tab-zapasy">Zápasy</a></li>
+          <li><a href="#tab-tabulka">Tabulka</a></li>
+          <li><a href="#tab-strelci">Střelci</a></li>
+          <li><a href="#tab-pavouk">Pavouk (Play-off)</a></li>
+          <li><a href="#tab-pravidla">Pravidla</a></li>
+        </ul>
+      </li>
+      <li><a href="#tips">Tipovačka — pro tipéry</a>
+        <ul class="toc-sub">
+          <li><a href="#tips-reg">Registrace a přihlášení</a></li>
+          <li><a href="#tips-groups">Tipy na skupinové zápasy</a></li>
+          <li><a href="#tips-playoff">Tipy na play-off</a></li>
+          <li><a href="#tips-special">Speciální tipy</a></li>
+          <li><a href="#tips-score">Bodování</a></li>
+        </ul>
+      </li>
+      <li><a href="#admin">Admin panel — pro správce turnaje</a>
+        <ul class="toc-sub">
+          <li><a href="#admin-login">Přihlášení</a></li>
+          <li><a href="#admin-info">Info &amp; Pravidla</a></li>
+          <li><a href="#admin-announcements">Informace (Oznámení)</a></li>
+          <li><a href="#admin-teams">Týmy &amp; Soupisky</a></li>
+          <li><a href="#admin-groups">Skupiny &amp; Harmonogram</a></li>
+          <li><a href="#admin-matches">Zápasy — zadávání výsledků</a></li>
+          <li><a href="#admin-bracket">Play-off</a></li>
+          <li><a href="#admin-tips">Tipovačka admin</a></li>
+          <li><a href="#admin-settings">Nastavení</a></li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════
+       1. VEŘEJNÁ ČÁST
+  ════════════════════════════════════════════════════ -->
+  <h1 class="section-title" id="public">1. Veřejná část</h1>
+  <p>Veřejná část aplikace je přístupná všem bez přihlášení. Na mobilním telefonu se navigace zobrazuje jako lišta dole na obrazovce; na počítači v horní části stránky.</p>
+
+  <div class="tab-grid">
+    <div class="tab-card avoid-break">
+      <span class="tab-icon">🏠</span><span class="tab-name">Přehled</span>
+      <div class="tab-desc">Název turnaje, QR kód + oznámení organizátorů (text, foto, video)</div>
+    </div>
+    <div class="tab-card avoid-break">
+      <span class="tab-icon">👥</span><span class="tab-name">Týmy</span>
+      <div class="tab-desc">Přehled týmů se soupiskami hráčů, kapitány a brankáři</div>
+    </div>
+    <div class="tab-card avoid-break">
+      <span class="tab-icon">📋</span><span class="tab-name">Zápasy</span>
+      <div class="tab-desc">Výsledky skupinových zápasů, vítěz zvýrazněn modře</div>
+    </div>
+    <div class="tab-card avoid-break">
+      <span class="tab-icon">📊</span><span class="tab-name">Tabulka</span>
+      <div class="tab-desc">Skupinové tabulky s body, skóre, postup do play-off</div>
+    </div>
+    <div class="tab-card avoid-break">
+      <span class="tab-icon">⚽</span><span class="tab-name">Střelci</span>
+      <div class="tab-desc">Pořadí střelců celého turnaje (skupiny + play-off)</div>
+    </div>
+    <div class="tab-card avoid-break">
+      <span class="tab-icon">🏆</span><span class="tab-name">Pavouk</span>
+      <div class="tab-desc">Play-off pavouk — od čtvrtfinále po finále; vítěz zlatě</div>
+    </div>
+    <div class="tab-card avoid-break">
+      <span class="tab-icon">📋</span><span class="tab-name">Pravidla</span>
+      <div class="tab-desc">Pravidla soutěže zadaná organizátorem</div>
+    </div>
+    <div class="tab-card avoid-break">
+      <span class="tab-icon">🎯</span><span class="tab-name">Tipy</span>
+      <div class="tab-desc">Tipovačka (viditelná jen pokud ji organizátor zapnul)</div>
+    </div>
+  </div>
+
+  <!-- Přehled -->
+  <h2 class="section-sub" id="tab-prehled">Přehled</h2>
+  <p>Úvodní záložka zobrazuje název turnaje a QR kód, kterým lze sdílet odkaz na aplikaci. Pod tím jsou <strong>oznámení od organizátora</strong> — může jít o text, fotografii nebo YouTube video.</p>
+
+  <!-- Týmy -->
+  <h2 class="section-sub" id="tab-tymy">Týmy</h2>
+  <p>Každý tým je zobrazen jako karta s barevným pruhem. V kartě je seznam hráčů seřazených abecedně. U jmen jsou odznaky:</p>
+  <ul>
+    <li><strong>C</strong> — kapitán</li>
+    <li><strong>B</strong> — brankář</li>
+    <li><strong>CB</strong> — kapitán i brankář</li>
+    <li><strong>⚽ N</strong> — počet vstřelených gólů v turnaji (zobrazí se jen pokud > 0)</li>
+  </ul>
+
+  <!-- Zápasy -->
+  <h2 class="section-sub" id="tab-zapasy">Zápasy</h2>
+  <p>Záložka zobrazuje všechny skupinové (nebo ligové) zápasy seřazené dle skupiny a času. Každý řádek ukazuje:</p>
+  <ul>
+    <li>Čas zápasu vlevo</li>
+    <li>Název domácího a hostujícího týmu s logem</li>
+    <li>Skóre — vítěz je zvýrazněn tučně modrou barvou</li>
+  </ul>
+  <div class="info-box">
+    Výsledky se aktualizují v reálném čase — není potřeba stránku obnovovat.
+  </div>
+
+  <!-- Tabulka -->
+  <h2 class="section-sub" id="tab-tabulka">Tabulka</h2>
+  <p>Skupinové tabulky jsou řazeny dle: body → skóre → vzájemný zápas (záleží na nastavení tiebreakerů). Barevné kódování postoupivších:</p>
+  <ul>
+    <li><strong style="color:#16a34a">Zelená</strong> — vítěz skupiny (jistý postup)</li>
+    <li><strong style="color:#2563eb">Modrá</strong> — 2. místo (postup do play-off)</li>
+  </ul>
+  <p>V <strong>lize</strong> je kódování jiné: zelená = 1.–2. místo (→ semifinále), oranžová = 3.–6. místo (→ čtvrtfinále).</p>
+
+  <!-- Střelci -->
+  <h2 class="section-sub" id="tab-strelci">Střelci</h2>
+  <p>Žebříček všech hráčů, kteří skórovali — počítají se góly ze skupin i z play-off. Hráči jsou seřazeni od nejvíce gólů. Vedle jména je zobrazeno logo týmu.</p>
+
+  <!-- Pavouk -->
+  <h2 class="section-sub" id="tab-pavouk">Pavouk (Play-off)</h2>
+  <p>Play-off zápasy jsou zobrazeny jako plochý seznam kol (ne pavouk). Každý zápas má dva řádky — domácí a hosté. Vítěz je zvýrazněn modře, finálový vítěz zlatě.</p>
+  <div class="info-box">
+    Záložka se zobrazuje až po nasazení týmů do play-off (krok provádí organizátor). V lize bez play-off je záložka skrytá.
+  </div>
+
+  <!-- Pravidla -->
+  <h2 class="section-sub" id="tab-pravidla">Pravidla</h2>
+  <p>Zobrazuje text pravidel soutěže, který zadal organizátor. Pokud nejsou pravidla vyplněna, záložka zobrazí informaci o jejich absenci.</p>
+
+  <!-- ═══════════════════════════════════════════════════
+       2. TIPOVAČKA
+  ════════════════════════════════════════════════════ -->
+  <div class="page-break"></div>
+  <h1 class="section-title" id="tips">2. Tipovačka</h1>
+  <p>Tipovačka je volitelný modul — organizátor ji může zapnout nebo vypnout. Tipéři jsou anonymní (bez Supabase účtu) — přihlašují se jménem a 4místným PINem.</p>
+
+  <div class="warn-box">
+    <strong>Uzamčení tipů:</strong> Tipy na zápas se automaticky uzamknou ve chvíli, kdy čas zápasu uplyne. Po uzamčení nelze tipy měnit.
+  </div>
+
+  <!-- Registrace -->
+  <h2 class="section-sub" id="tips-reg">Registrace a přihlášení</h2>
+  <ol class="steps">
+    <li>V záložce <strong>Tipy</strong> klikněte na „Nový tipér".</li>
+    <li>Zadejte <strong>jméno</strong> (celé jméno, malými písmeny — tvar: <code>jan novák</code>) a <strong>4místný PIN</strong> pro přístup.</li>
+    <li>PIN si zapamatujte — slouží k opětovnému přihlášení ze stejného nebo jiného zařízení.</li>
+    <li>Pro přihlášení existujícího účtu klikněte na „Přihlásit se" a zadejte stejné jméno + PIN.</li>
+  </ol>
+  <div class="tip-box">
+    Přihlášení je uloženo v prohlížeči. Při příštím otevření aplikace na stejném zařízení jste přihlášeni automaticky.
+  </div>
+
+  <!-- Skupinové tipy -->
+  <h2 class="section-sub" id="tips-groups">Tipy na skupinové zápasy</h2>
+  <p>Po přihlášení vidíte seznam všech skupinových zápasů. U každého zápasu zadejte předpokládaný výsledek — čísla domácích a hostujících gólů.</p>
+  <ul>
+    <li>Tipy se ukládají automaticky tlačítkem <strong>„Uložit tipy"</strong>.</li>
+    <li>Uzamčené zápasy (čas vypršel) jsou zobrazeny šedě a nelze je editovat.</li>
+    <li>V lize jsou zápasy seskupeny dle časových slotů.</li>
+  </ul>
+
+  <!-- Playoff tipy -->
+  <h2 class="section-sub" id="tips-playoff">Tipy na play-off</h2>
+  <p>Sekce play-off tipů se zobrazí po nasazení týmů do pavouku. Funguje stejně jako skupinové tipy — zadáte skóre, uložíte. Tipy se uzamknou v čase zahájení zápasu.</p>
+
+  <!-- Speciální tipy -->
+  <h2 class="section-sub" id="tips-special">Speciální tipy</h2>
+  <p>Speciální tipy jsou samostatnou sekcí. Tipujete výběrem týmu ze seznamu, ne zadáváním skóre:</p>
+  <ul>
+    <li><strong>Vítěz turnaje</strong> — tým, který vyhraje celý turnaj</li>
+    <li><strong>Vítěz skupiny X</strong> — tým, který skončí první v dané skupině</li>
+    <li><strong>Poslední skupiny X</strong> — tým, který skončí poslední v dané skupině</li>
+  </ul>
+  <div class="warn-box">
+    Speciální tipy se uzamknou jakmile jsou odehrány první zápasy dané kategorie. Tipujte co nejdříve!
+  </div>
+
+  <!-- Bodování -->
+  <h2 class="section-sub" id="tips-score">Bodování</h2>
+  <table class="avoid-break">
+    <thead>
+      <tr>
+        <th>Kategorie</th>
+        <th>Přesný výsledek</th>
+        <th>Správný vítěz / remíza</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Skupinové zápasy</td><td><strong>3 body</strong></td><td>1 bod</td></tr>
+      <tr><td>Play-off zápasy</td><td><strong>5 bodů</strong></td><td>2 body</td></tr>
+      <tr><td>Vítěz turnaje</td><td colspan="2"><strong>10 bodů</strong></td></tr>
+      <tr><td>Vítěz skupiny</td><td colspan="2"><strong>5 bodů</strong></td></tr>
+      <tr><td>Poslední skupiny</td><td colspan="2"><strong>3 body</strong></td></tr>
+    </tbody>
+  </table>
+  <p>Body se přičítají automaticky po zadání výsledku zápasu organizátorem. Celkové pořadí tipérů je viditelné v horní části záložky Tipy.</p>
+
+  <!-- ═══════════════════════════════════════════════════
+       3. ADMIN PANEL
+  ════════════════════════════════════════════════════ -->
+  <div class="page-break"></div>
+  <h1 class="section-title" id="admin">3. Admin panel</h1>
+  <p>Admin panel je přístupný přes tlačítko <strong>⚙ Admin</strong> v pravém horním rohu. Vyžaduje přihlášení e-mailem a heslem (účet zřizuje správce Supabase projektu).</p>
+
+  <!-- Přihlášení -->
+  <h2 class="section-sub" id="admin-login">Přihlášení</h2>
+  <ol class="steps">
+    <li>Klikněte na tlačítko <strong>⚙ Admin</strong> v pravém horním rohu.</li>
+    <li>Zadejte e-mail a heslo administrátora.</li>
+    <li>Po úspěšném přihlášení se panel otevře ze strany. Relace zůstává aktivní po dobu prohlížeče.</li>
+  </ol>
+  <div class="info-box">
+    Admin panel lze otevřít i na mobilním telefonu — panel se zobrazí jako překrytí přes celou obrazovku.
+  </div>
+
+  <hr class="divider">
+
+  <!-- Info -->
+  <h2 class="section-sub" id="admin-info">Záložka: Info</h2>
+  <p>Základní metadata turnaje:</p>
+  <ul>
+    <li><strong>Název turnaje</strong> — zobrazuje se v záhlaví a na úvodní obrazovce</li>
+    <li><strong>Podtitulek, datum, místo</strong> — doplňující informace</li>
+    <li><strong>Popis</strong> — krátký text o turnaji</li>
+    <li><strong>Pravidla soutěže</strong> — delší text zobrazený v záložce Pravidla (podporuje formátování novými řádky)</li>
+  </ul>
+
+  <!-- Informace -->
+  <h2 class="section-sub" id="admin-announcements">Záložka: Informace (Oznámení)</h2>
+  <p>CRUD správa oznámení zobrazovaných na úvodní obrazovce a záložce Info.</p>
+  <h3 class="sub-head">Typy oznámení</h3>
+  <ul>
+    <li><strong>📢 Text</strong> — ikona + nadpis + text zprávy</li>
+    <li><strong>🖼️ Obrázek</strong> — URL obrázku s živým náhledem</li>
+    <li><strong>▶️ Video</strong> — YouTube URL; zobrazí se jako vložené video (16:9)</li>
+  </ul>
+  <h3 class="sub-head">Pořadí oznámení</h3>
+  <p>Pořadí upravujte tlačítky <strong>↑</strong> a <strong>↓</strong> u každého záznamu. Změna se projeví okamžitě.</p>
+
+  <!-- Týmy -->
+  <h2 class="section-sub" id="admin-teams">Záložka: Týmy</h2>
+  <p>Správa týmů a jejich soupis hráčů.</p>
+  <h3 class="sub-head">Přidání týmu</h3>
+  <ol class="steps">
+    <li>Vyplňte název týmu a vyberte barvu.</li>
+    <li>Volitelně nahrajte logo (PNG, max. 500 KB, 200×200 px).</li>
+    <li>Klikněte <strong>Přidat tým</strong>.</li>
+  </ol>
+  <h3 class="sub-head">Přidání hráče</h3>
+  <ol class="steps">
+    <li>V kartě týmu zadejte jméno hráče a volitelně číslo dresu.</li>
+    <li>Vyberte roli: <em>—</em>, Kapitán, Brankář, nebo Kapitán + Brankář.</li>
+    <li>Klikněte <strong>Přidat</strong>.</li>
+  </ol>
+  <h3 class="sub-head">Editace hráče</h3>
+  <p>Klikněte na ikonu <strong>✎</strong> u jména hráče → upravte jméno nebo roli → uložte <strong>✓</strong>.</p>
+
+  <!-- Skupiny -->
+  <h2 class="section-sub" id="admin-groups">Záložka: Skupiny</h2>
+  <div class="info-box">
+    <strong>Pouze pro formát Skupiny.</strong> V lize se skupiny generují automaticky.
+  </div>
+  <h3 class="sub-head">Vytvoření skupiny a generování zápasů</h3>
+  <ol class="steps">
+    <li>Zadejte název skupiny (např. <em>Skupina A</em>) a čas zahájení.</li>
+    <li>Přetáhněte nebo vyberte týmy do skupiny.</li>
+    <li>Nastavte typ (každý s každým jednou / dvakrát) a délku přestávky.</li>
+    <li>Klikněte <strong>Generovat zápasy</strong> — časy se přiřadí automaticky dle počtu hřišť.</li>
+  </ol>
+  <div class="tip-box">
+    Počet hřišť (nastavení v záložce <em>Nastavení</em>) určuje, kolik zápasů probíhá souběžně. Při 2 hřištích dostane každý časový slot 2 zápasy.
+  </div>
+
+  <!-- Zápasy -->
+  <h2 class="section-sub" id="admin-matches">Záložka: Zápasy <span class="badge badge-green">Aktivní při turnaji</span></h2>
+  <p>Nejdůležitější záložka v průběhu turnaje — zde se zadávají výsledky.</p>
+  <h3 class="sub-head">Zadání výsledku</h3>
+  <ol class="steps">
+    <li>Najděte zápas v seznamu a klikněte <strong>✎ Upravit</strong>.</li>
+    <li>Upravte skóre pomocí tlačítek <strong>+</strong> / <strong>−</strong> nebo přímým zadáním čísla.</li>
+    <li>Volitelně doplňte střelce gólů — vyberte hráče a počet gólů.</li>
+    <li>Klikněte <strong>💾 Uložit vše</strong>. Výsledek se okamžitě zobrazí všem uživatelům.</li>
+  </ol>
+  <div class="warn-box">
+    Po uložení výsledku se automaticky spustí vyhodnocení tipů pro daný zápas a přepočet bodů tipérů.
+  </div>
+  <div class="info-box">
+    V <strong>lize</strong> je v této záložce také tlačítko <strong>Nasadit týmy do play-off</strong> — aktivní po odehrání všech ligových zápasů.
+  </div>
+
+  <!-- Play-off -->
+  <h2 class="section-sub" id="admin-bracket">Záložka: Play-off <span class="badge badge-green">Aktivní při turnaji</span></h2>
+  <p>Správa play-off probíhá ve dvou krocích:</p>
+  <h3 class="sub-head">Krok 1 — Generovat strukturu</h3>
+  <p>Klikněte <strong>Generovat strukturu</strong>. Vytvoří se kola (čtvrtfinále, semifinále, finále) s prázdnými sloty.</p>
+  <h3 class="sub-head">Krok 2 — Nasadit týmy</h3>
+  <p>Po odehrání všech skupinových zápasů klikněte <strong>Nasadit týmy</strong>. Týmy se automaticky rozmístí dle tabulek skupin. Vítězové čtvrtfinále postupují automaticky do semifinále.</p>
+  <h3 class="sub-head">Zadání výsledků play-off</h3>
+  <p>Stejný princip jako u skupinových zápasů — klikněte na slot, upravte skóre, doplňte góly, uložte. Po uložení finálového výsledku se automaticky vyhodnotí tipy na vítěze turnaje.</p>
+  <div class="tip-box">
+    U každého kola lze nastavit čas zahájení a přestávku. Tlačítko <strong>⏰ Rozepsat časy</strong> automaticky doplní časy všech zápasů v kole.
+  </div>
+
+  <!-- Tipovačka admin -->
+  <h2 class="section-sub" id="admin-tips">Záložka: Tipovačka <span class="badge badge-green">Aktivní při turnaji</span></h2>
+  <p>Administrace tipovačky — nutná minimálně pro spuštění a případné opravy.</p>
+  <h3 class="sub-head">Vyhodnocení speciálních tipů</h3>
+  <p>Speciální tipy (vítěz skupiny, poslední skupiny) se vyhodnocují automaticky po posledním zápase skupiny. Tuto sekci otevřete pro manuální kontrolu nebo opravné vyhodnocení.</p>
+  <h3 class="sub-head">Přepočet bodů</h3>
+  <p>Tlačítko <strong>Přepočítat body všech tipérů</strong> znovu spočítá celková skóre ze všech tipů. Použijte v případě nesrovnalostí.</p>
+  <h3 class="sub-head">Správa tipérů</h3>
+  <p>Přehled všech registrovaných tipérů s jejich celkovým skóre. Lze smazat konkrétního tipéra nebo všechny najednou (<em>Nebezpečná zóna</em>).</p>
+
+  <!-- Nastavení -->
+  <h2 class="section-sub" id="admin-settings">Záložka: Nastavení</h2>
+  <p>Konfigurace formátu a parametrů turnaje.</p>
+
+  <table class="avoid-break">
+    <thead>
+      <tr><th>Nastavení</th><th>Popis</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Formát turnaje</strong></td><td>Skupiny / Liga — ovlivňuje strukturu zápasů a tabulek</td></tr>
+      <tr><td><strong>Počet hřišť</strong></td><td>1–4; N zápasů probíhá souběžně ve stejném čase</td></tr>
+      <tr><td><strong>Počet týmů / skupin</strong></td><td>Parametry scénáře (pouze formát Skupiny)</td></tr>
+      <tr><td><strong>Délka zápasu</strong></td><td>Minuty; použije se při generování harmonogramu</td></tr>
+      <tr><td><strong>Přestávka mezi zápasy</strong></td><td>Minuty; přidá se za každý zápas</td></tr>
+      <tr><td><strong>Datum turnaje</strong></td><td>Od tohoto data se tipy začínají uzamykat dle časů zápasů</td></tr>
+      <tr><td><strong>Tipovačka</strong></td><td>Zapnout / vypnout viditelnost záložky Tipy</td></tr>
+      <tr><td><strong>Playoff po lize</strong></td><td>Pouze liga — zapnout / vypnout play-off fázi</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="sub-head">Čistý start</h3>
+  <p>Tlačítko <strong>Čistý start</strong> v nebezpečné zóně smaže všechny zápasy, skupiny, góly a tipy — zachová pouze týmy a hráče. Použijte před generováním nového harmonogramu.</p>
+  <div class="warn-box">
+    <strong>Pozor:</strong> Čistý start je nevratná operace. Ujistěte se, že chcete opravdu smazat všechna data.
+  </div>
+
+  <hr class="divider">
+
+  <!-- Závěr -->
+  <div class="tip-box" style="margin-top: 24px;">
+    <strong>Technická podpora:</strong> Aplikace je vyvinuta SmartFactory ZF Jablonec. Při technických potížích kontaktujte správce aplikace.
+  </div>
+
+</div><!-- /wrapper -->
+
+</body>
+</html>

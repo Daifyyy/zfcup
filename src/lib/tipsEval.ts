@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { calcGroupStandings } from './standings'
 import type { Group } from '../hooks/useGroups'
 import type { BracketRound } from '../hooks/useBracket'
+import type { Match } from '../hooks/useMatches'
 
 // Vrátí true pokud se skutečně změnil nějaký záznam
 export async function evaluateSpecialTip(tipType: string, correctTeamId: string): Promise<boolean> {
@@ -68,6 +69,20 @@ export async function checkGroupSpecialTips(groupId: string, group: Group): Prom
 
   if (changedW || changedL) await recalcTipsterPoints()
   return changedW || changedL
+}
+
+// Liga bez playoff: zkontroluje zda jsou odehrány všechny liga zápasy a vyhodnotí tournament_winner dle tabulky.
+export async function checkLeagueTournamentWinner(ligaGroup: Group): Promise<boolean> {
+  const { data: allMatches } = await supabase
+    .from('matches').select('*').eq('group_id', ligaGroup.id)
+  if (!allMatches?.length || !(allMatches as Match[]).every(m => m.played)) return false
+
+  const rows = calcGroupStandings(ligaGroup, allMatches as Match[])
+  if (!rows.length) return false
+
+  const changed = await evaluateSpecialTip('tournament_winner', rows[0].id)
+  if (changed) await recalcTipsterPoints()
+  return changed
 }
 
 // Zkontroluje zda je odehráno finále a vyhodnotí tournament_winner special tipy.

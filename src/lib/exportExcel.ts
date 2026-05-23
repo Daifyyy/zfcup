@@ -19,6 +19,7 @@ export function exportSchedule(
   matches: Match[],
   groups: Group[],
   teams: Team[],
+  numPitches: number = 2,
   tournament?: { match_duration: number; round_break: number },
 ) {
   const sorted = [...matches].sort((a, b) =>
@@ -37,7 +38,7 @@ export function exportSchedule(
     byTime.get(t)!.push(m)
   }
 
-  const buildFieldRows = (fieldIndex: 0 | 1): string[][] => {
+  const buildFieldRows = (fieldIndex: number): string[][] => {
     const rows: string[][] = []
     const times = Array.from(byTime.keys()).sort((a, b) => a.localeCompare(b))
     let prevTime: number | null = null
@@ -69,10 +70,11 @@ export function exportSchedule(
   const header = ['Čas', 'Domácí', 'Hosté', 'Výsledek']
   const allRows: string[][] = []
 
-  for (const [label, fieldIndex] of [['Hřiště A', 0], ['Hřiště B', 1]] as [string, 0 | 1][]) {
-    allRows.push([label, '', '', ''])
+  const pitchLabels = 'ABCD'
+  for (let i = 0; i < numPitches; i++) {
+    allRows.push([`Hřiště ${pitchLabels[i] ?? i + 1}`, '', '', ''])
     allRows.push(header)
-    allRows.push(...buildFieldRows(fieldIndex))
+    allRows.push(...buildFieldRows(i))
     allRows.push(['', '', '', ''])
   }
 

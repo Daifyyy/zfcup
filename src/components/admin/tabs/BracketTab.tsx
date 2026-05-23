@@ -605,8 +605,8 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     const maxPos = Math.max(...bracketRounds.map(r => r.position))
     if (currentRound.position >= maxPos - 1) {
       await refetchBracket()
-      await evalTournamentWinner()
-      showToast('Uloženo ✓')
+      const evaluated = await evalTournamentWinner()
+      showToast(evaluated ? 'Uloženo ✓ · 🏆 Vítěz turnaje vyhodnocen' : 'Uloženo ✓')
       return
     }
 
@@ -678,18 +678,21 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     const rSlots = [...bracketSlots]
       .filter(s => s.round_id === round.id)
       .sort((a, b) => a.position - b.position)
-
-    // Uložit čas a pauzu do kola
-    await supabase.from('bracket_rounds')
-      .update({ scheduled_start: round._start, break_after: brk })
-      .eq('id', round.id)
-
-    // Dopočítat scheduled_time pro každý slot
-    for (let i = 0; i < rSlots.length; i++) {
-      const t = addMinutes(round._start, i * (dur + brk))
-      await supabase.from('bracket_slots').update({ scheduled_time: t }).eq('id', rSlots[i].id)
+    try {
+      const { error: rErr } = await supabase.from('bracket_rounds')
+        .update({ scheduled_start: round._start, break_after: brk })
+        .eq('id', round.id)
+      if (rErr) throw rErr
+      for (let i = 0; i < rSlots.length; i++) {
+        const t = addMinutes(round._start, i * (dur + brk))
+        const { error: sErr } = await supabase.from('bracket_slots').update({ scheduled_time: t }).eq('id', rSlots[i].id)
+        if (sErr) throw sErr
+      }
+      await refetchBracket()
+      showToast(`Časy rozepsány pro ${rSlots.length} zápasů ✓`)
+    } catch (e: unknown) {
+      showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
     }
-    showToast(`Časy rozepsány pro ${rSlots.length} zápasů ✓`)
   }
 
   const sorted = [...bracketRounds].sort((a, b) => a.position - b.position)

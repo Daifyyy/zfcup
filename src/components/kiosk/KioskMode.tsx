@@ -1,258 +1,97 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { Tab } from '../../App'
+import { calcGroupStandings } from '../../lib/standings'
+import { TeamLogo } from '../ui/TeamLogo'
+import QRCode from '../ui/QRCode'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Team } from '../../hooks/useTeams'
 import type { Player } from '../../hooks/usePlayers'
 import type { Group } from '../../hooks/useGroups'
 import type { Match } from '../../hooks/useMatches'
 import type { Goal } from '../../hooks/useGoals'
+import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Announcement } from '../../hooks/useAnnouncements'
-import { calcGroupStandings } from '../../lib/standings'
-import QRCode from '../ui/QRCode'
 
-/* ── Constants ──────────────────────────────────────── */
-const KIOSK_TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'overview',  label: 'Přehled',  icon: '🏠' },
-  { key: 'results',   label: 'Výsledky', icon: '📋' },
-  { key: 'standings', label: 'Tabulka',  icon: '📊' },
-  { key: 'scorers',   label: 'Střelci',  icon: '⚽' },
-  { key: 'bracket',   label: 'Pavouk',   icon: '🏆' },
+/* ── Palette ───────────────────────────────────────────── */
+const C = {
+  bg:      '#f0f4ff',
+  col:     '#ffffff',
+  hdr:     '#1e3a8a',
+  text:    '#0f172a',
+  muted:   '#64748b',
+  accent:  '#2563eb',
+  border:  'rgba(37,99,235,.1)',
+  success: '#16a34a',
+  gold:    '#d97706',
+  bronze:  '#92400e',
+}
+
+/* ── Fluid sizes (Scoreboard-quality scale) ─────────────── */
+const S = {
+  title:   'clamp(1.3rem, 2.2vw, 2.8rem)',
+  section: 'clamp(.75rem, 1.1vw, 1.4rem)',
+  body:    'clamp(.65rem, .95vw, 1.15rem)',
+  small:   'clamp(.58rem, .78vw, .92rem)',
+  score:   'clamp(.9rem, 1.4vw, 1.7rem)',
+  pts:     'clamp(.9rem, 1.3vw, 1.6rem)',
+  label:   'clamp(.52rem, .7vw, .82rem)',
+}
+
+/* ── Views config ──────────────────────────────────────── */
+type KioskView = 'matches' | 'table' | 'bracket'
+const ALL_VIEWS: { key: KioskView; label: string; icon: string }[] = [
+  { key: 'matches', label: 'Zápasy',  icon: '⚽' },
+  { key: 'table',   label: 'Tabulka', icon: '📊' },
+  { key: 'bracket', label: 'Pavouk',  icon: '🏆' },
 ]
 const ROTATION_MS = 15_000
 
-// TV font sizes using clamp(min, fluid, max)
-const TV = {
-  title:    'clamp(3.5rem, 6vw, 7rem)',
-  heading:  'clamp(2rem, 3.5vw, 4.5rem)',
-  sub:      'clamp(1.2rem, 2vw, 2.2rem)',
-  body:     'clamp(1rem, 1.6vw, 1.7rem)',
-  small:    'clamp(.8rem, 1.2vw, 1.2rem)',
-  label:    'clamp(.7rem, 1vw, 1rem)',
-  score:    'clamp(4rem, 9vw, 11rem)',
-  pts:      'clamp(2rem, 4vw, 5rem)',
-  goalBig:  'clamp(3rem, 6vw, 8rem)',
-  rank:     'clamp(2rem, 4vw, 5rem)',
-}
-
-/* ── Helper ─────────────────────────────────────────── */
+/* ── Clock hook ────────────────────────────────────────── */
 function useClock() {
-  const [time, setTime] = useState(() => new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }))
-  useEffect(() => {
-    const t = setInterval(() => setTime(new Date().toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })), 10_000)
-    return () => clearInterval(t)
-  }, [])
-  return time
-}
-
-/* ── TV Views ────────────────────────────────────────── */
-
-function TvOverview({ tournament, teams, matches, groups, announcements }: {
-  tournament: Tournament | null; teams: Team[]; matches: Match[]; groups: Group[]; announcements: Announcement[]
-}) {
-  const played = matches.filter(m => m.played).length
-  const stats = [
-    { label: 'Týmů',     value: teams.length,   icon: '👥', accent: true  },
-    { label: 'Zápasů',   value: matches.length, icon: '📋', accent: false },
-    { label: 'Odehráno', value: played,          icon: '✅', accent: true  },
-    { label: 'Skupin',   value: groups.length,  icon: '🏆', accent: false },
-  ]
-  return (
-    <div style={{ padding: '3vw 4vw', height: '100%', display: 'flex', flexDirection: 'column', gap: '2.5vw' }}>
-      {/* Tournament name */}
-      <div>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.title, letterSpacing: '.05em', lineHeight: 1, color: '#0f172a' }}>
-          {tournament?.name || 'Turnaj'}
-        </div>
-        {[tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).length > 0 && (
-          <div style={{ fontSize: TV.sub, color: '#64748b', marginTop: '.4rem' }}>
-            {[tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')}
-          </div>
-        )}
-      </div>
-
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '1.5vw' }}>
-        {stats.map(s => (
-          <div key={s.label} style={{
-            background: '#fff', borderRadius: 20,
-            padding: '2.5vw 2vw', textAlign: 'center',
-            boxShadow: '0 4px 24px rgba(0,0,0,.08)',
-          }}>
-            <div style={{ fontSize: TV.sub, marginBottom: '.5vw' }}>{s.icon}</div>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.pts, color: s.accent ? '#2563eb' : '#0f172a', lineHeight: 1 }}>{s.value}</div>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.label, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.14em', marginTop: '.4vw' }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Description */}
-      {tournament?.description && (
-        <div style={{ background: '#fff', borderRadius: 16, padding: '2vw 2.5vw', fontSize: TV.body, color: '#64748b', lineHeight: 1.75 }}>
-          {tournament.description}
-        </div>
-      )}
-
-      {/* Announcements */}
-      {announcements.slice(0, 3).map(a => (
-        <div key={a.id} style={{ background: '#fff', borderRadius: 16, padding: '1.5vw 2vw', display: 'flex', gap: '1.5vw', alignItems: 'center', boxShadow: '0 2px 12px rgba(0,0,0,.06)' }}>
-          <span style={{ fontSize: TV.sub, flexShrink: 0 }}>{a.icon}</span>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: TV.body }}>{a.title}</div>
-            {a.body && <div style={{ fontSize: TV.small, color: '#64748b', marginTop: '.3vw' }}>{a.body}</div>}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function TvResults({ matches, teams }: { matches: Match[]; teams: Team[] }) {
-  const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
-  const tc = (id: string) => teams.find(t => t.id === id)?.color ?? '#94a3b8'
-
-  const rounds: Record<string, Match[]> = {}
-  for (const m of matches) {
-    const r = m.round || 'Zápasy'
-    if (!rounds[r]) rounds[r] = []
-    rounds[r].push(m)
+  const fmt = () => {
+    const d = new Date()
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
   }
-
-  if (!matches.length) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-        <div style={{ fontSize: TV.pts, marginBottom: '1rem' }}>📋</div>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading }}>Žádné zápasy</div>
-      </div>
-    </div>
-  )
-
-  return (
-    <div style={{ padding: '2.5vw 4vw', display: 'flex', flexDirection: 'column', gap: '2.5vw', overflowY: 'auto', height: '100%' }}>
-      {Object.entries(rounds).map(([round, ms]) => (
-        <div key={round}>
-          <div style={{
-            fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: TV.sub, letterSpacing: '.15em', color: '#64748b',
-            textTransform: 'uppercase', marginBottom: '1.2vw',
-            paddingBottom: '.7vw', borderBottom: '3px solid #e2e8f0',
-          }}>{round}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '.8vw' }}>
-            {ms.map(m => {
-              const hw = m.played && m.home_score > m.away_score
-              const aw = m.played && m.away_score > m.home_score
-              return (
-                <div key={m.id} style={{
-                  background: '#fff', borderRadius: 18,
-                  padding: '1.8vw 2.5vw',
-                  display: 'grid', gridTemplateColumns: '1fr auto 1fr',
-                  alignItems: 'center', gap: '2vw',
-                  boxShadow: '0 4px 20px rgba(0,0,0,.07)',
-                }}>
-                  {/* Home */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1.2vw' }}>
-                    <span style={{ fontWeight: hw ? 800 : 500, fontSize: TV.sub, color: hw ? '#0f172a' : '#64748b', textAlign: 'right' }}>{tn(m.home_id)}</span>
-                    <div style={{ width: '1.2vw', height: '1.2vw', minWidth: 14, minHeight: 14, borderRadius: '50%', background: tc(m.home_id), flexShrink: 0 }} />
-                  </div>
-                  {/* Score */}
-                  <div style={{ textAlign: 'center', minWidth: '14vw' }}>
-                    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.score, letterSpacing: '.08em', lineHeight: 1, color: m.played ? '#0f172a' : '#94a3b8' }}>
-                      {m.played ? `${m.home_score}:${m.away_score}` : 'VS'}
-                    </div>
-                    <div style={{
-                      display: 'inline-block', marginTop: '.3vw',
-                      fontSize: TV.small, fontWeight: 700,
-                      textTransform: 'uppercase', letterSpacing: '.1em',
-                      padding: '.3vw 1vw', borderRadius: 40,
-                      background: m.played ? 'rgba(22,163,74,.12)' : '#f1f5f9',
-                      color: m.played ? '#16a34a' : '#94a3b8',
-                    }}>
-                      {m.played ? '✓ Odehráno' : m.scheduled_time || 'Plánováno'}
-                    </div>
-                  </div>
-                  {/* Away */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.2vw' }}>
-                    <div style={{ width: '1.2vw', height: '1.2vw', minWidth: 14, minHeight: 14, borderRadius: '50%', background: tc(m.away_id), flexShrink: 0 }} />
-                    <span style={{ fontWeight: aw ? 800 : 500, fontSize: TV.sub, color: aw ? '#0f172a' : '#64748b' }}>{tn(m.away_id)}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
+  const [t, setT] = useState(fmt)
+  useEffect(() => {
+    const id = setInterval(() => setT(fmt()), 10_000)
+    return () => clearInterval(id)
+  }, [])
+  return t
 }
 
-function TvStandings({ groups, matches, teams }: { groups: Group[]; matches: Match[]; teams: Team[] }) {
-  const gt = (id: string) => teams.find(t => t.id === id)
+/* ── Sub-components for KioskMatches ───────────────────── */
 
-  if (!groups.length) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-        <div style={{ fontSize: TV.pts, marginBottom: '1rem' }}>📊</div>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading }}>Žádné skupiny</div>
-      </div>
-    </div>
-  )
-
+function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; matches: Match[]; teams: Team[] }) {
+  const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
+  const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
   return (
-    <div style={{ padding: '2.5vw 4vw', display: 'flex', flexDirection: 'column', gap: '3vw', overflowY: 'auto', height: '100%' }}>
-      {groups.map(group => {
-        const rows = calcGroupStandings(group, matches)
-        const headers = ['#', 'Tým', 'Z', 'V', 'R', 'P', 'Skóre', '+/−', 'Body']
+    <div style={{ padding: '.4rem .5rem', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden', gap: '.18rem' }}>
+      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.12em', color: C.accent, paddingBottom: '.15rem', borderBottom: `2px solid ${C.border}`, flexShrink: 0 }}>
+        {groupName}
+      </div>
+      {matches.map(m => {
+        const hw = m.played && m.home_score > m.away_score
+        const aw = m.played && m.away_score > m.home_score
         return (
-          <div key={group.id} style={{ background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
-            <div style={{ padding: '1.5vw 2.5vw', background: 'linear-gradient(135deg,#1e3a8a,#2563eb)', display: 'flex', alignItems: 'center', gap: '1.5vw' }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading, letterSpacing: '.08em', color: '#fff' }}>{group.name}</span>
-              <span style={{ fontSize: TV.small, color: 'rgba(255,255,255,.7)' }}>{group.team_ids.length} týmů</span>
+          <div key={m.id} style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'auto 1fr auto 1fr', alignItems: 'center', gap: '.2rem', padding: '.1rem .3rem', borderRadius: 4, background: m.played ? C.col : '#eff6ff', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            <div style={{ fontSize: S.label, color: m.played ? C.muted : C.accent, fontWeight: m.played ? 400 : 700, flexShrink: 0, minWidth: '3em', textAlign: 'center' }}>
+              {m.scheduled_time || ''}
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                  {headers.map((h, i) => (
-                    <th key={h} style={{
-                      padding: '1vw 1.5vw', color: '#94a3b8',
-                      fontSize: TV.label, textTransform: 'uppercase', letterSpacing: '.12em',
-                      textAlign: i <= 1 ? 'left' : 'center',
-                      fontWeight: 700, whiteSpace: 'nowrap',
-                    }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, i) => {
-                  const team = gt(row.id)
-                  const isTop = i === 0
-                  const rankColor = i === 0 ? '#d97706' : i === 1 ? '#94a3b8' : i === 2 ? '#b45309' : '#94a3b8'
-                  const gdColor = row.gd > 0 ? '#16a34a' : row.gd < 0 ? '#dc2626' : '#94a3b8'
-                  return (
-                    <tr key={row.id} style={{ borderBottom: i < rows.length - 1 ? '1px solid #f1f5f9' : 'none', background: isTop ? 'rgba(37,99,235,.04)' : 'transparent' }}>
-                      <td style={{ textAlign: 'center', padding: '1.2vw 1.5vw' }}>
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.rank, color: rankColor, lineHeight: 1 }}>{i + 1}</span>
-                      </td>
-                      <td style={{ padding: '1.2vw 1.5vw' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1vw' }}>
-                          {team && <div style={{ width: '1.4vw', height: '1.4vw', minWidth: 14, minHeight: 14, borderRadius: '50%', background: team.color, flexShrink: 0 }} />}
-                          <span style={{ fontWeight: 700, fontSize: TV.body }}>{team?.name ?? row.id}</span>
-                        </div>
-                      </td>
-                      {[row.played, row.w, row.d, row.l].map((v, j) => (
-                        <td key={j} style={{ textAlign: 'center', padding: '1.2vw 1.5vw', fontSize: TV.body, color: '#64748b' }}>{v}</td>
-                      ))}
-                      <td style={{ textAlign: 'center', padding: '1.2vw 1.5vw', fontSize: TV.body, color: '#64748b' }}>{row.gf}:{row.ga}</td>
-                      <td style={{ textAlign: 'center', padding: '1.2vw 1.5vw', fontSize: TV.body, color: gdColor, fontWeight: 700 }}>
-                        {row.gd > 0 ? '+' : ''}{row.gd}
-                      </td>
-                      <td style={{ textAlign: 'center', padding: '1.2vw 1.5vw' }}>
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.pts, color: '#2563eb', lineHeight: 1 }}>{row.pts}</span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
+              <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(m.home_id)}</span>
+              <TeamLogo team={tt(m.home_id)} size={14} />
+            </div>
+            <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, 3.5vw, 5rem)' }}>
+              {m.played
+                ? <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>{m.home_score}:{m.away_score}</span>
+                : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.muted, letterSpacing: '.06em' }}>VS</span>
+              }
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
+              <TeamLogo team={tt(m.away_id)} size={14} />
+              <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(m.away_id)}</span>
+            </div>
           </div>
         )
       })}
@@ -260,172 +99,409 @@ function TvStandings({ groups, matches, teams }: { groups: Group[]; matches: Mat
   )
 }
 
-function TvScorers({ goals, players, teams }: { goals: Goal[]; players: Player[]; teams: Team[] }) {
-  const agg: Record<string, number> = {}
-  for (const g of goals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
-
-  const scorers = Object.entries(agg)
-    .map(([pid, goals]) => {
-      const player = players.find(p => p.id === pid)
-      if (!player || goals === 0) return null
-      const team = teams.find(t => t.id === player.team_id)
-      return { id: pid, name: player.name, teamName: team?.name ?? '', teamColor: team?.color ?? '#94a3b8', goals }
-    })
-    .filter(Boolean)
-    .sort((a, b) => b!.goals - a!.goals)
-    .slice(0, 10) as { id: string; name: string; teamName: string; teamColor: string; goals: number }[]
-
-  if (!scorers.length) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-        <div style={{ fontSize: TV.pts, marginBottom: '1rem' }}>⚽</div>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading }}>Žádní střelci</div>
+function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
+  const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
+  const tt = (id: string) => teams.find(t => t.id === id)
+  const hw = match.played && match.home_score > match.away_score
+  const aw = match.played && match.away_score > match.home_score
+  return (
+    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '.18rem', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.2rem', minWidth: 0 }}>
+        <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(match.home_id)}</span>
+        {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={14} />}
+      </div>
+      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
+        {match.played
+          ? <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>{match.home_score}:{match.away_score}</span>
+          : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.small, color: C.muted }}>VS</span>
+        }
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
+        {tt(match.away_id) && <TeamLogo team={tt(match.away_id)!} size={14} />}
+        <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(match.away_id)}</span>
       </div>
     </div>
   )
+}
 
-  const medals = ['🥇', '🥈', '🥉']
-
+function LeagueMatchesCol({ matches, teams, numPitches = 2 }: { matches: Match[]; teams: Team[]; numPitches?: number }) {
+  const slotsMap = new Map<string, Match[]>()
+  for (const m of [...matches].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
+    const key = m.scheduled_time ?? ''
+    if (!slotsMap.has(key)) slotsMap.set(key, [])
+    slotsMap.get(key)!.push(m)
+  }
+  const sortedSlots = [...slotsMap.entries()]
   return (
-    <div style={{ padding: '2.5vw 4vw', display: 'flex', flexDirection: 'column', gap: '1vw', overflowY: 'auto', height: '100%' }}>
-      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading, letterSpacing: '.06em', marginBottom: '.5vw', color: '#0f172a' }}>
-        Střelci
-      </div>
-      {scorers.map((sc, i) => (
-        <div key={sc.id} style={{
-          background: '#fff', borderRadius: 16,
-          padding: '1.2vw 2vw',
-          display: 'grid', gridTemplateColumns: '5vw 1fr auto',
-          alignItems: 'center', gap: '1.5vw',
-          boxShadow: i < 3 ? '0 4px 20px rgba(0,0,0,.09)' : '0 2px 8px rgba(0,0,0,.05)',
-          borderLeft: i === 0 ? '6px solid #d97706' : i === 1 ? '6px solid #94a3b8' : i === 2 ? '6px solid #b45309' : '6px solid transparent',
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            {i < 3
-              ? <span style={{ fontSize: TV.sub }}>{medals[i]}</span>
-              : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.rank, color: '#94a3b8', lineHeight: 1 }}>{i + 1}</span>
-            }
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', padding: '.3rem .55rem', gap: '.18rem', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '0 .4rem', flexShrink: 0 }}>
+        <div style={{ minWidth: '3.1em', flexShrink: 0 }} />
+        {'ABCD'.slice(0, numPitches).split('').map((letter, i) => (
+          <div key={letter} style={{ display: 'contents' }}>
+            {i > 0 && <div style={{ width: 1, flexShrink: 0 }} />}
+            <div style={{ flex: 1, textAlign: 'center', fontSize: S.label, color: C.accent, fontWeight: 700, letterSpacing: '.08em' }}>HŘIŠTĚ {letter}</div>
           </div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: TV.sub, color: '#0f172a' }}>{sc.name}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '.8vw', marginTop: '.3vw' }}>
-              <div style={{ width: '1vw', height: '1vw', minWidth: 10, minHeight: 10, borderRadius: '50%', background: sc.teamColor }} />
-              <span style={{ fontSize: TV.small, color: '#64748b' }}>{sc.teamName}</span>
+        ))}
+      </div>
+      {sortedSlots.map(([time, slotMatches], si) => {
+        const allPlayed = slotMatches.every(m => m.played)
+        return (
+          <div key={time || si} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.15rem .4rem', borderRadius: 5, background: allPlayed ? C.col : '#eff6ff', border: `1px solid ${C.border}`, minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>{time || '—'}</div>
+            {'ABCD'.slice(0, numPitches).split('').map((letter, i) => (
+              <div key={letter} style={{ display: 'contents' }}>
+                {i > 0 && <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />}
+                {slotMatches[i] ? <MatchCell match={slotMatches[i]} teams={teams} /> : <div style={{ flex: 1 }} />}
+              </div>
+            ))}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]; slots: BracketSlot[]; teams: Team[] }) {
+  const gt = (id: string | null) => id ? teams.find(t => t.id === id) ?? null : null
+  const tn = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? 'TBD' : 'TBD'
+  const sorted = [...rounds].sort((a, b) => a.position - b.position)
+  if (!sorted.length) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: C.muted, fontSize: S.body }}>
+      Play-off není nastaven
+    </div>
+  )
+  return (
+    <div style={{ padding: '.5rem .8rem', display: 'flex', flexDirection: 'column', gap: '.4rem', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+      {sorted.map(round => {
+        const roundSlots = [...slots].filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
+        const isFinal = /finále/i.test(round.name) && !/3/i.test(round.name)
+        const isThird = /3/i.test(round.name) || /třet/i.test(round.name) || /bronze/i.test(round.name)
+        const accentColor = isFinal ? C.gold : isThird ? C.bronze : C.accent
+        return (
+          <div key={round.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.label, letterSpacing: '.16em', color: accentColor, textTransform: 'uppercase', marginBottom: '.2rem', paddingBottom: '.14rem', borderBottom: `1px solid ${accentColor}` }}>
+              {isFinal ? '🏆' : isThird ? '🥉' : '⚔️'} {round.name}
+            </div>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '.15rem', overflow: 'hidden' }}>
+              {roundSlots.map(s => {
+                const hT = gt(s.home_id), aT = gt(s.away_id)
+                const hw = s.played && s.home_score > s.away_score
+                const aw = s.played && s.away_score > s.home_score
+                return (
+                  <div key={s.id} style={{ flex: 1, minHeight: 0, borderRadius: 5, background: s.played ? C.col : '#eff6ff', border: `1px solid ${isFinal ? 'rgba(217,119,6,.3)' : isThird ? 'rgba(146,64,14,.2)' : C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    {s.scheduled_time && !s.played && (
+                      <div style={{ fontSize: S.label, color: C.muted, padding: '.1rem .5rem 0', fontWeight: 600 }}>🕐 {s.scheduled_time}</div>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '.3rem', padding: '.26rem .5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.25rem', minWidth: 0 }}>
+                        <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? accentColor : C.muted, fontStyle: hT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(s.home_id)}</span>
+                        {hT && <TeamLogo team={hT} size={16} />}
+                      </div>
+                      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
+                        {s.played
+                          ? <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: accentColor, letterSpacing: '.06em', lineHeight: 1 }}>{s.home_score}:{s.away_score}</span>
+                          : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.muted }}>VS</span>
+                        }
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
+                        {aT && <TeamLogo team={aT} size={16} />}
+                        <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? accentColor : C.muted, fontStyle: aT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(s.away_id)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '.8vw', paddingRight: '1vw' }}>
-            <span style={{ fontSize: TV.sub }}>⚽</span>
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.goalBig, color: i === 0 ? '#d97706' : '#2563eb', lineHeight: 1 }}>{sc.goals}</span>
-          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ── View A: Zápasy ─────────────────────────────────────── */
+function KioskMatches({ tournament, teams, groups, matches, bracketRounds, bracketSlots }: {
+  tournament: Tournament | null; teams: Team[]; groups: Group[]
+  matches: Match[]; bracketRounds: BracketRound[]; bracketSlots: BracketSlot[]
+}) {
+  const isLeague = tournament?.format === 'league'
+  const groupMatches = matches.filter(m => m.group_id !== null)
+  const allGroupMatchesPlayed = groups.length > 0 && groupMatches.length > 0 && groupMatches.every(m => m.played)
+  const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+
+  if (allGroupMatchesPlayed) {
+    return (
+      <div style={{ height: '100%', overflow: 'hidden' }}>
+        <PlayoffMatchesSubCol rounds={bracketRounds} slots={bracketSlots} teams={teams} />
+      </div>
+    )
+  }
+
+  if (!groupMatches.length) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: C.muted, fontSize: S.section }}>
+      Žádné zápasy
+    </div>
+  )
+
+  if (isLeague) {
+    return <LeagueMatchesCol matches={groupMatches} teams={teams} numPitches={tournament?.num_pitches ?? 2} />
+  }
+
+  const numCols = sortedGroups.length <= 3 ? sortedGroups.length : Math.ceil(sortedGroups.length / 2)
+  const columns: Group[][] = Array.from({ length: numCols }, () => [])
+  sortedGroups.forEach((g, i) => columns[i % numCols].push(g))
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${numCols}, 1fr)`, height: '100%', overflow: 'hidden' }}>
+      {columns.map((colGroups, colIdx) => (
+        <div key={colIdx} style={{ borderLeft: colIdx > 0 ? `1px solid ${C.border}` : 'none', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {colGroups.map((group, gi) => {
+            const gMatches = groupMatches.filter(m => m.group_id === group.id)
+            return (
+              <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', borderTop: gi > 0 ? `2px solid ${C.border}` : 'none' }}>
+                <GroupMatchesSubCol groupName={group.name} matches={gMatches} teams={teams} />
+              </div>
+            )
+          })}
         </div>
       ))}
     </div>
   )
 }
 
-function TvBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots: BracketSlot[]; teams: Team[] }) {
-  const gt = (id: string | null) => id ? teams.find(t => t.id === id) : null
-  const sorted = [...rounds].sort((a, b) => a.position - b.position)
+/* ── View B: Tabulka (standings + scorers) ──────────────── */
+function KioskTable({ tournament, teams, players, groups, matches, goals, bracketGoals }: {
+  tournament: Tournament | null; teams: Team[]; players: Player[]; groups: Group[]
+  matches: Match[]; goals: Goal[]; bracketGoals: BracketGoal[]
+}) {
+  const gt = (id: string) => teams.find(t => t.id === id)
+  const isLeague = tournament?.format === 'league'
 
-  if (!sorted.length) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-      <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-        <div style={{ fontSize: TV.pts, marginBottom: '1rem' }}>🏆</div>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading }}>Pavouk není nastaven</div>
-      </div>
-    </div>
-  )
+  const leagueRowStyle = (i: number) => {
+    if (i < 2) return { bg: 'rgba(22,163,74,.10)',  borderLeft: '3px solid rgba(22,163,74,.6)',   numColor: '#15803d' }
+    if (i < 6) return { bg: 'rgba(245,158,11,.10)', borderLeft: '3px solid rgba(245,158,11,.55)', numColor: '#b45309' }
+    return          { bg: 'transparent',             borderLeft: '3px solid transparent',          numColor: C.muted }
+  }
+
+  // Top 10 scorers — aggregate group goals + bracket_goals
+  const scorers = players
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      team: teams.find(t => t.id === p.team_id),
+      total:
+        goals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0) +
+        bracketGoals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0),
+    }))
+    .filter(r => r.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+
+  const medals = ['🥇', '🥈', '🥉']
 
   return (
-    <div style={{ padding: '2.5vw 4vw', overflowX: 'auto', height: '100%' }}>
-      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading, letterSpacing: '.06em', marginBottom: '2vw', color: '#0f172a' }}>Pavouk</div>
-      <div style={{ display: 'flex', alignItems: 'stretch', gap: '1.5vw', minWidth: 'max-content' }}>
-        {sorted.map((round, ri) => {
-          const rSlots = [...slots].filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
-          const UNIT = 160
-          const slotH = UNIT * Math.pow(2, ri)
-          const isFinal = ri === sorted.length - 1
-          return (
-            <div key={round.id} style={{ display: 'flex' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: '16vw', maxWidth: 300 }}>
-                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.sub, letterSpacing: '.13em', color: '#64748b', textAlign: 'center', padding: '0 .5vw 1vw', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>
-                  {round.name}
-                </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  {rSlots.map(slot => {
-                    const hT = gt(slot.home_id), aT = gt(slot.away_id)
-                    const hw = slot.played && slot.home_score > slot.away_score
-                    const aw = slot.played && slot.away_score > slot.home_score
-                    return (
-                      <div key={slot.id} style={{ display: 'flex', alignItems: 'center', padding: '.5vw', height: slotH }}>
-                        <div style={{
-                          background: '#fff', borderRadius: 14, overflow: 'hidden', width: '100%',
-                          border: `2px solid ${isFinal ? 'rgba(217,119,6,.5)' : '#e2e8f0'}`,
-                          boxShadow: '0 4px 20px rgba(0,0,0,.1)',
-                        }}>
-                          {[{ team: hT, score: slot.home_score, win: hw }, { team: aT, score: slot.away_score, win: aw }].map((row, ri2) => (
-                            <div key={ri2} style={{
-                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                              padding: '1vw 1.2vw',
-                              borderBottom: ri2 === 0 ? '1px solid #e2e8f0' : 'none',
-                              background: row.win ? (isFinal ? 'rgba(217,119,6,.1)' : 'rgba(37,99,235,.08)') : 'transparent',
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '.6vw' }}>
-                                {row.team && <div style={{ width: '1vw', height: '1vw', minWidth: 10, minHeight: 10, borderRadius: '50%', background: row.team.color }} />}
-                                <span style={{ fontSize: TV.body, fontWeight: row.win ? 800 : 500, color: row.team ? '#0f172a' : '#94a3b8', fontStyle: row.team ? 'normal' : 'italic' }}>
-                                  {row.team?.name ?? 'TBD'}
-                                </span>
-                              </div>
-                              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.sub, color: row.win ? (isFinal ? '#d97706' : '#2563eb') : '#94a3b8' }}>
-                                {slot.played ? row.score : ''}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-              {ri < sorted.length - 1 && (
-                <div style={{ width: '2vw', minWidth: 20, display: 'flex', flexDirection: 'column', paddingTop: 'calc(1.5vw + 2px)' }}>
-                  {Array.from({ length: Math.ceil(rSlots.length / 2) }, (_, p) => (
-                    <div key={p} style={{ height: slotH * 2, flex: 1, position: 'relative' }}>
-                      <div style={{ position: 'absolute', right: 0, top: '25%', height: '50%', width: 2, background: '#cbd5e1' }} />
-                      <div style={{ position: 'absolute', right: 0, top: '25%', width: '100%', height: 2, background: '#cbd5e1' }} />
-                      <div style={{ position: 'absolute', right: 0, top: '75%', width: '100%', height: 2, background: '#cbd5e1' }} />
+    <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', height: '100%', overflow: 'hidden' }}>
+      {/* Left: Standings */}
+      <div style={{ borderRight: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '.6rem .8rem .2rem' }}>
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+          {groups.length === 0 ? (
+            <div style={{ color: C.muted, fontSize: S.body, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>Žádné skupiny</div>
+          ) : (
+            groups.map(group => {
+              const rows = calcGroupStandings(group, matches)
+              return (
+                <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ marginBottom: '.25rem', paddingBottom: '.18rem', borderBottom: `1px solid ${C.border}` }}>
+                    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.1em', color: C.accent, lineHeight: 1.15 }}>
+                      {group.name}
                     </div>
-                  ))}
+                    {isLeague && (
+                      <div style={{ display: 'flex', gap: '.7rem', marginTop: '.18rem' }}>
+                        <span style={{ fontSize: S.label, color: '#15803d', fontWeight: 600 }}>■ 1–2 → SF</span>
+                        <span style={{ fontSize: S.label, color: '#b45309', fontWeight: 600 }}>■ 3–6 → QF</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          {['#', 'Tým', 'Z', 'V', 'R', 'P', 'Sk', 'B'].map((h, i) => (
+                            <th key={h} style={{ fontSize: S.label, textTransform: 'uppercase', letterSpacing: '.08em', color: C.muted, textAlign: i <= 1 ? 'left' : 'center', padding: '.1rem .22rem', fontWeight: 600 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row, i) => {
+                          const team = gt(row.id)
+                          const ls = isLeague ? leagueRowStyle(i) : null
+                          const rowBg = ls ? ls.bg : i === 0 ? 'rgba(59,130,246,.1)' : 'transparent'
+                          const numColor = ls ? ls.numColor : C.muted
+                          const bold = isLeague ? i < 6 : i === 0
+                          return (
+                            <tr key={row.id} style={{ background: rowBg }}>
+                              <td style={{ padding: '.12rem .22rem', paddingLeft: ls ? 0 : '.22rem', textAlign: 'center', fontSize: S.label, borderLeft: ls?.borderLeft }}>
+                                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: numColor, lineHeight: 1 }}>{i + 1}</span>
+                              </td>
+                              <td style={{ padding: '.12rem .22rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  {team && <TeamLogo team={team} size={16} />}
+                                  <span style={{ fontSize: S.body, fontWeight: bold ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {team?.name ?? row.id}
+                                  </span>
+                                </div>
+                              </td>
+                              {[row.played, row.w, row.d, row.l].map((v, j) => (
+                                <td key={j} style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{v}</td>
+                              ))}
+                              <td style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{row.gf}:{row.ga}</td>
+                              <td style={{ textAlign: 'center', padding: '.12rem .22rem' }}>
+                                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: numColor !== C.muted ? numColor : i === 0 ? C.accent : C.text }}>
+                                  {row.pts}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              )}
-            </div>
-          )
-        })}
+              )
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Right: Scorers */}
+      <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '.6rem .8rem .4rem' }}>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.1em', color: C.gold, marginBottom: '.3rem', flexShrink: 0 }}>
+          ⚽ Střelci
+        </div>
+        {scorers.length === 0 ? (
+          <div style={{ color: C.muted, fontSize: S.body, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>Žádní střelci</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.22rem', flex: 1, overflow: 'hidden' }}>
+            {scorers.map((sc, i) => (
+              <div key={sc.id} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.3rem .5rem', borderRadius: 6, background: i < 3 ? (i === 0 ? 'rgba(217,119,6,.08)' : 'rgba(148,163,184,.07)') : 'transparent', borderLeft: i === 0 ? `3px solid ${C.gold}` : i === 1 ? '3px solid #94a3b8' : i === 2 ? `3px solid ${C.bronze}` : '3px solid transparent' }}>
+                <div style={{ width: '2em', textAlign: 'center', flexShrink: 0 }}>
+                  {i < 3
+                    ? <span style={{ fontSize: S.body }}>{medals[i]}</span>
+                    : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: C.muted, lineHeight: 1 }}>{i + 1}</span>
+                  }
+                </div>
+                {sc.team && <TeamLogo team={sc.team} size={18} />}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: S.body, fontWeight: i < 3 ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sc.name}</div>
+                  {sc.team && <div style={{ fontSize: S.label, color: C.muted }}>{sc.team.name}</div>}
+                </div>
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: i === 0 ? C.gold : C.accent, flexShrink: 0, lineHeight: 1 }}>{sc.total}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-/* ── Main KioskMode ─────────────────────────────────── */
+/* ── View C: Pavouk ─────────────────────────────────────── */
+function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots: BracketSlot[]; teams: Team[] }) {
+  const gt = (id: string | null) => id ? teams.find(t => t.id === id) ?? null : null
+  const tn = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? 'TBD' : 'TBD'
+  const sorted = [...rounds].sort((a, b) => a.position - b.position)
+
+  if (!sorted.length) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: C.muted, fontSize: S.section }}>
+      Pavouk není nastaven
+    </div>
+  )
+
+  return (
+    <div style={{ padding: '.7rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '.7rem', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+      {sorted.map(round => {
+        const roundSlots = [...slots].filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
+        const isFinal = /finále/i.test(round.name) && !/3/i.test(round.name)
+        const isThird = /3/i.test(round.name) || /třet/i.test(round.name) || /bronze/i.test(round.name)
+        const accentColor = isFinal ? C.gold : isThird ? C.bronze : C.accent
+        const borderColor = isFinal ? 'rgba(217,119,6,.35)' : isThird ? 'rgba(146,64,14,.25)' : C.border
+
+        return (
+          <div key={round.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.13em', color: accentColor, marginBottom: '.3rem', paddingBottom: '.2rem', borderBottom: `2px solid ${accentColor}`, display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
+              {isFinal ? '🏆' : isThird ? '🥉' : '⚔️'} {round.name}
+            </div>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: '.5rem', overflow: 'hidden' }}>
+              {roundSlots.map(slot => {
+                const hT = gt(slot.home_id), aT = gt(slot.away_id)
+                const hw = slot.played && slot.home_score > slot.away_score
+                const aw = slot.played && slot.away_score > slot.home_score
+                return (
+                  <div key={slot.id} style={{ flex: 1, minWidth: 0, background: slot.played ? C.col : '#eff6ff', border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden', boxShadow: isFinal ? '0 2px 10px rgba(217,119,6,.12)' : '0 1px 4px rgba(37,99,235,.06)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    {slot.scheduled_time && !slot.played && (
+                      <div style={{ fontSize: S.label, color: C.muted, padding: '.2rem .7rem 0', fontWeight: 600 }}>🕐 {slot.scheduled_time}</div>
+                    )}
+                    {/* Home row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.4rem .7rem', borderBottom: `1px solid ${borderColor}`, background: hw ? (isFinal ? 'rgba(217,119,6,.1)' : 'rgba(37,99,235,.08)') : 'transparent' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
+                        {hT && <TeamLogo team={hT} size={18} />}
+                        <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hT ? (hw ? accentColor : C.text) : C.muted, fontStyle: hT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hT?.name ?? 'TBD'}</span>
+                      </div>
+                      {slot.played && <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.home_score}</span>}
+                    </div>
+                    {/* Away row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.4rem .7rem', background: aw ? (isFinal ? 'rgba(217,119,6,.1)' : 'rgba(37,99,235,.08)') : 'transparent' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
+                        {aT && <TeamLogo team={aT} size={18} />}
+                        <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aT ? (aw ? accentColor : C.text) : C.muted, fontStyle: aT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aT?.name ?? 'TBD'}</span>
+                      </div>
+                      {slot.played && <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.away_score}</span>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ── Sub-header labels ───────────────────────────────────── */
+const VIEW_SUBHEADERS: Record<KioskView, { icon: string; label: string }> = {
+  matches: { icon: '⚽', label: 'Zápasy — výsledky' },
+  table:   { icon: '📊', label: 'Tabulka & střelci' },
+  bracket: { icon: '🏆', label: 'Play-off — pavouk' },
+}
+
+/* ── Main KioskMode ─────────────────────────────────────── */
 interface Props {
   tournament: Tournament | null
   teams: Team[]; players: Player[]; groups: Group[]
-  matches: Match[]; goals: Goal[]
+  matches: Match[]; goals: Goal[]; bracketGoals: BracketGoal[]
   bracketRounds: BracketRound[]; bracketSlots: BracketSlot[]
   announcements: Announcement[]
   onExit: () => void
   onScoreboard: () => void
 }
 
-export default function KioskMode({ tournament, teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, onExit, onScoreboard }: Props) {
+export default function KioskMode({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit, onScoreboard }: Props) {
+  const bracketActive = bracketSlots.some(s => s.home_id != null || s.away_id != null)
+  const effectiveViews = bracketActive ? ALL_VIEWS : ALL_VIEWS.filter(v => v.key !== 'bracket')
+
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
   const [barKey, setBarKey] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
   const clock = useClock()
-  const tab = KIOSK_TABS[idx].key
 
-  const advance = useCallback(() => { setIdx(i => (i + 1) % KIOSK_TABS.length); setBarKey(k => k + 1) }, [])
+  const currentView = effectiveViews[idx % effectiveViews.length]
+
+  const advance = useCallback(() => {
+    setIdx(i => (i + 1) % effectiveViews.length)
+    setBarKey(k => k + 1)
+  }, [effectiveViews.length])
 
   useEffect(() => {
     if (paused) return
@@ -450,16 +526,21 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
     setPaused(p => !p)
   }
 
-  const goTo = (i: number) => { clearTimeout(timerRef.current); setIdx(i); setBarKey(k => k + 1); setPaused(false) }
+  const goTo = (i: number) => {
+    clearTimeout(timerRef.current)
+    setIdx(i)
+    setBarKey(k => k + 1)
+    setPaused(false)
+  }
+
+  const subhdr = VIEW_SUBHEADERS[currentView.key]
 
   return (
-    <div onClick={handleClick} style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', flexDirection: 'column', background: '#eef2ff', cursor: paused ? 'pointer' : 'default', userSelect: 'none' }}>
-      <style>{`
-        @keyframes kioskBar { from { width:0% } to { width:100% } }
-      `}</style>
+    <div onClick={handleClick} style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', flexDirection: 'column', background: C.bg, cursor: paused ? 'pointer' : 'default', userSelect: 'none', fontFamily: "'DM Sans', sans-serif", color: C.text }}>
+      <style>{`@keyframes kioskBar { from { width:0% } to { width:100% } }`}</style>
 
       {/* ── Progress bar ── */}
-      <div style={{ height: 5, background: 'rgba(255,255,255,.3)', flexShrink: 0, position: 'relative' }}>
+      <div style={{ height: 4, background: 'rgba(255,255,255,.3)', flexShrink: 0, position: 'relative' }}>
         <div key={paused ? 'p' : `b${barKey}`} style={{
           position: 'absolute', left: 0, top: 0, height: '100%', background: '#60a5fa',
           animation: paused ? 'none' : `kioskBar ${ROTATION_MS}ms linear forwards`,
@@ -468,109 +549,100 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
       </div>
 
       {/* ── Header ── */}
-      <div style={{ background: '#1e3a8a', flexShrink: 0, padding: '1.2vw 3vw', display: 'flex', alignItems: 'center', gap: '2vw' }}>
-        <span style={{ fontSize: 'clamp(1.5rem,3vw,3rem)' }}>⚽</span>
+      <div style={{ background: C.hdr, flexShrink: 0, padding: '.6rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading, letterSpacing: '.05em', color: '#fff', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.title, letterSpacing: '.08em', color: '#fff', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tournament?.name || 'Turnaj'}
           </div>
           {tournament?.subtitle && (
-            <div style={{ fontSize: TV.small, color: 'rgba(255,255,255,.65)', marginTop: '.2vw' }}>{tournament.subtitle}</div>
+            <div style={{ fontSize: S.label, color: 'rgba(255,255,255,.6)', marginTop: '.1rem' }}>{tournament.subtitle}</div>
           )}
         </div>
 
         {/* Tab pills */}
-        <div data-kiosk-ctrl style={{ display: 'flex', gap: '.6vw', flexWrap: 'nowrap' }}>
-          {KIOSK_TABS.map((t, i) => (
-            <button type="button" key={t.key} onClick={e => { e.stopPropagation(); goTo(i) }} style={{
+        <div data-kiosk-ctrl style={{ display: 'flex', gap: '.5rem' }}>
+          {effectiveViews.map((v, i) => (
+            <button type="button" key={v.key} onClick={e => { e.stopPropagation(); goTo(i) }} style={{
               background: i === idx ? 'rgba(255,255,255,.2)' : 'transparent',
               color: i === idx ? '#fff' : 'rgba(255,255,255,.5)',
               border: `2px solid ${i === idx ? 'rgba(255,255,255,.6)' : 'rgba(255,255,255,.15)'}`,
-              borderRadius: 40, padding: '.4vw 1.2vw',
-              fontSize: TV.label, fontWeight: 700,
+              borderRadius: 40, padding: '.3rem 1rem',
+              fontSize: S.label, fontWeight: 700,
               textTransform: 'uppercase', letterSpacing: '.08em',
               cursor: 'pointer', transition: 'all .2s',
-              display: 'flex', alignItems: 'center', gap: '.4vw',
+              display: 'flex', alignItems: 'center', gap: '.35rem',
             }}>
-              <span>{t.icon}</span> {t.label}
+              <span>{v.icon}</span> {v.label}
             </button>
           ))}
         </div>
 
         {/* Clock */}
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.heading, color: '#fff', letterSpacing: '.05em', flexShrink: 0 }}>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.title, color: '#bfdbfe', letterSpacing: '.08em', flexShrink: 0 }}>
           {clock}
         </div>
 
-        {/* Pause + exit */}
-        <div data-kiosk-ctrl style={{ display: 'flex', gap: '.8vw', alignItems: 'center', flexShrink: 0 }}>
+        {/* Controls */}
+        <div data-kiosk-ctrl style={{ display: 'flex', gap: '.7rem', alignItems: 'center', flexShrink: 0 }}>
           {paused && (
-            <span style={{ fontSize: TV.small, color: 'rgba(255,255,255,.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>⏸ Pauza</span>
+            <span style={{ fontSize: S.label, color: 'rgba(255,255,255,.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>⏸ Pauza</span>
           )}
-          <button type="button" onClick={e => { e.stopPropagation(); onScoreboard() }} style={{
-            background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)',
-            borderRadius: 10, color: 'rgba(255,255,255,.7)',
-            fontSize: TV.small, fontWeight: 700, padding: '.5vw 1.2vw',
-            cursor: 'pointer', transition: 'all .15s',
-          }}
+          <button type="button" onClick={e => { e.stopPropagation(); onScoreboard() }} style={{ background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 8, color: 'rgba(255,255,255,.7)', fontSize: S.label, fontWeight: 700, padding: '.35rem 1rem', cursor: 'pointer', transition: 'all .15s' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(96,165,250,.3)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.1)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.7)' }}
-          >
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.1)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.7)' }}>
             📋 Tabule
           </button>
-          <button type="button" onClick={e => { e.stopPropagation(); onExit() }} style={{
-            background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)',
-            borderRadius: 10, color: 'rgba(255,255,255,.7)',
-            fontSize: TV.small, fontWeight: 700, padding: '.5vw 1.2vw',
-            cursor: 'pointer', transition: 'all .15s',
-          }}
+          <button type="button" onClick={e => { e.stopPropagation(); onExit() }} style={{ background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 8, color: 'rgba(255,255,255,.7)', fontSize: S.label, fontWeight: 700, padding: '.35rem 1rem', cursor: 'pointer', transition: 'all .15s' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(220,38,38,.4)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.1)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.7)' }}
-          >
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.1)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.7)' }}>
             ✕ Ukončit
           </button>
         </div>
       </div>
 
+      {/* ── Sub-header ── */}
+      <div style={{ background: '#eff6ff', borderBottom: `2px solid ${C.border}`, padding: '.32rem 1.5rem', flexShrink: 0 }}>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.label, letterSpacing: '.16em', color: C.accent, textTransform: 'uppercase' }}>
+          {subhdr.icon} {subhdr.label}
+        </span>
+      </div>
+
       {/* ── Content ── */}
-      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {tab === 'overview'  && <TvOverview tournament={tournament} teams={teams} matches={matches} groups={groups} announcements={announcements} />}
-        {tab === 'results'   && <TvResults matches={matches} teams={teams} />}
-        {tab === 'standings' && <TvStandings groups={groups} matches={matches} teams={teams} />}
-        {tab === 'scorers'   && <TvScorers goals={goals} players={players} teams={teams} />}
-        {tab === 'bracket'   && <TvBracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative', background: currentView.key === 'table' ? C.col : '#f8faff' }}>
+        {currentView.key === 'matches' && (
+          <KioskMatches tournament={tournament} teams={teams} groups={groups} matches={matches} bracketRounds={bracketRounds} bracketSlots={bracketSlots} />
+        )}
+        {currentView.key === 'table' && (
+          <KioskTable tournament={tournament} teams={teams} players={players} groups={groups} matches={matches} goals={goals} bracketGoals={bracketGoals} />
+        )}
+        {currentView.key === 'bracket' && (
+          <KioskBracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />
+        )}
       </div>
 
       {/* ── Footer ── */}
-      <div style={{ background: '#1e293b', flexShrink: 0, padding: '1vw 3vw', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2vw' }}>
+      <div style={{ background: '#1e293b', flexShrink: 0, padding: '.8rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
         {/* Nav dots */}
-        <div data-kiosk-ctrl style={{ display: 'flex', gap: '.6vw', alignItems: 'center' }}>
-          {KIOSK_TABS.map((t, i) => (
-            <div key={i} onClick={e => { e.stopPropagation(); goTo(i) }} style={{
-              width: i === idx ? '3vw' : '1vw', height: '1vw',
-              minWidth: i === idx ? 28 : 10, minHeight: 10,
-              maxWidth: i === idx ? 50 : 18, maxHeight: 18,
-              borderRadius: 10,
-              background: i === idx ? '#60a5fa' : 'rgba(255,255,255,.25)',
-              transition: 'all .35s', cursor: 'pointer',
-            }} />
+        <div data-kiosk-ctrl style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
+          {effectiveViews.map((v, i) => (
+            <div key={v.key} onClick={e => { e.stopPropagation(); goTo(i) }} style={{ width: i === idx ? '2.5rem' : '.8rem', height: '.8rem', minWidth: i === idx ? 28 : 10, minHeight: 10, maxWidth: i === idx ? 44 : 16, maxHeight: 16, borderRadius: 10, background: i === idx ? '#60a5fa' : 'rgba(255,255,255,.25)', transition: 'all .35s', cursor: 'pointer' }} />
           ))}
-          <span style={{ fontSize: TV.small, color: 'rgba(255,255,255,.5)', marginLeft: '.5vw', fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '.1em' }}>
-            {KIOSK_TABS[idx].label}
+          <span style={{ fontSize: S.label, color: 'rgba(255,255,255,.5)', marginLeft: '.4rem', fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '.1em' }}>
+            {currentView.label}
           </span>
         </div>
 
-        <div style={{ fontSize: TV.small, color: 'rgba(255,255,255,.4)', textAlign: 'center' }}>
+        <div style={{ fontSize: S.label, color: 'rgba(255,255,255,.4)', textAlign: 'center' }}>
           {paused ? 'Klikni pro pokračování' : `Přepne za ${ROTATION_MS / 1000}s · Klik = pauza`}
         </div>
 
         {/* QR */}
-        <div data-kiosk-ctrl style={{ display: 'flex', alignItems: 'center', gap: '1.2vw' }}>
+        <div data-kiosk-ctrl style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: TV.sub, color: '#fff', letterSpacing: '.1em' }}>Sdílet</div>
-            <div style={{ fontSize: TV.small, color: 'rgba(255,255,255,.5)' }}>Naskenuj QR kód</div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.body, color: '#fff', letterSpacing: '.1em' }}>Sdílet</div>
+            <div style={{ fontSize: S.label, color: 'rgba(255,255,255,.5)' }}>Naskenuj QR kód</div>
           </div>
-          <QRCode size={64} />
+          <QRCode size={52} />
         </div>
       </div>
     </div>

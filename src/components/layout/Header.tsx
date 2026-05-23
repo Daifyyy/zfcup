@@ -10,6 +10,7 @@ interface Props {
   onScoreboard: () => void
   isAdmin: boolean
   tipsEnabled?: boolean
+  showBracket?: boolean
 }
 
 const BASE_TABS: [Tab, string][] = [
@@ -19,10 +20,12 @@ const BASE_TABS: [Tab, string][] = [
   ['standings', 'Tabulka'],
   ['scorers',   'Střelci'],
   ['bracket',   'Pavouk'],
+  ['rules',     'Pravidla'],
 ]
 
-export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, isAdmin, tipsEnabled }: Props) {
-  const TABS: [Tab, string][] = tipsEnabled ? [...BASE_TABS, ['tips', 'Tipy']] : BASE_TABS
+export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, isAdmin, tipsEnabled, showBracket = true }: Props) {
+  const baseTabs: [Tab, string][] = showBracket ? BASE_TABS : BASE_TABS.filter(([key]) => key !== 'bracket')
+  const TABS: [Tab, string][] = tipsEnabled ? [...baseTabs, ['tips', 'Tipy']] : baseTabs
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
 
   return (

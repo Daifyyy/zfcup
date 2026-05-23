@@ -226,15 +226,15 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
   const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
 
   return (
-    <div style={{ padding: '.5rem .65rem', display: 'flex', flexDirection: 'column', gap: '.3rem', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+    <div style={{ padding: '.4rem .5rem', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden', gap: '.18rem' }}>
       <div style={{
         fontFamily: "'Bebas Neue', sans-serif",
         fontSize: S.section,
         letterSpacing: '.12em',
         color: C.accent,
-        marginBottom: '.2rem',
         paddingBottom: '.15rem',
         borderBottom: `2px solid ${C.border}`,
+        flexShrink: 0,
       }}>
         {groupName}
       </div>
@@ -243,29 +243,31 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
         const aw = m.played && m.away_score > m.home_score
         return (
           <div key={m.id} style={{
+            flex: 1,
+            minHeight: 0,
             display: 'grid',
             gridTemplateColumns: 'auto 1fr auto 1fr',
             alignItems: 'center',
-            gap: '.28rem',
-            padding: '.26rem .4rem',
-            borderRadius: 5,
+            gap: '.2rem',
+            padding: '.1rem .3rem',
+            borderRadius: 4,
             background: m.played ? C.col : '#eff6ff',
             border: `1px solid ${C.border}`,
-            flexShrink: 0,
+            overflow: 'hidden',
           }}>
             {/* Čas */}
-            <div style={{ fontSize: S.label, color: m.played ? C.muted : C.accent, fontWeight: m.played ? 400 : 700, flexShrink: 0, minWidth: '3.2em', textAlign: 'center' }}>
+            <div style={{ fontSize: S.label, color: m.played ? C.muted : C.accent, fontWeight: m.played ? 400 : 700, flexShrink: 0, minWidth: '3em', textAlign: 'center' }}>
               {m.scheduled_time || ''}
             </div>
             {/* Home */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.25rem', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
               <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tn(m.home_id)}
               </span>
-              <TeamLogo team={tt(m.home_id)} size={16} />
+              <TeamLogo team={tt(m.home_id)} size={14} />
             </div>
             {/* Skóre */}
-            <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
+            <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, 3.5vw, 5rem)' }}>
               {m.played ? (
                 <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>
                   {m.home_score}:{m.away_score}
@@ -275,8 +277,8 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
               )}
             </div>
             {/* Away */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
-              <TeamLogo team={tt(m.away_id)} size={16} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
+              <TeamLogo team={tt(m.away_id)} size={14} />
               <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tn(m.away_id)}
               </span>
@@ -302,14 +304,14 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
   )
 
   return (
-    <div style={{ padding: '.5rem .8rem', display: 'flex', flexDirection: 'column', gap: '.5rem', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+    <div style={{ padding: '.5rem .8rem', display: 'flex', flexDirection: 'column', gap: '.4rem', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
       {sorted.map(round => {
         const roundSlots = [...slots].filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
         const isFinal = /finále/i.test(round.name) && !/3/i.test(round.name)
         const isThird = /3/i.test(round.name) || /třet/i.test(round.name) || /bronze/i.test(round.name)
         const accentColor = isFinal ? C.gold : isThird ? C.bronze : C.accent
         return (
-          <div key={round.id} style={{ flexShrink: 0 }}>
+          <div key={round.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{
               fontFamily: "'Bebas Neue', sans-serif",
               fontSize: S.label,
@@ -322,17 +324,22 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
             }}>
               {isFinal ? '🏆' : isThird ? '🥉' : '⚔️'} {round.name}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '.2rem' }}>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '.15rem', overflow: 'hidden' }}>
               {roundSlots.map(s => {
                 const hT = gt(s.home_id), aT = gt(s.away_id)
                 const hw = s.played && s.home_score > s.away_score
                 const aw = s.played && s.away_score > s.home_score
                 return (
                   <div key={s.id} style={{
+                    flex: 1,
+                    minHeight: 0,
                     borderRadius: 5,
                     background: s.played ? C.col : '#eff6ff',
                     border: `1px solid ${isFinal ? 'rgba(217,119,6,.3)' : isThird ? 'rgba(146,64,14,.2)' : C.border}`,
                     overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
                   }}>
                   {s.scheduled_time && !s.played && (
                     <div style={{ fontSize: S.label, color: C.muted, padding: '.1rem .5rem 0', fontWeight: 600 }}>🕐 {s.scheduled_time}</div>
@@ -410,8 +417,8 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
   )
 }
 
-// ── League matches — all 36 grouped by time slot, 2 side by side ──────────────
-function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] }) {
+// ── League matches — all slots grouped by time, N side by side ────────────────
+function LeagueMatchesCol({ matches, teams, numPitches = 2 }: { matches: Match[]; teams: Team[]; numPitches?: number }) {
   // Group by scheduled_time
   const slotsMap = new Map<string, Match[]>()
   for (const m of [...matches].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
@@ -423,16 +430,19 @@ function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', padding: '.3rem .55rem', gap: '.18rem', boxSizing: 'border-box' }}>
-      {/* Záhlaví hřišť */}
+      {/* Záhlaví hřišť — dynamicky N sloupců */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '0 .4rem', flexShrink: 0 }}>
         <div style={{ minWidth: '3.1em', flexShrink: 0 }} />
-        <div style={{ flex: 1, textAlign: 'center', fontSize: S.label, color: C.accent, fontWeight: 700, letterSpacing: '.08em' }}>HŘIŠTĚ A</div>
-        <div style={{ width: 1, flexShrink: 0 }} />
-        <div style={{ flex: 1, textAlign: 'center', fontSize: S.label, color: C.accent, fontWeight: 700, letterSpacing: '.08em' }}>HŘIŠTĚ B</div>
+        {'ABCD'.slice(0, numPitches).split('').map((letter, i) => (
+          <div key={letter} style={{ display: 'contents' }}>
+            {i > 0 && <div style={{ width: 1, flexShrink: 0 }} />}
+            <div style={{ flex: 1, textAlign: 'center', fontSize: S.label, color: C.accent, fontWeight: 700, letterSpacing: '.08em' }}>
+              HŘIŠTĚ {letter}
+            </div>
+          </div>
+        ))}
       </div>
       {sortedSlots.map(([time, slotMatches], si) => {
-        const m1 = slotMatches[0]
-        const m2 = slotMatches[1] ?? null
         const allPlayed = slotMatches.every(m => m.played)
         return (
           <div key={time || si} style={{
@@ -451,12 +461,15 @@ function LeagueMatchesCol({ matches, teams }: { matches: Match[]; teams: Team[] 
             <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>
               {time || '—'}
             </div>
-            {/* Zápas 1 — Hřiště A */}
-            <MatchCell match={m1} teams={teams} />
-            {/* Oddělovač */}
-            <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />
-            {/* Zápas 2 — Hřiště B */}
-            {m2 ? <MatchCell match={m2} teams={teams} /> : <div style={{ flex: 1 }} />}
+            {/* N hřišť */}
+            {'ABCD'.slice(0, numPitches).split('').map((letter, i) => (
+              <div key={letter} style={{ display: 'contents' }}>
+                {i > 0 && <div style={{ width: 1, alignSelf: 'stretch', background: C.border, flexShrink: 0 }} />}
+                {slotMatches[i]
+                  ? <MatchCell match={slotMatches[i]} teams={teams} />
+                  : <div style={{ flex: 1 }} />}
+              </div>
+            ))}
           </div>
         )
       })}
@@ -489,24 +502,33 @@ function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots, tourn
   )
 
   if (isLeague) {
-    return <LeagueMatchesCol matches={groupMatches} teams={teams} />
+    return <LeagueMatchesCol matches={groupMatches} teams={teams} numPitches={tournament?.num_pitches ?? 2} />
   }
+
+  // Distribute groups into columns: 1–3 groups → N columns; 4+ → stack 2 groups per column
+  const numCols = sortedGroups.length <= 3 ? sortedGroups.length : Math.ceil(sortedGroups.length / 2)
+  const columns: Group[][] = Array.from({ length: numCols }, () => [])
+  sortedGroups.forEach((g, i) => columns[i % numCols].push(g))
 
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: `repeat(${Math.min(sortedGroups.length, 2)}, 1fr)`,
+      gridTemplateColumns: `repeat(${numCols}, 1fr)`,
       height: '100%',
       overflow: 'hidden',
     }}>
-      {sortedGroups.map((group, i) => {
-        const gMatches = groupMatches.filter(m => m.group_id === group.id)
-        return (
-          <div key={group.id} style={{ borderLeft: i > 0 ? `1px solid ${C.border}` : 'none', overflow: 'hidden', height: '100%' }}>
-            <GroupMatchesSubCol groupName={group.name} matches={gMatches} teams={teams} />
-          </div>
-        )
-      })}
+      {columns.map((colGroups, colIdx) => (
+        <div key={colIdx} style={{ borderLeft: colIdx > 0 ? `1px solid ${C.border}` : 'none', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
+          {colGroups.map((group, gi) => {
+            const gMatches = groupMatches.filter(m => m.group_id === group.id)
+            return (
+              <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', borderTop: gi > 0 ? `2px solid ${C.border}` : 'none' }}>
+                <GroupMatchesSubCol groupName={group.name} matches={gMatches} teams={teams} />
+              </div>
+            )
+          })}
+        </div>
+      ))}
     </div>
   )
 }

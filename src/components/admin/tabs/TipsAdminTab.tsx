@@ -27,42 +27,53 @@ function getPoints(tipType: string): number {
   return 0
 }
 
-async function recalcAllTips() {
-  // Skupinové zápasy: 3/1 b.
-  const { data: playedMatches } = await supabase
-    .from('matches').select('id, home_score, away_score').eq('played', true)
-  if (playedMatches?.length) {
-    const { data: allTips } = await supabase
-      .from('tips').select('id, match_id, predicted_home, predicted_away')
-      .in('match_id', playedMatches.map(m => m.id))
-    for (const tip of allTips ?? []) {
-      const m = playedMatches.find(m => m.id === tip.match_id)
-      if (!m) continue
-      let pts = 0
-      if (tip.predicted_home === m.home_score && tip.predicted_away === m.away_score) pts = 3
-      else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(m.home_score - m.away_score)) pts = 1
-      await supabase.from('tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
+async function recalcAllTips(showToast: (m: string) => void) {
+  try {
+    // Skupinové zápasy: 3/1 b.
+    const { data: playedMatches, error: mErr } = await supabase
+      .from('matches').select('id, home_score, away_score').eq('played', true)
+    if (mErr) throw mErr
+    if (playedMatches?.length) {
+      const { data: allTips, error: tErr } = await supabase
+        .from('tips').select('id, match_id, predicted_home, predicted_away')
+        .in('match_id', playedMatches.map(m => m.id))
+      if (tErr) throw tErr
+      for (const tip of allTips ?? []) {
+        const m = playedMatches.find(m => m.id === tip.match_id)
+        if (!m) continue
+        let pts = 0
+        if (tip.predicted_home === m.home_score && tip.predicted_away === m.away_score) pts = 3
+        else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(m.home_score - m.away_score)) pts = 1
+        const { error } = await supabase.from('tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
+        if (error) throw error
+      }
     }
-  }
 
-  // Playoff zápasy: 5/2 b. (všechna kola včetně finále)
-  const { data: playedSlots } = await supabase
-    .from('bracket_slots').select('id, home_score, away_score').eq('played', true)
-  if (playedSlots?.length) {
-    const { data: allBTips } = await supabase
-      .from('bracket_tips').select('id, slot_id, predicted_home, predicted_away')
-      .in('slot_id', playedSlots.map(s => s.id))
-    for (const tip of allBTips ?? []) {
-      const s = playedSlots.find(s => s.id === tip.slot_id)
-      if (!s) continue
-      let pts = 0
-      if (tip.predicted_home === s.home_score && tip.predicted_away === s.away_score) pts = 5
-      else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(s.home_score - s.away_score)) pts = 2
-      await supabase.from('bracket_tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
+    // Playoff zápasy: 5/2 b. (všechna kola včetně finále)
+    const { data: playedSlots, error: sErr } = await supabase
+      .from('bracket_slots').select('id, home_score, away_score').eq('played', true)
+    if (sErr) throw sErr
+    if (playedSlots?.length) {
+      const { data: allBTips, error: btErr } = await supabase
+        .from('bracket_tips').select('id, slot_id, predicted_home, predicted_away')
+        .in('slot_id', playedSlots.map(s => s.id))
+      if (btErr) throw btErr
+      for (const tip of allBTips ?? []) {
+        const s = playedSlots.find(s => s.id === tip.slot_id)
+        if (!s) continue
+        let pts = 0
+        if (tip.predicted_home === s.home_score && tip.predicted_away === s.away_score) pts = 5
+        else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(s.home_score - s.away_score)) pts = 2
+        const { error } = await supabase.from('bracket_tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
+        if (error) throw error
+      }
     }
-  }
 
-  await recalcTipsterPoints()
+    await recalcTipsterPoints()
+    showToast('Body přepočítány ✓')
+  } catch (e: unknown) {
+    showToast('Chyba přepočtu: ' + (e instanceof Error ? e.message : String(e)))
+  }
 }
 
 // ── EvalRow: ruční override (nebo informační řádek po auto-vyhodnocení) ─────────
@@ -252,9 +263,8 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
 
   const handleRecalcAll = async () => {
     setRecalcing(true)
-    await recalcAllTips()
+    await recalcAllTips(showToast)
     setRecalcing(false)
-    showToast('Body přepočítány ✓')
   }
 
   const resetAll = async () => {

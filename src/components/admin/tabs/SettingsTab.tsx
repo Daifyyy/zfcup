@@ -23,6 +23,7 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
     num_groups: 2,
     advancing_per_group: 2,
   })
+  const [numPitches, setNumPitches] = useState(2)
 
   useEffect(() => {
     if (!tournament) return
@@ -37,6 +38,7 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
       num_groups: tournament.num_groups ?? 2,
       advancing_per_group: tournament.advancing_per_group ?? 2,
     })
+    setNumPitches(tournament.num_pitches ?? 2)
   }, [tournament?.id])
 
   const toggleTips = async () => {
@@ -55,6 +57,14 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
     const { error } = await supabase.from('tournament').update({ format: next }).eq('id', tournament.id)
     if (error) showToast('Chyba: ' + error.message)
     else { showToast(next === 'league' ? 'Formát: Liga ✓' : 'Formát: Skupiny ✓'); refetchTournament() }
+  }
+
+  const toggleLeaguePlayoff = async () => {
+    if (!tournament) return
+    const next = !(tournament.league_has_playoff ?? true)
+    const { error } = await supabase.from('tournament').update({ league_has_playoff: next }).eq('id', tournament.id)
+    if (error) showToast('Chyba: ' + error.message)
+    else { showToast(next ? 'Liga s playoff ✓' : 'Liga bez playoff ✓'); refetchTournament() }
   }
 
   const saveLeagueParams = async () => {
@@ -82,9 +92,12 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
 
   // Derived scenario preview
   const isLeagueFormat = tournament?.format === 'league'
+  const leagueHasPlayoff = tournament?.league_has_playoff ?? true
   const totalAdvancing = isLeagueFormat ? 6 : scenario.num_groups * scenario.advancing_per_group
   const playoffLabel = isLeagueFormat
-    ? 'Top-6 → Čtvrtfinále (2) + Semifinále (2) + Finále'
+    ? (leagueHasPlayoff
+        ? 'Top-6 → Čtvrtfinále (2) + Semifinále (2) + Finále'
+        : 'Bez playoff — vítěz dle tabulky po odehrání všech zápasů')
     : totalAdvancing <= 4
       ? `${totalAdvancing} týmů → Semifinále (${totalAdvancing / 2} zápasy) + Finále`
       : totalAdvancing === 6
@@ -182,6 +195,37 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
         </button>
       </div>
 
+      {/* Počet hřišť — vždy viditelné, platí pro skupiny i ligu */}
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .95rem', marginBottom: '.75rem' }}>
+        <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.5rem' }}>
+          Počet hřišť
+        </div>
+        <div className="field-row" style={{ alignItems: 'flex-end' }}>
+          <div className="field-group">
+            <label className="field-label">Hřiště k dispozici (1–4)</label>
+            <input
+              className="field-input"
+              type="number"
+              min="1"
+              max="4"
+              value={numPitches}
+              onChange={e => setNumPitches(Math.min(4, Math.max(1, parseInt(e.target.value) || 1)))}
+            />
+          </div>
+          <div className="field-group" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-s" onClick={async () => {
+              if (!tournament) return
+              const { error } = await supabase.from('tournament').update({ num_pitches: numPitches }).eq('id', tournament.id)
+              if (error) showToast('Chyba: ' + error.message)
+              else { showToast(`Počet hřišť: ${numPitches} ✓`); refetchTournament() }
+            }}>💾 Uložit</button>
+          </div>
+        </div>
+        <div style={{ fontSize: '.69rem', color: 'var(--muted)', marginTop: '.25rem' }}>
+          Určuje kolik zápasů probíhá současně — ovlivňuje časový harmonogram skupin i ligy.
+        </div>
+      </div>
+
       {/* Scénář — skupinový formát */}
       {tournament?.format !== 'league' && (
         <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem .95rem', marginBottom: '.75rem' }}>
@@ -250,6 +294,22 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
         <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem .95rem', marginBottom: '.75rem' }}>
           <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.6rem' }}>
             Parametry ligového zápasu
+          </div>
+          {/* Playoff toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.55rem .75rem', background: '#fff', border: '1px solid var(--border)', borderRadius: 8, marginBottom: '.7rem' }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '.82rem' }}>Playoff po ligové fázi</div>
+              <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: 2 }}>
+                {leagueHasPlayoff ? 'Top-6 → QF + SF + Finále' : 'Bez playoff — vítěz = 1. místo tabulky'}
+              </div>
+            </div>
+            <button type="button" className={`btn btn-sm ${leagueHasPlayoff ? 'btn-p' : 'btn-s'}`} onClick={toggleLeaguePlayoff}>
+              {leagueHasPlayoff ? 'Ano' : 'Ne'}
+            </button>
+          </div>
+          {/* Playoff preview */}
+          <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 7, padding: '.45rem .65rem', fontSize: '.74rem', color: 'var(--accent)', marginBottom: '.7rem' }}>
+            🏆 {playoffLabel}
           </div>
           <div className="field-row">
             <div className="field-group">
