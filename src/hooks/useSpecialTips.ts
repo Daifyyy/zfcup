@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable } from '../lib/realtimeManager'
 
 export interface SpecialTip {
   id: string
@@ -12,6 +13,7 @@ export interface SpecialTip {
 
 export function useSpecialTips(tipsterId: string | null) {
   const [specialTips, setSpecialTips] = useState<SpecialTip[]>([])
+  const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     if (!tipsterId) { setSpecialTips([]); return }
@@ -23,15 +25,24 @@ export function useSpecialTips(tipsterId: string | null) {
         .eq('tipster_id', tipsterId)
       setSpecialTips(data ?? [])
     }
+    fetchRef.current = fetch
     fetch()
 
-    const sub = supabase
-      .channel(`special_tips-${tipsterId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_tips' }, fetch)
-      .subscribe()
+    const unsub = subscribeTable('special_tips', () => fetchRef.current())
 
-    const poll = setInterval(fetch, 30_000)
-    return () => { supabase.removeChannel(sub); clearInterval(poll) }
+    let poll: ReturnType<typeof setInterval> | null = null
+    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 180_000) }
+    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
+    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
+
+    startPoll()
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      unsub()
+      stopPoll()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [tipsterId])
 
   return { specialTips }

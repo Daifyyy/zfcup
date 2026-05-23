@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable } from '../lib/realtimeManager'
 
 export interface Group {
   id: string
@@ -26,13 +27,21 @@ export function useGroups() {
     fetchRef.current = fetch
     fetch()
 
-    const sub = supabase
-      .channel('groups')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, fetch)
-      .subscribe()
-    const poll = setInterval(fetch, 120_000)
+    const unsub = subscribeTable('groups', () => fetchRef.current())
 
-    return () => { supabase.removeChannel(sub); clearInterval(poll) }
+    let poll: ReturnType<typeof setInterval> | null = null
+    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
+    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
+    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
+
+    startPoll()
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      unsub()
+      stopPoll()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [])
 
   return { groups, loading, refetch: () => fetchRef.current() }

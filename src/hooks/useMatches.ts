@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable } from '../lib/realtimeManager'
 
 export interface Match {
   id: string
@@ -30,13 +31,21 @@ export function useMatches() {
     fetchRef.current = fetch
     fetch()
 
-    const sub = supabase
-      .channel('matches')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, fetch)
-      .subscribe()
-    const poll = setInterval(fetch, 30_000)
+    const unsub = subscribeTable('matches', () => fetchRef.current())
 
-    return () => { supabase.removeChannel(sub); clearInterval(poll) }
+    let poll: ReturnType<typeof setInterval> | null = null
+    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
+    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
+    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
+
+    startPoll()
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      unsub()
+      stopPoll()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [])
 
   return { matches, loading, refetch: () => fetchRef.current() }

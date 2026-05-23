@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable } from '../lib/realtimeManager'
 
 export interface BracketRound {
   id: string
@@ -41,20 +42,22 @@ export function useBracket() {
     fetchRef.current = fetch
     fetch()
 
-    const subR = supabase
-      .channel('bracket_rounds')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bracket_rounds' }, fetch)
-      .subscribe()
-    const subS = supabase
-      .channel('bracket_slots')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bracket_slots' }, fetch)
-      .subscribe()
+    const unsubR = subscribeTable('bracket_rounds', () => fetchRef.current())
+    const unsubS = subscribeTable('bracket_slots', () => fetchRef.current())
 
-    const poll = setInterval(fetch, 30_000)
+    let poll: ReturnType<typeof setInterval> | null = null
+    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
+    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
+    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
+
+    startPoll()
+    document.addEventListener('visibilitychange', onVisibility)
+
     return () => {
-      supabase.removeChannel(subR)
-      supabase.removeChannel(subS)
-      clearInterval(poll)
+      unsubR()
+      unsubS()
+      stopPoll()
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 

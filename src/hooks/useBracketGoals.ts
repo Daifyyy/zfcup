@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable } from '../lib/realtimeManager'
 
 export interface BracketGoal {
   id: string
@@ -20,13 +21,21 @@ export function useBracketGoals() {
     fetchRef.current = fetch
     fetch()
 
-    const sub = supabase
-      .channel('bracket_goals')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bracket_goals' }, fetch)
-      .subscribe()
-    const poll = setInterval(fetch, 30_000)
+    const unsub = subscribeTable('bracket_goals', () => fetchRef.current())
 
-    return () => { supabase.removeChannel(sub); clearInterval(poll) }
+    let poll: ReturnType<typeof setInterval> | null = null
+    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
+    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
+    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
+
+    startPoll()
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      unsub()
+      stopPoll()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [])
 
   return { bracketGoals, refetch: () => fetchRef.current() }

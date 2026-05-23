@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable } from '../lib/realtimeManager'
 
 export interface Tipster {
   id: string
@@ -9,6 +10,7 @@ export interface Tipster {
 
 export function useTipsters() {
   const [tipsters, setTipsters] = useState<Tipster[]>([])
+  const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
@@ -18,15 +20,24 @@ export function useTipsters() {
         .order('total_points', { ascending: false })
       setTipsters(data ?? [])
     }
+    fetchRef.current = fetch
     fetch()
 
-    const sub = supabase
-      .channel('tipsters')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tipsters' }, fetch)
-      .subscribe()
-    const poll = setInterval(fetch, 30_000)
+    const unsub = subscribeTable('tipsters', () => fetchRef.current())
 
-    return () => { supabase.removeChannel(sub); clearInterval(poll) }
+    let poll: ReturnType<typeof setInterval> | null = null
+    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
+    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
+    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
+
+    startPoll()
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      unsub()
+      stopPoll()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [])
 
   return { tipsters }
