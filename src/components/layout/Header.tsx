@@ -23,7 +23,7 @@ const BASE_TABS: [Tab, string][] = [
   ['rules',     'Pravidla'],
 ]
 
-export default function Header({ tournament, tab, onTab, onKiosk, onScoreboard, tipsEnabled, showBracket = true }: Props) {
+export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, isAdmin, tipsEnabled, showBracket = true }: Props) {
   const baseTabs: [Tab, string][] = showBracket ? BASE_TABS : BASE_TABS.filter(([key]) => key !== 'bracket')
   const TABS: [Tab, string][] = tipsEnabled ? [...baseTabs, ['tips', 'Tipy']] : baseTabs
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
@@ -41,6 +41,25 @@ export default function Header({ tournament, tab, onTab, onKiosk, onScoreboard, 
         display: 'flex', alignItems: 'center',
         gap: '.9rem', height: 64, padding: '0 2rem',
       }}>
+        {/* Admin button */}
+        <button
+          type="button"
+          onClick={onAdmin}
+          title={isAdmin ? 'Admin panel (přihlášen)' : 'Admin panel (Ctrl+Shift+A)'}
+          style={{
+            width: 38, height: 38, borderRadius: 10,
+            background: '#f1f5f9',
+            border: '1.5px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, cursor: 'pointer', flexShrink: 0,
+            transition: 'background .15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#e2e8f0' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#f1f5f9' }}
+        >
+          ⚽
+        </button>
+
         {/* Tournament name */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{
