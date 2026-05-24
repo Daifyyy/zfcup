@@ -66,6 +66,8 @@ interface Props {
   refetchBracket: () => void
   refetchBracketGoals: () => void
   refetchReferees: () => void
+  refetchAnnouncements: () => void
+  refetchRuleItems: () => void
   showToast: (msg: string) => void
   onClose: () => void
 }
@@ -220,7 +222,7 @@ export default function AdminPanel(props: Props) {
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.15rem 1.2rem' }}>
               {aTab === 'info'          && <InfoTab {...tabProps} />}
               {aTab === 'announcements' && <AnnouncementsTab {...tabProps} />}
-              {aTab === 'rules'         && <RuleItemsTab ruleItems={props.ruleItems} showToast={showToast} />}
+              {aTab === 'rules'         && <RuleItemsTab ruleItems={props.ruleItems} refetchRuleItems={props.refetchRuleItems} showToast={showToast} />}
               {aTab === 'teams'         && <TeamsTab {...tabProps} />}
               {aTab === 'referees'      && <RefereesTab referees={props.referees} refetchReferees={props.refetchReferees} showToast={showToast} />}
               {aTab === 'groups'        && <GroupsTab {...tabProps} />}

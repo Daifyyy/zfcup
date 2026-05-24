@@ -43,5 +43,5 @@ export function useAnnouncements() {
     }
   }, [])
 
-  return { announcements, loading }
+  return { announcements, loading, refetch: () => fetchRef.current() }
 }

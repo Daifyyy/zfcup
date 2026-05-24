@@ -49,8 +49,8 @@ export default function App() {
   const { goals, refetch: refetchGoals } = useGoals()
   const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket()
   const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals()
-  const { announcements } = useAnnouncements()
-  const { ruleItems } = useRuleItems()
+  const { announcements, refetch: refetchAnnouncements } = useAnnouncements()
+  const { ruleItems, refetch: refetchRuleItems } = useRuleItems()
   const { referees, refetch: refetchReferees } = useReferees()
 
   // ── Auth ──────────────────────────────────────────────
@@ -207,6 +207,8 @@ export default function App() {
           refetchBracket={refetchBracket}
           refetchBracketGoals={refetchBracketGoals}
           refetchReferees={refetchReferees}
+          refetchAnnouncements={refetchAnnouncements}
+          refetchRuleItems={refetchRuleItems}
           onClose={() => setAdminOpen(false)}
         />
       )}

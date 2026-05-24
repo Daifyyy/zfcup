@@ -23,10 +23,11 @@ function extractYoutubeId(url: string): string | null {
 
 interface Props {
   announcements: Announcement[]
+  refetchAnnouncements: () => void
   showToast: (msg: string) => void
 }
 
-export default function AnnouncementsTab({ announcements, showToast }: Props) {
+export default function AnnouncementsTab({ announcements, refetchAnnouncements, showToast }: Props) {
   const [form, setForm] = useState({ icon: '📌', title: '', body: '', type: 'text' as 'text' | 'image' | 'video', media_url: '' })
   const [editId, setEditId] = useState<string | null>(null)
   const [items, setItems] = useState(announcements)
@@ -54,6 +55,7 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
     }
     setForm({ icon: '📌', title: '', body: '', type: 'text', media_url: '' })
     setEditId(null)
+    refetchAnnouncements()
     showToast('Uloženo ✓')
   }
 
@@ -65,8 +67,9 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
   const remove = async (id: string) => {
     if (!confirm('Smazat oznámení?')) return
     const { error } = await supabase.from('announcements').delete().eq('id', id)
-    if (error) showToast('Chyba: ' + error.message)
-    else showToast('Smazáno')
+    if (error) { showToast('Chyba: ' + error.message); return }
+    refetchAnnouncements()
+    showToast('Smazáno')
   }
 
   const moveUp = async (index: number) => {
@@ -81,6 +84,7 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
       supabase.from('announcements').update({ position: a.position }).eq('id', b.id),
     ])
     if (r1.error || r2.error) { setItems(snapshot); showToast('Chyba řazení') }
+    else refetchAnnouncements()
   }
 
   const moveDown = async (index: number) => {
@@ -95,6 +99,7 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
       supabase.from('announcements').update({ position: a.position }).eq('id', b.id),
     ])
     if (r1.error || r2.error) { setItems(snapshot); showToast('Chyba řazení') }
+    else refetchAnnouncements()
   }
 
   const typeLabel = (t?: string) => t === 'image' ? '🖼️ Obrázek' : t === 'video' ? '▶️ Video' : '📢 Oznámení'

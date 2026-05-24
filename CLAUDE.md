@@ -107,7 +107,8 @@ CREATE POLICY "admin_write" ON rule_items FOR ALL TO authenticated USING (true) 
 - **Nikdy nepoužívat `disabled` atribut na tlačítkách v admin formulářích** — Android ignoruje touch eventy na disabled elementech; místo toho proveď kontrolu uvnitř onClick a zobraz toast; používej `style={{ opacity: 0.5 }}` pro vizuální stav
 - **async save funkce — vždy try-finally**: `setSaving(false)` / `savingRef.current = false` musí být v `finally` bloku — jinak tlačítko uvízne při výjimce (síťová chyba, timeout, RLS). Platí pro `InlineMatchEditor.saveAll`, `SlotEditor.saveAll`, `EvalRow.evaluate`, atd.
 - **Batch DB UPDATE místo sekvenční smyčky**: `recalcAllTips` seskupuje tipy dle bodů a volá `.update().in('id', ids)` — 3 paralelní volání místo N×1800 sekvenčních. Nikdy nepoužívat `for (const x of arr) { await supabase.update().eq('id', x.id) }` pro větší datové sady.
-- **Optimistické UI pro řazení**: `AnnouncementsTab` udržuje lokální `items` state — swap proběhne okamžitě, DB updaty jdou paralelně na pozadí přes `Promise.all`; při chybě se state revertuje
+- **Optimistické UI pro řazení**: `AnnouncementsTab` a `RuleItemsTab` udržují lokální `items` state — swap proběhne okamžitě, DB updaty jdou paralelně přes `Promise.all`; při chybě se state revertuje
+- **Refetch po mutaci v content tabs**: `useAnnouncements` exportuje `refetch()`; `AnnouncementsTab` a `RuleItemsTab` volají `refetch` po každém save/remove/move → okamžitý UI update bez čekání na polling (120s) nebo realtime
 
 ## Důležité chování / known issues
 - **`scheduled_time` a `round`**: sloupce jsou TEXT NOT NULL — při UPDATE posílat `''` (prázdný string), **ne `null`**, jinak 400 Bad Request
@@ -136,7 +137,7 @@ CREATE POLICY "admin_write" ON rule_items FOR ALL TO authenticated USING (true) 
 
 ## Architektura záložek
 ### Veřejné záložky (BottomNav + Header)
-- `overview` — Dashboard: popis turnaje (vlevo, `rich-content`) + logo turnaje 140px (vpravo) + QR kód pod logem; oznámení/média níže (text, obrázky, YouTube videa); název turnaje se NEopakuje (je v headeru)
+- `overview` — Dashboard: logo turnaje 140px (vlevo) + QR pod logem + popis (vpravo, `rich-content`); oznámení/média níže; název turnaje se NEopakuje (je v headeru)
 - `teams` — Týmy + soupisky; hráči seřazeni abecedně; zobrazení: Jméno | RoleBadge (C/B/CB) | ⚽N (jen pokud > 0)
 - `results` — Zápasy skupinových zápasů (řazené abecedně dle skupiny), zvýraznění vítěze; label v navigaci: **"Zápasy"**
 - `standings` — Tabulky skupin; barevné kódování dle `tournament.format`:

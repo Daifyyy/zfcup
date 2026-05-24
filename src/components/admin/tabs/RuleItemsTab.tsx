@@ -5,10 +5,11 @@ import RichTextEditor from '../../ui/RichTextEditor'
 
 interface Props {
   ruleItems: RuleItem[]
+  refetchRuleItems: () => void
   showToast: (msg: string) => void
 }
 
-export default function RuleItemsTab({ ruleItems, showToast }: Props) {
+export default function RuleItemsTab({ ruleItems, refetchRuleItems, showToast }: Props) {
   const [form, setForm] = useState({ title: '', body: '' })
   const [editId, setEditId] = useState<string | null>(null)
   const [items, setItems] = useState(ruleItems)
@@ -26,6 +27,7 @@ export default function RuleItemsTab({ ruleItems, showToast }: Props) {
     }
     setForm({ title: '', body: '' })
     setEditId(null)
+    refetchRuleItems()
     showToast('Uloženo ✓')
   }
 
@@ -37,8 +39,9 @@ export default function RuleItemsTab({ ruleItems, showToast }: Props) {
   const remove = async (id: string) => {
     if (!confirm('Smazat položku pravidel?')) return
     const { error } = await supabase.from('rule_items').delete().eq('id', id)
-    if (error) showToast('Chyba: ' + error.message)
-    else showToast('Smazáno')
+    if (error) { showToast('Chyba: ' + error.message); return }
+    refetchRuleItems()
+    showToast('Smazáno')
   }
 
   const moveUp = async (index: number) => {
@@ -53,6 +56,7 @@ export default function RuleItemsTab({ ruleItems, showToast }: Props) {
       supabase.from('rule_items').update({ position: a.position }).eq('id', b.id),
     ])
     if (r1.error || r2.error) { setItems(snapshot); showToast('Chyba řazení') }
+    else refetchRuleItems()
   }
 
   const moveDown = async (index: number) => {
@@ -67,6 +71,7 @@ export default function RuleItemsTab({ ruleItems, showToast }: Props) {
       supabase.from('rule_items').update({ position: a.position }).eq('id', b.id),
     ])
     if (r1.error || r2.error) { setItems(snapshot); showToast('Chyba řazení') }
+    else refetchRuleItems()
   }
 
   return (

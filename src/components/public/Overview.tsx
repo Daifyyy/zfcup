@@ -78,11 +78,6 @@ export default function Overview({ tournament, announcements }: Props) {
       {/* Logo + popis */}
       {hasContent && (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1.25rem' }}>
-          <div
-            className="card-bordered rich-content"
-            style={{ flex: 1, minWidth: 0, padding: 'var(--pad-card)' }}
-            dangerouslySetInnerHTML={{ __html: tournament?.description || '' }}
-          />
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.75rem' }}>
             {tournament?.logo_url && (
               <img
@@ -98,6 +93,11 @@ export default function Overview({ tournament, announcements }: Props) {
               </div>
             </div>
           </div>
+          <div
+            className="card-bordered rich-content"
+            style={{ flex: 1, minWidth: 0, padding: 'var(--pad-card)' }}
+            dangerouslySetInnerHTML={{ __html: tournament?.description || '' }}
+          />
         </div>
       )}
 
