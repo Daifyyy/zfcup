@@ -92,6 +92,9 @@ ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAU
 - Chyby vždy ošetři — ukaž uživateli toast, ne console.error
 - Všechny `<button>` musí mít `type="button"` — bez toho může dojít k nechtěnému submit
 - **Nikdy nepoužívat `disabled` atribut na tlačítkách v admin formulářích** — Android ignoruje touch eventy na disabled elementech; místo toho proveď kontrolu uvnitř onClick a zobraz toast; používej `style={{ opacity: 0.5 }}` pro vizuální stav
+- **async save funkce — vždy try-finally**: `setSaving(false)` / `savingRef.current = false` musí být v `finally` bloku — jinak tlačítko uvízne při výjimce (síťová chyba, timeout, RLS). Platí pro `InlineMatchEditor.saveAll`, `SlotEditor.saveAll`, `EvalRow.evaluate`, atd.
+- **Batch DB UPDATE místo sekvenční smyčky**: `recalcAllTips` seskupuje tipy dle bodů a volá `.update().in('id', ids)` — 3 paralelní volání místo N×1800 sekvenčních. Nikdy nepoužívat `for (const x of arr) { await supabase.update().eq('id', x.id) }` pro větší datové sady.
+- **Optimistické UI pro řazení**: `AnnouncementsTab` udržuje lokální `items` state — swap proběhne okamžitě, DB updaty jdou paralelně na pozadí přes `Promise.all`; při chybě se state revertuje
 
 ## Důležité chování / known issues
 - **`scheduled_time` a `round`**: sloupce jsou TEXT NOT NULL — při UPDATE posílat `''` (prázdný string), **ne `null`**, jinak 400 Bad Request
@@ -104,6 +107,8 @@ ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAU
 - **Tipy — upsert místo insert/update**: `saveAll` používá `supabase.from('tips').upsert({...}, {onConflict: 'tipster_id,match_id'})` — předchází UNIQUE constraint violation.
 - **useBracket exportuje `refetch()`**: useRef pattern — volá se po každém `saveSlot` a `seedTeams` pro okamžitý UI update.
 - **Admin panel backdrop — drag z panelu ven**: `onClick` na backdrops by zavřel panel i při drag (mousedown uvnitř, mouseup venku). Oprava: `mouseDownOnBackdrop = useRef(false)` → `onMouseDown` nastaví flag jen když klik začal přímo na backdrops; `onClick` kontroluje oba podmínky. Viz `AdminPanel.tsx`.
+- **WYSIWYG editor pro `description`**: pole `tournament.description` se ukládá jako HTML string (TipTap výstup). Ve veřejném view (`Info.tsx`, `Overview.tsx`) se renderuje přes `dangerouslySetInnerHTML` s třídou `rich-content`. Komponenta editoru: `src/components/ui/RichTextEditor.tsx` (TipTap + StarterKit, `@tiptap/react` + `@tiptap/starter-kit`). Zpětně kompatibilní — plain text je validní HTML.
+- **Oznámení — nadpis je volitelný**: `AnnouncementsTab` nevaliduje povinný nadpis. Příspěvky bez nadpisu zobrazují *(bez nadpisu)* v admin seznamu; ve veřejném view se podmíněně renderuje jen `body` / media.
 
 ## Styl a UX
 - Světlé téma: pozadí `#f8fafc`, karty bílé se shadow, akcent `#2563eb` (modrá)

@@ -97,9 +97,11 @@ export default function Overview({ tournament, announcements }: Props) {
 
       {/* Popis turnaje */}
       {tournament?.description && (
-        <div className="card-bordered" style={{ padding: 'var(--pad-card)', marginBottom: '1rem', fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.8 }}>
-          {tournament.description}
-        </div>
+        <div
+          className="card-bordered rich-content"
+          style={{ padding: 'var(--pad-card)', marginBottom: '1rem' }}
+          dangerouslySetInnerHTML={{ __html: tournament.description }}
+        />
       )}
 
       {/* Oznámení + média */}

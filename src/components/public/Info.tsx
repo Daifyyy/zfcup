@@ -91,9 +91,11 @@ export default function Info({ tournament, announcements, onTab }: Props) {
           <div style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)', marginBottom: '.25rem' }}>📍 {tournament.venue}</div>
         )}
         {tournament?.description && (
-          <div style={{ marginTop: '.85rem', fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.75, whiteSpace: 'pre-line' }}>
-            {tournament.description}
-          </div>
+          <div
+            className="rich-content"
+            style={{ marginTop: '.85rem' }}
+            dangerouslySetInnerHTML={{ __html: tournament.description }}
+          />
         )}
         {!tournament?.description && (
           <div style={{ marginTop: '.85rem', fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.75 }}>

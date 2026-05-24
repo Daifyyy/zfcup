@@ -29,7 +29,7 @@ function getPoints(tipType: string): number {
 
 async function recalcAllTips(showToast: (m: string) => void) {
   try {
-    // Skupinové zápasy: 3/1 b.
+    // Skupinové zápasy: 3/1/0 b. — batch UPDATE dle bodů (N tipů → 3 volání)
     const { data: playedMatches, error: mErr } = await supabase
       .from('matches').select('id, home_score, away_score').eq('played', true)
     if (mErr) throw mErr
@@ -38,18 +38,24 @@ async function recalcAllTips(showToast: (m: string) => void) {
         .from('tips').select('id, match_id, predicted_home, predicted_away')
         .in('match_id', playedMatches.map(m => m.id))
       if (tErr) throw tErr
+      const byPts = new Map<number, string[]>([[3, []], [1, []], [0, []]])
       for (const tip of allTips ?? []) {
         const m = playedMatches.find(m => m.id === tip.match_id)
         if (!m) continue
         let pts = 0
         if (tip.predicted_home === m.home_score && tip.predicted_away === m.away_score) pts = 3
         else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(m.home_score - m.away_score)) pts = 1
-        const { error } = await supabase.from('tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
-        if (error) throw error
+        byPts.get(pts)!.push(tip.id)
       }
+      const tipOps = [...byPts.entries()]
+        .filter(([, ids]) => ids.length > 0)
+        .map(([pts, ids]) => supabase.from('tips').update({ points_earned: pts, evaluated: true }).in('id', ids))
+      const tipResults = await Promise.all(tipOps)
+      const tipErr = tipResults.find(r => r.error)?.error
+      if (tipErr) throw tipErr
     }
 
-    // Playoff zápasy: 5/2 b. (všechna kola včetně finále)
+    // Playoff zápasy: 5/2/0 b. — batch UPDATE dle bodů
     const { data: playedSlots, error: sErr } = await supabase
       .from('bracket_slots').select('id, home_score, away_score').eq('played', true)
     if (sErr) throw sErr
@@ -58,15 +64,21 @@ async function recalcAllTips(showToast: (m: string) => void) {
         .from('bracket_tips').select('id, slot_id, predicted_home, predicted_away')
         .in('slot_id', playedSlots.map(s => s.id))
       if (btErr) throw btErr
+      const byPts = new Map<number, string[]>([[5, []], [2, []], [0, []]])
       for (const tip of allBTips ?? []) {
         const s = playedSlots.find(s => s.id === tip.slot_id)
         if (!s) continue
         let pts = 0
         if (tip.predicted_home === s.home_score && tip.predicted_away === s.away_score) pts = 5
         else if (Math.sign(tip.predicted_home - tip.predicted_away) === Math.sign(s.home_score - s.away_score)) pts = 2
-        const { error } = await supabase.from('bracket_tips').update({ points_earned: pts, evaluated: true }).eq('id', tip.id)
-        if (error) throw error
+        byPts.get(pts)!.push(tip.id)
       }
+      const btOps = [...byPts.entries()]
+        .filter(([, ids]) => ids.length > 0)
+        .map(([pts, ids]) => supabase.from('bracket_tips').update({ points_earned: pts, evaluated: true }).in('id', ids))
+      const btResults = await Promise.all(btOps)
+      const btErr2 = btResults.find(r => r.error)?.error
+      if (btErr2) throw btErr2
     }
 
     await recalcTipsterPoints()
@@ -105,23 +117,33 @@ function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId }: {
   const evaluate = async () => {
     if (!selected) { showToast('Vyber tým'); return }
     setEvaluating(true)
-    await evaluateSpecialTip(tipType, selected)
-    await recalcTipsterPoints()
-    setEvaluating(false)
-    setDone(true)
-    showToast(`${label} vyhodnoceno ✓`)
+    try {
+      await evaluateSpecialTip(tipType, selected)
+      await recalcTipsterPoints()
+      setDone(true)
+      showToast(`${label} vyhodnoceno ✓`)
+    } catch (e: unknown) {
+      showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setEvaluating(false)
+    }
   }
 
   const resetEval = async () => {
     if (!confirm(`Zrušit vyhodnocení "${label}"? Body za tento tip budou vymazány.`)) return
     setResetting(true)
-    await supabase.from('special_tips')
-      .update({ evaluated: false, points_earned: 0 })
-      .eq('tip_type', tipType)
-    await recalcTipsterPoints()
-    setResetting(false)
-    setDone(false)
-    showToast('Vyhodnocení zrušeno ✓')
+    try {
+      await supabase.from('special_tips')
+        .update({ evaluated: false, points_earned: 0 })
+        .eq('tip_type', tipType)
+      await recalcTipsterPoints()
+      setDone(false)
+      showToast('Vyhodnocení zrušeno ✓')
+    } catch (e: unknown) {
+      showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setResetting(false)
+    }
   }
 
   const autoTeam = autoWinnerId ? teamPool.find(t => t.id === autoWinnerId) : null

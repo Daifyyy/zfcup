@@ -122,23 +122,25 @@ function InlineMatchEditor({
 
     refetchMatches()
     refetchGoals()
-    // Po uložení výsledku skupinového zápasu zkontrolovat zda je skupina dokončena
-    if (autoPlayed && match.group_id && group) {
-      await checkGroupSpecialTips(match.group_id, group)
-    }
-    // Liga bez playoff: auto-eval vítěze turnaje dle tabulky po odehrání všech zápasů
-    const isLeagueNoPlayoff = tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true)
-    if (isLeagueNoPlayoff && autoPlayed) {
-      const ligaGroup = groups.find(g => g.name === 'Liga')
-      if (ligaGroup) {
-        const evaluated = await checkLeagueTournamentWinner(ligaGroup)
-        if (evaluated) { showToast('Uloženo ✓ · 🏆 Vítěz ligy vyhodnocen'); savingRef.current = false; setSaving(false); onClose(); return }
+    try {
+      if (autoPlayed && match.group_id && group)
+        await checkGroupSpecialTips(match.group_id, group)
+      const isLeagueNoPlayoff = tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true)
+      if (isLeagueNoPlayoff && autoPlayed) {
+        const ligaGroup = groups.find(g => g.name === 'Liga')
+        if (ligaGroup) {
+          const evaluated = await checkLeagueTournamentWinner(ligaGroup)
+          if (evaluated) { showToast('Uloženo ✓ · 🏆 Vítěz ligy vyhodnocen'); return }
+        }
       }
+      showToast('Uloženo ✓')
+    } catch {
+      showToast('Uloženo ✓ (tipy neaktualizovány)')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+      onClose()
     }
-    showToast('Uloženo ✓')
-    savingRef.current = false
-    setSaving(false)
-    onClose()
   }
 
   const ht = teams.find(t => t.id === match.home_id)

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Announcement } from '../../../hooks/useAnnouncements'
 
@@ -28,9 +28,11 @@ interface Props {
 export default function AnnouncementsTab({ announcements, showToast }: Props) {
   const [form, setForm] = useState({ icon: '📌', title: '', body: '', type: 'text' as 'text' | 'image' | 'video', media_url: '' })
   const [editId, setEditId] = useState<string | null>(null)
+  const [items, setItems] = useState(announcements)
+
+  useEffect(() => { setItems(announcements) }, [announcements])
 
   const save = async () => {
-    if (!form.title.trim()) { showToast('Zadej nadpis'); return }
     if (form.type === 'video' && form.media_url && !extractYoutubeId(form.media_url)) {
       showToast('Neplatná YouTube URL'); return
     }
@@ -38,7 +40,7 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
       icon: form.icon,
       title: form.title.trim(),
       body: form.body.trim(),
-      position: editId ? undefined : announcements.length,
+      position: editId ? undefined : items.length,
       type: form.type,
       media_url: form.media_url.trim() || null,
     }
@@ -46,7 +48,7 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
       const { error } = await supabase.from('announcements').update(data).eq('id', editId)
       if (error) { showToast('Chyba: ' + error.message); return }
     } else {
-      const { error } = await supabase.from('announcements').insert({ ...data, position: announcements.length })
+      const { error } = await supabase.from('announcements').insert({ ...data, position: items.length })
       if (error) { showToast('Chyba: ' + error.message); return }
     }
     setForm({ icon: '📌', title: '', body: '', type: 'text', media_url: '' })
@@ -68,22 +70,30 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
 
   const moveUp = async (index: number) => {
     if (index === 0) return
-    const a = announcements[index]
-    const b = announcements[index - 1]
-    const { error: e1 } = await supabase.from('announcements').update({ position: b.position }).eq('id', a.id)
-    if (e1) { showToast('Chyba řazení: ' + e1.message); return }
-    const { error: e2 } = await supabase.from('announcements').update({ position: a.position }).eq('id', b.id)
-    if (e2) showToast('Chyba řazení: ' + e2.message)
+    const snapshot = items
+    const next = [...items]
+    ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
+    setItems(next)
+    const a = snapshot[index], b = snapshot[index - 1]
+    const [r1, r2] = await Promise.all([
+      supabase.from('announcements').update({ position: b.position }).eq('id', a.id),
+      supabase.from('announcements').update({ position: a.position }).eq('id', b.id),
+    ])
+    if (r1.error || r2.error) { setItems(snapshot); showToast('Chyba řazení') }
   }
 
   const moveDown = async (index: number) => {
-    if (index === announcements.length - 1) return
-    const a = announcements[index]
-    const b = announcements[index + 1]
-    const { error: e1 } = await supabase.from('announcements').update({ position: b.position }).eq('id', a.id)
-    if (e1) { showToast('Chyba řazení: ' + e1.message); return }
-    const { error: e2 } = await supabase.from('announcements').update({ position: a.position }).eq('id', b.id)
-    if (e2) showToast('Chyba řazení: ' + e2.message)
+    if (index === items.length - 1) return
+    const snapshot = items
+    const next = [...items]
+    ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
+    setItems(next)
+    const a = snapshot[index], b = snapshot[index + 1]
+    const [r1, r2] = await Promise.all([
+      supabase.from('announcements').update({ position: b.position }).eq('id', a.id),
+      supabase.from('announcements').update({ position: a.position }).eq('id', b.id),
+    ])
+    if (r1.error || r2.error) { setItems(snapshot); showToast('Chyba řazení') }
   }
 
   const typeLabel = (t?: string) => t === 'image' ? '🖼️ Obrázek' : t === 'video' ? '▶️ Video' : '📢 Oznámení'
@@ -142,7 +152,7 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
       )}
 
       <div className="field-group">
-        <label className="field-label">Nadpis</label>
+        <label className="field-label">Nadpis (volitelný)</label>
         <input
           className="field-input"
           value={form.title}
@@ -207,20 +217,23 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
 
       <hr className="divider" />
       <div className="sub-title">Položky</div>
-      {!announcements.length ? (
+      {!items.length ? (
         <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Žádná oznámení.</p>
       ) : (
         <div className="a-list">
-          {announcements.map((a, i) => (
+          {items.map((a, i) => (
             <div key={a.id} className="a-item">
               <span style={{ fontSize: '1.1rem' }}>{a.type === 'image' ? '🖼️' : a.type === 'video' ? '▶️' : a.icon}</span>
               <div style={{ flex: 1 }}>
-                <div className="a-item-main">{a.title}</div>
+                {a.title
+                  ? <div className="a-item-main">{a.title}</div>
+                  : <div className="a-item-main" style={{ color: 'var(--muted)', fontStyle: 'italic' }}>(bez nadpisu)</div>
+                }
                 {a.body && <div className="a-item-sub">{a.body}</div>}
                 {a.media_url && <div className="a-item-sub" style={{ fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{a.media_url}</div>}
               </div>
               <button type="button" className="btn btn-s btn-sm" onClick={() => moveUp(i)} style={{ opacity: i === 0 ? 0.3 : 1 }}>↑</button>
-              <button type="button" className="btn btn-s btn-sm" onClick={() => moveDown(i)} style={{ opacity: i === announcements.length - 1 ? 0.3 : 1 }}>↓</button>
+              <button type="button" className="btn btn-s btn-sm" onClick={() => moveDown(i)} style={{ opacity: i === items.length - 1 ? 0.3 : 1 }}>↓</button>
               <button type="button" className="btn btn-d btn-sm" onClick={() => edit(a)}>Upravit</button>
               <button type="button" className="btn btn-d btn-sm" onClick={() => remove(a.id)}>Smazat</button>
             </div>

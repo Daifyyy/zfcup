@@ -100,15 +100,20 @@ function SlotEditor({
     refetchBracketGoals()
     // 2) Save slot + auto-advance (shows toast)
     const autoPlayed = s.played || s.home_score > 0 || s.away_score > 0
-    await onSave({
-      home_id: s.home_id, away_id: s.away_id,
-      home_score: s.home_score, away_score: s.away_score,
-      played: autoPlayed,
-      scheduled_time: s.scheduled_time || null,
-      referee_id: refereeId || null,
-    })
-    savingRef.current = false
-    setSaving(false)
+    try {
+      await onSave({
+        home_id: s.home_id, away_id: s.away_id,
+        home_score: s.home_score, away_score: s.away_score,
+        played: autoPlayed,
+        scheduled_time: s.scheduled_time || null,
+        referee_id: refereeId || null,
+      })
+    } catch (e: unknown) {
+      showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+    }
   }
 
   const PlayerRow = ({ p, color }: { p: Player; color: string }) => (

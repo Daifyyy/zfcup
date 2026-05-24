@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
+import RichTextEditor from '../../ui/RichTextEditor'
 
 interface Props {
   tournament: Tournament | null
@@ -53,12 +54,9 @@ export default function InfoTab({ tournament, showToast }: Props) {
       </div>
       <div className="field-group">
         <label className="field-label">Popis</label>
-        <textarea
-          className="field-input"
-          value={form.description}
-          onChange={f('description')}
-          placeholder="Stručný popis turnaje…"
-          style={{ resize: 'vertical', minHeight: 80, lineHeight: 1.5 }}
+        <RichTextEditor
+          content={form.description}
+          onChange={html => setForm(p => ({ ...p, description: html }))}
         />
       </div>
 
