@@ -99,6 +99,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
   const isLeagueFormat = tournament?.format === 'league'
   const leagueHasPlayoff = tournament?.league_has_playoff ?? true
   const totalAdvancing = isLeagueFormat ? 6 : scenario.num_groups * scenario.advancing_per_group
+  const playoffStyle = tournament?.playoff_style ?? 'standard'
   const playoffLabel = isLeagueFormat
     ? (leagueHasPlayoff
         ? 'Top-6 → Čtvrtfinále (2) + Semifinále (2) + Finále'
@@ -113,7 +114,6 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
 
   const teamsPerGroup = scenario.num_groups > 0 ? Math.round(scenario.num_teams / scenario.num_groups) : 0
   const maxAdvancing = Math.max(1, teamsPerGroup - 1)
-  const playoffStyle = tournament?.playoff_style ?? 'standard'
 
   const changePassword = async () => {
     if (!p1) { showToast('Zadejte nové heslo'); return }
