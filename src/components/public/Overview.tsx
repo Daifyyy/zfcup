@@ -71,47 +71,38 @@ function AnnouncementCard({ a }: { a: Announcement }) {
 }
 
 export default function Overview({ tournament, announcements }: Props) {
-  const hasContent = !!(tournament?.description || tournament?.logo_url)
+  const hasContent = !!(tournament?.description || tournament?.logo_url || announcements.length)
 
   return (
     <div>
-      {/* Logo + popis */}
-      {hasContent && (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1.25rem' }}>
-          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.75rem' }}>
-            {tournament?.logo_url && (
-              <img
-                src={tournament.logo_url}
-                alt="logo turnaje"
-                style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 12, background: '#fff', border: '1px solid var(--border)' }}
-              />
-            )}
-            <div style={{ textAlign: 'center' }}>
-              <QRCode size={80} />
-              <div style={{ fontSize: '.58rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: '.3rem' }}>
-                Sdílet
-              </div>
-            </div>
+      {/* Logo + popis + QR */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1.25rem' }}>
+        {/* Left: logo */}
+        {tournament?.logo_url && (
+          <div style={{ flexShrink: 0 }}>
+            <img
+              src={tournament.logo_url}
+              alt="logo turnaje"
+              style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 12, background: '#fff', border: '1px solid var(--border)' }}
+            />
           </div>
+        )}
+        {/* Middle: description */}
+        {tournament?.description && (
           <div
             className="card-bordered rich-content"
             style={{ flex: 1, minWidth: 0, padding: 'var(--pad-card)' }}
-            dangerouslySetInnerHTML={{ __html: tournament?.description || '' }}
+            dangerouslySetInnerHTML={{ __html: tournament.description }}
           />
-        </div>
-      )}
-
-      {/* Bez loga/popisu: jen QR */}
-      {!hasContent && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
-          <div style={{ textAlign: 'center' }}>
-            <QRCode size={100} />
-            <div style={{ fontSize: '.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: '.35rem' }}>
-              Sdílet
-            </div>
+        )}
+        {/* Right: QR */}
+        <div style={{ flexShrink: 0, textAlign: 'center', marginLeft: 'auto' }}>
+          <QRCode size={80} />
+          <div style={{ fontSize: '.58rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: '.3rem' }}>
+            Sdílet
           </div>
         </div>
-      )}
+      </div>
 
       {/* Oznámení + média */}
       {announcements.length > 0 && (
@@ -120,9 +111,9 @@ export default function Overview({ tournament, announcements }: Props) {
         </div>
       )}
 
-      {!hasContent && !announcements.length && (
+      {!hasContent && (
         <div className="card-bordered" style={{ padding: 'var(--pad-card)', fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.75 }}>
-          Klikni na ⚽ vlevo nahoře nebo stiskni <strong>Ctrl+Shift+A</strong> pro admin panel.
+          Stiskni <strong>Ctrl+Shift+A</strong> pro otevření admin panelu.
         </div>
       )}
     </div>

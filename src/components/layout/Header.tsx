@@ -23,7 +23,7 @@ const BASE_TABS: [Tab, string][] = [
   ['rules',     'Pravidla'],
 ]
 
-export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, isAdmin, tipsEnabled, showBracket = true }: Props) {
+export default function Header({ tournament, tab, onTab, onKiosk, onScoreboard, tipsEnabled, showBracket = true }: Props) {
   const baseTabs: [Tab, string][] = showBracket ? BASE_TABS : BASE_TABS.filter(([key]) => key !== 'bracket')
   const TABS: [Tab, string][] = tipsEnabled ? [...baseTabs, ['tips', 'Tipy']] : baseTabs
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
@@ -41,31 +41,6 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
         display: 'flex', alignItems: 'center',
         gap: '.9rem', height: 64, padding: '0 2rem',
       }}>
-        {/* Logo */}
-        <button
-          onClick={onAdmin}
-          title={isAdmin ? 'Admin panel (přihlášen)' : 'Admin panel (Ctrl+Shift+A)'}
-          style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: 'var(--accent)',
-            border: 'none', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, cursor: 'pointer', flexShrink: 0,
-            boxShadow: '0 3px 10px rgba(37,99,235,.4)',
-            transition: 'transform .15s, box-shadow .15s',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 5px 16px rgba(37,99,235,.5)'
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.transform = ''
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 3px 10px rgba(37,99,235,.4)'
-          }}
-        >
-          ⚽
-        </button>
-
         {/* Tournament name */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{
