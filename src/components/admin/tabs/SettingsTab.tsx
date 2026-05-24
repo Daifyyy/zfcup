@@ -106,11 +106,14 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
     : totalAdvancing <= 4
       ? `${totalAdvancing} týmů → Semifinále (${totalAdvancing / 2} zápasy) + Finále`
       : totalAdvancing === 6
-        ? '6 týmů → Čtvrtfinále (2, 2 bye) + Semifinále (2) + Finále'
+        ? (playoffStyle === 'cross'
+            ? '6 týmů → Křížový QF (3 zápasy, bez bye) + SF (1) + Finále'
+            : '6 týmů → Čtvrtfinále (2, 2 bye) + Semifinále (2) + Finále')
         : `${totalAdvancing} týmů → Čtvrtfinále (${totalAdvancing / 2} zápasy) + Semifinále (2) + Finále`
 
   const teamsPerGroup = scenario.num_groups > 0 ? Math.round(scenario.num_teams / scenario.num_groups) : 0
   const maxAdvancing = Math.max(1, teamsPerGroup - 1)
+  const playoffStyle = tournament?.playoff_style ?? 'standard'
 
   const changePassword = async () => {
     if (!p1) { showToast('Zadejte nové heslo'); return }
@@ -289,6 +292,35 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 7, padding: '.5rem .7rem', fontSize: '.74rem', color: 'var(--accent)', marginBottom: '.6rem' }}>
             🏆 {playoffLabel}
           </div>
+          {/* Playoff style — zobrazit jen když totalAdvancing === 6 */}
+          {totalAdvancing === 6 && (
+            <div style={{ marginBottom: '.6rem' }}>
+              <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.3rem' }}>Styl playoff (6 postupujících)</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {(['standard', 'cross'] as const).map(style => (
+                  <button
+                    key={style}
+                    type="button"
+                    onClick={async () => {
+                      if (!tournament) return
+                      const { error } = await supabase.from('tournament').update({ playoff_style: style }).eq('id', tournament.id)
+                      if (error) showToast('Chyba: ' + error.message)
+                      else { showToast(style === 'cross' ? 'Křížový playoff ✓' : 'Standard playoff ✓'); refetchTournament() }
+                    }}
+                    style={{
+                      padding: '.3rem .75rem', borderRadius: 7, fontSize: '.78rem', cursor: 'pointer',
+                      border: `2px solid ${playoffStyle === style ? 'var(--accent)' : 'var(--border)'}`,
+                      background: playoffStyle === style ? 'var(--accent-dim)' : '#f8fafc',
+                      color: playoffStyle === style ? 'var(--accent)' : 'var(--muted)',
+                      fontWeight: playoffStyle === style ? 700 : 500,
+                    }}
+                  >
+                    {style === 'standard' ? 'Standard (2 QF + bye)' : 'Křížový (3 QF, bez bye)'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <button type="button" className="btn btn-s" onClick={saveScenario}>💾 Uložit scénář</button>
           <div style={{ fontSize: '.69rem', color: 'var(--muted)', marginTop: '.4rem' }}>
             Uložení nezmění existující skupiny ani pavouk — slouží jen jako reference pro generátor playoff.

@@ -97,6 +97,12 @@ CREATE POLICY "public_read" ON rule_items FOR SELECT USING (true);
 CREATE POLICY "admin_write" ON rule_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- -------------------------------------------------------
+-- TOURNAMENT — playoff styl (standard / cross)
+-- -------------------------------------------------------
+ALTER TABLE tournament
+  ADD COLUMN IF NOT EXISTS playoff_style TEXT DEFAULT 'standard';
+
+-- -------------------------------------------------------
 -- TIEBREAKER — update výchozí hodnoty na existujících skupinách
 -- Spustit pokud chcete sjednotit tiebreaker na score_then_h2h.
 -- POZOR: Změní tiebreaker VŠECH existujících skupin.
