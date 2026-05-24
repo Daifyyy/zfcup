@@ -27,7 +27,7 @@ ALTER TABLE <tabulka> ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public_read" ON <tabulka> FOR SELECT USING (true);
 CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) WITH CHECK (true);
 -- Tabulky: matches, goals, groups, tournament, teams, players,
---           bracket_rounds, bracket_slots, announcements, bracket_goals
+--           bracket_rounds, bracket_slots, announcements, bracket_goals, rule_items
 ```
 
 ## DB Schema — důležité tabulky
@@ -37,7 +37,8 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `bracket_slots`: id, round_id, position, home_id, away_id, home_score, away_score, played, **scheduled_time (TEXT nullable)** — migrační SQL: `ALTER TABLE bracket_slots ADD COLUMN IF NOT EXISTS scheduled_time TEXT;`
 - `bracket_goals`: id, slot_id (FK → bracket_slots), player_id (FK → players), count, UNIQUE(slot_id, player_id)
   - Samostatná tabulka od `goals` — `goals` má FK na `matches`, playoff sloty nejsou v `matches`
-- `announcements`: id, icon (TEXT), title (TEXT), body (TEXT), position (INT), **type TEXT DEFAULT 'text'** (`'text'|'image'|'video'`), **media_url TEXT** — migrační SQL: `ALTER TABLE announcements ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'text'; ALTER TABLE announcements ADD COLUMN IF NOT EXISTS media_url TEXT;`
+- `announcements`: id, icon (TEXT), title (TEXT), body (TEXT, HTML z RichTextEditor), position (INT), **type TEXT DEFAULT 'text'** (`'text'|'image'|'video'`), **media_url TEXT** — migrační SQL: `ALTER TABLE announcements ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'text'; ALTER TABLE announcements ADD COLUMN IF NOT EXISTS media_url TEXT;`
+- `rule_items`: id, title (TEXT DEFAULT ''), body (TEXT DEFAULT '', HTML z RichTextEditor), position (INT) — sekce pravidel soutěže; spravované přes admin záložku Pravidla
 - `tipsters`: id, name (TEXT UNIQUE), pin (CHAR(4)), total_points (INTEGER DEFAULT 0)
 - `tips`: id, tipster_id (FK → tipsters), match_id (FK → matches), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, match_id)
 - `bracket_tips`: id, tipster_id (FK → tipsters), slot_id (FK → bracket_slots), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, slot_id)
@@ -49,8 +50,9 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
   - `tips_lock_from TEXT DEFAULT ''` — datum YYYY-MM-DD pro datový zámek tipování
   - `num_teams INT DEFAULT 0`, `num_groups INT DEFAULT 2`, `advancing_per_group INT DEFAULT 2` — nastavení scénáře
   - `num_pitches INT DEFAULT 2` — **počet hřišť**; určuje kolik zápasů probíhá simultánně; platí pro skupiny i ligu
-  - `rules_content TEXT DEFAULT ''` — text pravidel soutěže; zobrazuje se v záložce Pravidla
+  - `rules_content TEXT DEFAULT ''` — starý jednoblokový text pravidel (nepoužíván, nahrazen `rule_items`)
   - `league_has_playoff BOOLEAN DEFAULT true` — liga s playoff (QF+SF+Finále) nebo bez (vítěz = 1. místo tabulky)
+  - `logo_url TEXT` — URL loga turnaje (Storage bucket `team-logos`, path `tournament-logo.png`); zobrazuje se v Overview vpravo vedle popisu
 
 ### SQL migrace (spustit jednou v Supabase SQL Editor)
 ```sql
@@ -76,6 +78,17 @@ ALTER TABLE announcements
   ADD COLUMN IF NOT EXISTS media_url TEXT;
 ALTER TABLE tournament ADD COLUMN IF NOT EXISTS rules_content TEXT DEFAULT '';
 ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAULT true;
+ALTER TABLE tournament ADD COLUMN IF NOT EXISTS logo_url TEXT;
+
+CREATE TABLE IF NOT EXISTS rule_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0
+);
+ALTER TABLE rule_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_read" ON rule_items FOR SELECT USING (true);
+CREATE POLICY "admin_write" ON rule_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
 ```
 
 ## Pravidla kódování
@@ -107,8 +120,10 @@ ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAU
 - **Tipy — upsert místo insert/update**: `saveAll` používá `supabase.from('tips').upsert({...}, {onConflict: 'tipster_id,match_id'})` — předchází UNIQUE constraint violation.
 - **useBracket exportuje `refetch()`**: useRef pattern — volá se po každém `saveSlot` a `seedTeams` pro okamžitý UI update.
 - **Admin panel backdrop — drag z panelu ven**: `onClick` na backdrops by zavřel panel i při drag (mousedown uvnitř, mouseup venku). Oprava: `mouseDownOnBackdrop = useRef(false)` → `onMouseDown` nastaví flag jen když klik začal přímo na backdrops; `onClick` kontroluje oba podmínky. Viz `AdminPanel.tsx`.
-- **WYSIWYG editor pro `description`**: pole `tournament.description` se ukládá jako HTML string (TipTap výstup). Ve veřejném view (`Info.tsx`, `Overview.tsx`) se renderuje přes `dangerouslySetInnerHTML` s třídou `rich-content`. Komponenta editoru: `src/components/ui/RichTextEditor.tsx` (TipTap + StarterKit, `@tiptap/react` + `@tiptap/starter-kit`). Zpětně kompatibilní — plain text je validní HTML.
+- **WYSIWYG editor (RichTextEditor)**: `src/components/ui/RichTextEditor.tsx` (TipTap + StarterKit). Používá se pro `tournament.description`, `tournament.rules_content` (legacy), `announcements.body`, `rule_items.body`. Výstup je HTML string; ve veřejném view renderovat přes `dangerouslySetInnerHTML` s třídou `rich-content`. Zpětně kompatibilní — plain text je validní HTML.
 - **Oznámení — nadpis je volitelný**: `AnnouncementsTab` nevaliduje povinný nadpis. Příspěvky bez nadpisu zobrazují *(bez nadpisu)* v admin seznamu; ve veřejném view se podmíněně renderuje jen `body` / media.
+- **Čistý start (`resetTournamentData`)**: soft tables (`bracket_goals`, `bracket_slots`, `bracket_rounds`, `bracket_tips`, `special_tips`) — chyby ignorovány; hard tables (`goals`, `tips`, `matches`, `groups`) — chyba zastaví. Po úspěchu volá všechny refetch funkce pro okamžitý UI update.
+- **InfoTab `save`** volá `refetchTournament()` — bez toho se změny projeví až po 120s pollingu.
 
 ## Styl a UX
 - Světlé téma: pozadí `#f8fafc`, karty bílé se shadow, akcent `#2563eb` (modrá)
@@ -121,7 +136,7 @@ ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAU
 
 ## Architektura záložek
 ### Veřejné záložky (BottomNav + Header)
-- `overview` — Dashboard: název turnaje + QR kód + oznámení/média (text, obrázky, YouTube videa); pořadí dle `position`
+- `overview` — Dashboard: popis turnaje (vlevo, `rich-content`) + logo turnaje 140px (vpravo) + QR kód pod logem; oznámení/média níže (text, obrázky, YouTube videa); název turnaje se NEopakuje (je v headeru)
 - `teams` — Týmy + soupisky; hráči seřazeni abecedně; zobrazení: Jméno | RoleBadge (C/B/CB) | ⚽N (jen pokud > 0)
 - `results` — Zápasy skupinových zápasů (řazené abecedně dle skupiny), zvýraznění vítěze; label v navigaci: **"Zápasy"**
 - `standings` — Tabulky skupin; barevné kódování dle `tournament.format`:
@@ -130,16 +145,17 @@ ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAU
 - `scorers` — Střelci (agregováno z goals + bracket_goals)
 - `bracket` — Play-off jako flat list zápasů oddělených koly (ne pavouk), finále zlatě; stacked layout (home/away řádky); **skryta v navigaci i renderu při `format='league' && !league_has_playoff`**
 - `info` — Info o turnaji + oznámení/média (stejný render jako Overview)
-- `rules` — Pravidla soutěže; zobrazuje `tournament.rules_content` s `white-space: pre-wrap`; viditelná vždy
+- `rules` — Pravidla soutěže; zobrazuje `rule_items` jako karty (title + body HTML); komponenta `src/hooks/useRuleItems.ts` + `src/components/public/Rules.tsx`; viditelná vždy
 - `tips` — Tipovačka; viditelná jen pokud `tournament.tips_enabled === true`
 
 ### Admin záložky (AdminPanel slide-in)
-Pořadí: **Info → Informace → Týmy → Skupiny → Střelci → Zápasy → Play-off → Tipovačka → Nastavení**
+Pořadí: **Info → Informace → Pravidla → Týmy → Skupiny → Střelci → Zápasy → Play-off → Tipovačka → Nastavení**
 
 Záložky aktivně používané při turnaji (**Zápasy, Play-off, Tipovačka**) jsou vizuálně zvýrazněny: světle zelené pozadí + tmavě zelený text (`ACTION_TABS` konstanta v AdminPanel.tsx).
 
-- `info` — Metadata turnaje + **pravidla soutěže** (`rules_content` textarea dole ve formuláři)
-- `announcements` — CRUD oznámení/médií; typy: 📢 text / 🖼️ obrázek (URL+preview) / ▶️ video (YouTube URL); řazení tlačítky **↑ ↓** (prohazují `position` v DB); realtime hook zajistí refresh
+- `info` — Metadata turnaje (název, podnázev, datum, místo) + popis (RichTextEditor) + **logo turnaje** (upload PNG do Storage `team-logos/tournament-logo.png`) + legacy `rules_content` (RichTextEditor, nepoužíváno)
+- `announcements` — CRUD oznámení/médií; typy: 📢 text / 🖼️ obrázek (URL+preview) / ▶️ video (YouTube URL); `body` je HTML (RichTextEditor); řazení tlačítky **↑ ↓**; realtime hook zajistí refresh
+- `rules` — CRUD sekcí pravidel (`rule_items`); každá sekce: title (volitelný) + body (RichTextEditor); řazení ↑↓; optimistic UI (stejný vzor jako AnnouncementsTab)
 - `teams` — Týmy + soupisky; **inline editace hráče**: ✎ → input jméno + select role + ✓/✕
 - `groups` — Skupiny + generování zápasů; **časy zápasů jsou ovlivněny `tournament.num_pitches`** — N zápasů sdílí stejný časový slot; v liga módu generuje skupinu "Liga"
 - `scorers` — Read-only přehled střelců
@@ -161,10 +177,11 @@ Klíčový parametr pro správné plánování harmonogramů. Platí pro **oba f
 
 **Skupiny (`GroupsTab.tsx`):**
 ```
-scheduled_time = start + floor(matchIndex / numPitches) * (match_duration + break)
+pitchesPerGroup = max(1, floor(numPitches / numGroups))
+scheduled_time = start + floor(matchIndex / pitchesPerGroup) * (match_duration + break)
 ```
-- N zápasů dostane stejný čas → hrají se simultánně na N hřištích
-- Příklad (num_pitches=2, dur=20, brk=5): zápas 0+1 → 08:00, zápas 2+3 → 08:25, ...
+- `numGroups` = `tournament.num_groups` — hřiště se dělí mezi skupiny; každá skupina dostane `floor(total/groups)` hřišť
+- Příklad (num_pitches=2, num_groups=2, dur=20, brk=5): každá skupina hraje sekvenčně (1 hřiště); slot 0→10:00 (1 z A + 1 z B), slot 1→10:25, …
 
 **Liga (`leagueSchedule.ts` — funkce `generateLeagueSchedule`):**
 - Circle-method vrátí seřazené páry per kolo (DP optimalizace zachována)
@@ -346,12 +363,20 @@ CREATE POLICY "anon_update_tips" ON tips FOR UPDATE TO anon USING (true) WITH CH
 - Props: `tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit`
 - `tournament.num_pitches` předáno do `LeagueMatchesCol` přes `MatchesCol`
 
-## Týmová loga (Supabase Storage)
+## Loga (Supabase Storage)
+
+### Týmová loga
 - Formát: PNG, max 500 KB, doporučeno 200×200px
 - Storage path: `{teamId}.png` (upsert přepíše staré)
 - Cache-bust: URL s `?v={timestamp}`
 - Bucket: "team-logos", Public: true
 - Komponenta `TeamLogo` (`src/components/ui/TeamLogo.tsx`): `logo_url` → `<img alt="">` s onError fallback na barevnou tečku
+
+### Logo turnaje
+- Formát: PNG, max 500 KB, doporučeno 400×400px
+- Storage path: `tournament-logo.png` v bucketu "team-logos" (sdílený bucket, jiná cesta)
+- Upload v admin → Info → sekce "Logo turnaje"; upsert; po uploadu `refetchTournament()`
+- Zobrazení: `Overview.tsx` — 140×140px vpravo vedle popisu, `objectFit: contain`; bez loga se zobrazí jen QR
 
 | Kontext | size |
 |---------|------|

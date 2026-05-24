@@ -76,6 +76,27 @@ DROP POLICY IF EXISTS "admin_write" ON special_tips;
 CREATE POLICY "admin_write" ON special_tips FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- -------------------------------------------------------
+-- TOURNAMENT — logo turnaje
+-- -------------------------------------------------------
+ALTER TABLE tournament
+  ADD COLUMN IF NOT EXISTS logo_url TEXT;
+
+-- -------------------------------------------------------
+-- RULE_ITEMS — tabulka pro položky pravidel
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS rule_items (
+  id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title    TEXT NOT NULL DEFAULT '',
+  body     TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0
+);
+ALTER TABLE rule_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON rule_items;
+DROP POLICY IF EXISTS "admin_write" ON rule_items;
+CREATE POLICY "public_read" ON rule_items FOR SELECT USING (true);
+CREATE POLICY "admin_write" ON rule_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- -------------------------------------------------------
 -- TIEBREAKER — update výchozí hodnoty na existujících skupinách
 -- Spustit pokud chcete sjednotit tiebreaker na score_then_h2h.
 -- POZOR: Změní tiebreaker VŠECH existujících skupin.

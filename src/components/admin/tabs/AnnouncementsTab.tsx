@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Announcement } from '../../../hooks/useAnnouncements'
+import RichTextEditor from '../../ui/RichTextEditor'
 
 const ICONS = [
   // Turnaj / sport
@@ -200,12 +201,9 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
       {form.type !== 'video' && (
         <div className="field-group">
           <label className="field-label">Text (volitelný)</label>
-          <textarea
-            className="field-input"
-            value={form.body}
-            onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-            placeholder="Podrobnější informace…"
-            style={{ resize: 'vertical', minHeight: 64, lineHeight: 1.5 }}
+          <RichTextEditor
+            content={form.body}
+            onChange={html => setForm(f => ({ ...f, body: html }))}
           />
         </div>
       )}
@@ -229,7 +227,7 @@ export default function AnnouncementsTab({ announcements, showToast }: Props) {
                   ? <div className="a-item-main">{a.title}</div>
                   : <div className="a-item-main" style={{ color: 'var(--muted)', fontStyle: 'italic' }}>(bez nadpisu)</div>
                 }
-                {a.body && <div className="a-item-sub">{a.body}</div>}
+                {a.body && <div className="a-item-sub">{a.body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120)}</div>}
                 {a.media_url && <div className="a-item-sub" style={{ fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{a.media_url}</div>}
               </div>
               <button type="button" className="btn btn-s btn-sm" onClick={() => moveUp(i)} style={{ opacity: i === 0 ? 0.3 : 1 }}>↑</button>

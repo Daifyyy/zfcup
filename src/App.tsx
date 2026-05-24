@@ -9,6 +9,7 @@ import { useGoals } from './hooks/useGoals'
 import { useBracket } from './hooks/useBracket'
 import { useBracketGoals } from './hooks/useBracketGoals'
 import { useAnnouncements } from './hooks/useAnnouncements'
+import { useRuleItems } from './hooks/useRuleItems'
 import { useReferees } from './hooks/useReferees'
 import Header from './components/layout/Header'
 import BottomNav from './components/layout/BottomNav'
@@ -49,6 +50,7 @@ export default function App() {
   const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket()
   const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals()
   const { announcements } = useAnnouncements()
+  const { ruleItems } = useRuleItems()
   const { referees, refetch: refetchReferees } = useReferees()
 
   // ── Auth ──────────────────────────────────────────────
@@ -108,7 +110,7 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToastShow(false), 2600)
   }, [])
 
-  const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, showToast }
+  const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, ruleItems, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
 
   if (!tournament) {
@@ -172,7 +174,7 @@ export default function App() {
         {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} players={players} teams={teams} />}
         {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
-        {tab === 'rules'     && <Rules tournament={tournament} />}
+        {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
         {tab === 'tips'      && <Tips matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
       </main>
       {scoreboard && (

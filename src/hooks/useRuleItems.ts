@@ -1,42 +1,29 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable } from '../lib/realtimeManager'
 
-export interface Tournament {
+export interface RuleItem {
   id: string
-  name: string
-  subtitle: string
-  date: string
-  venue: string
-  description: string
-  tips_enabled: boolean
-  format: 'groups' | 'league'
-  match_duration: number
-  halves: number
-  playoff_kickoff: string
-  round_break: number
-  tips_lock_from: string
-  num_teams: number
-  num_groups: number
-  advancing_per_group: number
-  num_pitches: number
-  rules_content: string
-  league_has_playoff: boolean
-  logo_url: string | null
+  title: string
+  body: string
+  position: number
 }
 
-export function useTournament() {
-  const [tournament, setTournament] = useState<Tournament | null>(null)
+export function useRuleItems() {
+  const [ruleItems, setRuleItems] = useState<RuleItem[]>([])
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('tournament').select('*').single()
-      setTournament(data)
+      const { data } = await supabase.from('rule_items').select('*').order('position')
+      setRuleItems(data ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch
     fetch()
+
+    const unsub = subscribeTable('rule_items', () => fetchRef.current())
 
     let poll: ReturnType<typeof setInterval> | null = null
     const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
@@ -47,10 +34,12 @@ export function useTournament() {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      unsub()
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 
-  return { tournament, loading, refetch: () => fetchRef.current() }
+  const refetch = () => fetchRef.current()
+  return { ruleItems, loading, refetch }
 }

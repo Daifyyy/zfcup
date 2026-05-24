@@ -27,7 +27,7 @@ function AnnouncementCard({ a }: { a: Announcement }) {
         {(a.title || a.body) && (
           <div style={{ marginTop: '.6rem' }}>
             {a.title && <div style={{ fontWeight: 700, fontSize: 'calc(var(--fs-body) + .05rem)' }}>{a.title}</div>}
-            {a.body && <div style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7, marginTop: '.2rem' }}>{a.body}</div>}
+            {a.body && <div className="rich-content" style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7, marginTop: '.2rem' }} dangerouslySetInnerHTML={{ __html: a.body }} />}
           </div>
         )}
       </div>
@@ -64,44 +64,53 @@ function AnnouncementCard({ a }: { a: Announcement }) {
       <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{a.icon}</span>
       <div>
         <div style={{ fontWeight: 700, fontSize: 'calc(var(--fs-body) + .05rem)', marginBottom: '.3rem' }}>{a.title}</div>
-        {a.body && <div style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7 }}>{a.body}</div>}
+        {a.body && <div className="rich-content" style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: a.body }} />}
       </div>
     </div>
   )
 }
 
 export default function Overview({ tournament, announcements }: Props) {
-  const tmeta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
+  const hasContent = !!(tournament?.description || tournament?.logo_url)
 
   return (
     <div>
-      {/* Hero: název + datum/místo + QR */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1.5rem', marginBottom: '2rem' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 className="sec-title" style={{ marginBottom: '.5rem' }}>
-            {tournament?.name || 'Turnaj'}
-          </h2>
-          {tmeta && (
-            <div style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', letterSpacing: '.04em', lineHeight: 1.6 }}>
-              {tmeta}
+      {/* Logo + popis */}
+      {hasContent && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1.25rem' }}>
+          <div
+            className="card-bordered rich-content"
+            style={{ flex: 1, minWidth: 0, padding: 'var(--pad-card)' }}
+            dangerouslySetInnerHTML={{ __html: tournament?.description || '' }}
+          />
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.75rem' }}>
+            {tournament?.logo_url && (
+              <img
+                src={tournament.logo_url}
+                alt="logo turnaje"
+                style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 12, background: '#fff', border: '1px solid var(--border)' }}
+              />
+            )}
+            <div style={{ textAlign: 'center' }}>
+              <QRCode size={80} />
+              <div style={{ fontSize: '.58rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: '.3rem' }}>
+                Sdílet
+              </div>
             </div>
-          )}
-        </div>
-        <div style={{ flexShrink: 0, textAlign: 'center' }}>
-          <QRCode size={100} />
-          <div style={{ fontSize: '.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: '.35rem' }}>
-            Sdílet
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Popis turnaje */}
-      {tournament?.description && (
-        <div
-          className="card-bordered rich-content"
-          style={{ padding: 'var(--pad-card)', marginBottom: '1rem' }}
-          dangerouslySetInnerHTML={{ __html: tournament.description }}
-        />
+      {/* Bez loga/popisu: jen QR */}
+      {!hasContent && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
+          <div style={{ textAlign: 'center' }}>
+            <QRCode size={100} />
+            <div style={{ fontSize: '.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: '.35rem' }}>
+              Sdílet
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Oznámení + média */}
@@ -111,7 +120,7 @@ export default function Overview({ tournament, announcements }: Props) {
         </div>
       )}
 
-      {!tournament?.description && !announcements.length && (
+      {!hasContent && !announcements.length && (
         <div className="card-bordered" style={{ padding: 'var(--pad-card)', fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.75 }}>
           Klikni na ⚽ vlevo nahoře nebo stiskni <strong>Ctrl+Shift+A</strong> pro admin panel.
         </div>

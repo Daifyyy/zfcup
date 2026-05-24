@@ -5,10 +5,15 @@ import type { Tournament } from '../../../hooks/useTournament'
 interface Props {
   tournament: Tournament | null
   refetchTournament: () => void
+  refetchGroups: () => void
+  refetchMatches: () => void
+  refetchGoals: () => void
+  refetchBracket: () => void
+  refetchBracketGoals: () => void
   showToast: (msg: string) => void
 }
 
-export default function SettingsTab({ tournament, refetchTournament, showToast }: Props) {
+export default function SettingsTab({ tournament, refetchTournament, refetchGroups, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals, showToast }: Props) {
   const [p1, setP1] = useState('')
   const [p2, setP2] = useState('')
   const [loading, setLoading] = useState(false)
@@ -124,19 +129,19 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
     if (!confirm('Opravdu? Tato akce je nevratná.')) return
 
     const NULL_ID = '00000000-0000-0000-0000-000000000000'
-    // Delete in dependency order: goals/tips first, then matches/slots, then rounds/groups
-    const tables = [
-      'bracket_goals', 'goals',
-      'tips', 'bracket_tips', 'special_tips',
-      'bracket_slots', 'bracket_rounds',
-      'matches', 'groups',
-    ]
-    for (const table of tables) {
+    // Soft tables: ignore errors (may not exist or have missing RLS)
+    const softTables = ['bracket_goals', 'bracket_slots', 'bracket_rounds', 'bracket_tips', 'special_tips']
+    // Hard tables: must succeed
+    const hardTables = ['goals', 'tips', 'matches', 'groups']
+    for (const table of softTables) {
+      await supabase.from(table).delete().neq('id', NULL_ID)
+    }
+    for (const table of hardTables) {
       const { error } = await supabase.from(table).delete().neq('id', NULL_ID)
       if (error) { showToast('Chyba (' + table + '): ' + error.message); return }
     }
-    // Reset tipster points (keep accounts)
     await supabase.from('tipsters').update({ total_points: 0 }).neq('id', NULL_ID)
+    refetchGroups(); refetchMatches(); refetchGoals(); refetchBracket(); refetchBracketGoals()
     showToast('Zápasy, skupiny, góly a tipy smazány ✓')
   }
 
@@ -160,6 +165,7 @@ export default function SettingsTab({ tournament, refetchTournament, showToast }
     await supabase.from('tipsters').update({ total_points: 0 }).neq('id', NULL_ID)
     await supabase.from('tournament').update({ name: '', subtitle: '', date: '', venue: '', description: '' })
       .neq('id', NULL_ID)
+    refetchGroups(); refetchMatches(); refetchGoals(); refetchBracket(); refetchBracketGoals(); refetchTournament()
     showToast('Vše smazáno')
   }
 

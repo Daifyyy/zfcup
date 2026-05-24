@@ -154,7 +154,9 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
     const dur = parseInt(form.match_duration) || 20
     const brk = parseInt(form.break_between) || 5
     const numPitches = tournament?.num_pitches ?? 2
-    const numSlots = Math.ceil(total / numPitches)
+    const numGroups = tournament?.num_groups ?? 1
+    const pitchesPerGroup = Math.max(1, Math.floor(numPitches / numGroups))
+    const numSlots = Math.ceil(total / pitchesPerGroup)
     const end = addMinutes(form.start_time, numSlots * (dur + brk) - brk)
     return `${total} zápasů · ${form.start_time}–${end}`
   }
@@ -179,6 +181,8 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
     const dur = parseInt(form.match_duration) || 20
     const brk = parseInt(form.break_between) || 5
     const numPitches = tournament?.num_pitches ?? 2
+    const numGroups = tournament?.num_groups ?? 1
+    const pitchesPerGroup = Math.max(1, Math.floor(numPitches / numGroups))
     const matchRows = pairs.map((p, i) => ({
       group_id: grp.id,
       round: form.name.trim(),
@@ -187,7 +191,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
       home_score: 0,
       away_score: 0,
       played: false,
-      scheduled_time: form.start_time ? addMinutes(form.start_time, Math.floor(i / numPitches) * (dur + brk)) : '',
+      scheduled_time: form.start_time ? addMinutes(form.start_time, Math.floor(i / pitchesPerGroup) * (dur + brk)) : '',
     }))
 
     const { error: mErr } = await supabase.from('matches').insert(matchRows)

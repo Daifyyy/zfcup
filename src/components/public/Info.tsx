@@ -27,7 +27,7 @@ function AnnouncementCard({ a }: { a: Announcement }) {
         {(a.title || a.body) && (
           <div style={{ marginTop: '.6rem' }}>
             {a.title && <div style={{ fontWeight: 700, fontSize: 'calc(var(--fs-body) + .05rem)' }}>{a.title}</div>}
-            {a.body && <div style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7, marginTop: '.2rem' }}>{a.body}</div>}
+            {a.body && <div className="rich-content" style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7, marginTop: '.2rem' }} dangerouslySetInnerHTML={{ __html: a.body }} />}
           </div>
         )}
       </div>
@@ -63,7 +63,7 @@ function AnnouncementCard({ a }: { a: Announcement }) {
       <span style={{ fontSize: '1.6rem', lineHeight: 1, flexShrink: 0 }}>{a.icon}</span>
       <div>
         <div style={{ fontWeight: 700, fontSize: 'calc(var(--fs-body) + .05rem)', marginBottom: '.3rem' }}>{a.title}</div>
-        {a.body && <div style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7 }}>{a.body}</div>}
+        {a.body && <div className="rich-content" style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7 }} dangerouslySetInnerHTML={{ __html: a.body }} />}
       </div>
     </div>
   )
