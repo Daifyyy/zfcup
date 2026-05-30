@@ -15,13 +15,14 @@ interface Props {
   onTab: (t: Tab) => void
   tipsEnabled?: boolean
   showBracket?: boolean
+  cardsEnabled?: boolean
 }
 
-export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true }: Props) {
+export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true, cardsEnabled }: Props) {
   const baseTabs = showBracket ? BASE_TABS : BASE_TABS.filter(t => t.key !== 'bracket')
-  const TABS = tipsEnabled
-    ? [...baseTabs, { key: 'tips' as Tab, icon: '🎯', label: 'Tipy' }]
-    : baseTabs
+  let TABS = [...baseTabs]
+  if (cardsEnabled) TABS = [...TABS, { key: 'discipline' as Tab, icon: '🟡', label: 'Disciplína' }]
+  if (tipsEnabled) TABS = [...TABS, { key: 'tips' as Tab, icon: '🎯', label: 'Tipy' }]
 
   return (
     <nav

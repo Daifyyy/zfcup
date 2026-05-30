@@ -6,6 +6,7 @@ import { useBracketTips } from '../../hooks/useBracketTips'
 import { useSpecialTips } from '../../hooks/useSpecialTips'
 import type { Match } from '../../hooks/useMatches'
 import type { Team } from '../../hooks/useTeams'
+import type { Player } from '../../hooks/usePlayers'
 import type { Group } from '../../hooks/useGroups'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Tournament } from '../../hooks/useTournament'
@@ -16,6 +17,7 @@ const STORAGE_KEY = 'zfcup_tipster_id'
 interface Props {
   matches: Match[]
   teams: Team[]
+  players: Player[]
   groups: Group[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
@@ -172,9 +174,10 @@ function Leaderboard({ tipsters, myId }: { tipsters: ReturnType<typeof useTipste
 
 // ── Special tips ───────────────────────────────────────────────────────────────
 
-function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPlayed, anyPlayoffPlayed, showToast, isLeague }: {
+function SpecialTipsSection({ groups, teams, players, tipsterId, specialTips, anyMatchPlayed, anyPlayoffPlayed, showToast, isLeague }: {
   groups: Group[]
   teams: Team[]
+  players: Player[]
   tipsterId: string
   specialTips: ReturnType<typeof useSpecialTips>['specialTips']
   anyMatchPlayed: boolean
@@ -182,26 +185,45 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
   showToast: (m: string) => void
   isLeague: boolean
 }) {
-  // selected = what user sees in dropdowns
-  // savedSelections = what's confirmed saved (updated immediately after save, not waiting for realtime)
+  // selected = what user sees in dropdowns (team-based tips)
   const [selected, setSelected] = useState<Record<string, string>>({})
   const [savedSelections, setSavedSelections] = useState<Record<string, string>>({})
+  // selectedPlayer = player-based tips (top_scorer)
+  const [selectedPlayer, setSelectedPlayer] = useState<Record<string, string>>({})
+  const [savedPlayerSelections, setSavedPlayerSelections] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
 
-  // On DB load: sync state; when specialTips empties (after reset) clear stale entries
   useEffect(() => {
     setSelected(prev => {
       const next: Record<string, string> = {}
       for (const tip of specialTips) {
-        next[tip.tip_type] = prev[tip.tip_type] ?? tip.predicted_team_id
+        if (tip.predicted_team_id) next[tip.tip_type] = prev[tip.tip_type] ?? tip.predicted_team_id
       }
       return next
     })
-    setSavedSelections(Object.fromEntries(specialTips.map(t => [t.tip_type, t.predicted_team_id])))
+    setSavedSelections(Object.fromEntries(
+      specialTips.filter(t => t.predicted_team_id).map(t => [t.tip_type, t.predicted_team_id!])
+    ))
+    setSelectedPlayer(prev => {
+      const next: Record<string, string> = {}
+      for (const tip of specialTips) {
+        if (tip.predicted_player_id) next[tip.tip_type] = prev[tip.tip_type] ?? tip.predicted_player_id
+      }
+      return next
+    })
+    setSavedPlayerSelections(Object.fromEntries(
+      specialTips.filter(t => t.predicted_player_id).map(t => [t.tip_type, t.predicted_player_id!])
+    ))
   }, [specialTips])
 
-  const handleChange = (tipType: string, teamId: string) => {
-    setSelected(prev => ({ ...prev, [tipType]: teamId }))
+  const recalcPoints = async () => {
+    const [{ data: t1 }, { data: t2 }, { data: t3 }] = await Promise.all([
+      supabase.from('tips').select('points_earned').eq('tipster_id', tipsterId!),
+      supabase.from('bracket_tips').select('points_earned').eq('tipster_id', tipsterId!),
+      supabase.from('special_tips').select('points_earned').eq('tipster_id', tipsterId!),
+    ])
+    const total = [...(t1 ?? []), ...(t2 ?? []), ...(t3 ?? [])].reduce((s, r) => s + (r.points_earned ?? 0), 0)
+    await supabase.from('tipsters').update({ total_points: total }).eq('id', tipsterId!)
   }
 
   const saveSpecialTip = async (tipType: string) => {
@@ -211,11 +233,8 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
     const existing = specialTips.find(t => t.tip_type === tipType)
     let saveError: { message: string } | null = null
     if (existing) {
-      // Reset evaluated/points_earned — tip se mění, dosavadní vyhodnocení je neplatné
       const { error } = await supabase.from('special_tips').update({
-        predicted_team_id: teamId,
-        evaluated: false,
-        points_earned: 0,
+        predicted_team_id: teamId, evaluated: false, points_earned: 0,
       }).eq('id', existing.id)
       saveError = error
     } else {
@@ -224,24 +243,33 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
       })
       saveError = error
     }
-    if (saveError) {
-      showToast('Chyba uložení: ' + saveError.message)
-      setSaving(prev => ({ ...prev, [tipType]: false }))
-      return
-    }
-    // Vždy přepočítej total_points — opraví zastaralou hodnotu v tipsters
-    // (ať byl tip uložen poprvé nebo změněn po dřívějším vyhodnocení).
-    // Fetch special_tips proběhne PO insert/update → vrátí aktuální points_earned: 0.
-    const [{ data: t1 }, { data: t2 }, { data: t3 }] = await Promise.all([
-      supabase.from('tips').select('points_earned').eq('tipster_id', tipsterId!),
-      supabase.from('bracket_tips').select('points_earned').eq('tipster_id', tipsterId!),
-      supabase.from('special_tips').select('points_earned').eq('tipster_id', tipsterId!),
-    ])
-    const recalcTotal = [...(t1 ?? []), ...(t2 ?? []), ...(t3 ?? [])]
-      .reduce((s, r) => s + (r.points_earned ?? 0), 0)
-    await supabase.from('tipsters').update({ total_points: recalcTotal }).eq('id', tipsterId!)
-    // Mark as saved immediately — don't wait for realtime to clear the save button
+    if (saveError) { showToast('Chyba uložení: ' + saveError.message); setSaving(prev => ({ ...prev, [tipType]: false })); return }
+    await recalcPoints()
     setSavedSelections(prev => ({ ...prev, [tipType]: teamId }))
+    setSaving(prev => ({ ...prev, [tipType]: false }))
+    showToast('Tip uložen ✓')
+  }
+
+  const saveSpecialTipPlayer = async (tipType: string) => {
+    const playerId = selectedPlayer[tipType]
+    if (!playerId) return
+    setSaving(prev => ({ ...prev, [tipType]: true }))
+    const existing = specialTips.find(t => t.tip_type === tipType)
+    let saveError: { message: string } | null = null
+    if (existing) {
+      const { error } = await supabase.from('special_tips').update({
+        predicted_player_id: playerId, evaluated: false, points_earned: 0,
+      }).eq('id', existing.id)
+      saveError = error
+    } else {
+      const { error } = await supabase.from('special_tips').insert({
+        tipster_id: tipsterId, tip_type: tipType, predicted_player_id: playerId, points_earned: 0, evaluated: false,
+      })
+      saveError = error
+    }
+    if (saveError) { showToast('Chyba uložení: ' + saveError.message); setSaving(prev => ({ ...prev, [tipType]: false })); return }
+    await recalcPoints()
+    setSavedPlayerSelections(prev => ({ ...prev, [tipType]: playerId }))
     setSaving(prev => ({ ...prev, [tipType]: false }))
     showToast('Tip uložen ✓')
   }
@@ -255,8 +283,8 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
     const savedVal = savedSelections[tipType] ?? ''
     const changed = currentVal !== savedVal && currentVal !== ''
     const borderStyle = isLast ? 'none' : '1px solid var(--border)'
-    // tournament_winner locks when first playoff match played; group tips lock when first group match played
-    const isLocked = tipType === 'tournament_winner' ? anyPlayoffPlayed : anyMatchPlayed
+    // tournament_winner and most_goals_team lock when first playoff match played; group tips lock when first group match played
+    const isLocked = (tipType === 'tournament_winner' || tipType === 'most_goals_team') ? anyPlayoffPlayed : anyMatchPlayed
 
     if (isEvaluated) {
       return (
@@ -310,7 +338,7 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
             className="field-input field-select"
             style={{ width: 'auto', minWidth: 120, fontSize: '.78rem', padding: '.3rem .5rem' }}
             value={currentVal}
-            onChange={e => handleChange(tipType, e.target.value)}
+            onChange={e => setSelected(prev => ({ ...prev, [tipType]: e.target.value }))}
           >
             <option value="">— vyber tým —</option>
             {teamPool.map(t => (
@@ -329,8 +357,84 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
     )
   }
 
+  const renderPlayerRow = (tipType: string, label: string, playerPool: Player[], points: number, isLast: boolean) => {
+    const existing = specialTips.find(t => t.tip_type === tipType)
+    const isEvaluated = existing?.evaluated
+    const currentVal = selectedPlayer[tipType] ?? ''
+    const savedVal = savedPlayerSelections[tipType] ?? ''
+    const changed = currentVal !== savedVal && currentVal !== ''
+    const borderStyle = isLast ? 'none' : '1px solid var(--border)'
+    const isLocked = anyPlayoffPlayed
+
+    if (isEvaluated) {
+      const pl = playerPool.find(p => p.id === existing.predicted_player_id)
+      return (
+        <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: borderStyle }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
+            <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{points} b. za správný tip</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+            <span style={{ fontSize: '.78rem', color: 'var(--text)' }}>{pl?.name ?? '—'}</span>
+            <span style={{ fontSize: '.65rem', fontWeight: 700, padding: '1px 7px', borderRadius: 20, background: existing.points_earned > 0 ? 'rgba(22,163,74,.12)' : 'rgba(0,0,0,.06)', color: existing.points_earned > 0 ? 'var(--success)' : 'var(--muted)' }}>
+              {existing.points_earned > 0 ? `+${existing.points_earned} b.` : '0 b.'}
+            </span>
+          </div>
+        </div>
+      )
+    }
+    if (isLocked) {
+      const pl = playerPool.find(p => p.id === savedVal)
+      return (
+        <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: borderStyle, opacity: .75 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
+            <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{points} b. za správný tip</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+            <span style={{ fontSize: '.78rem', color: savedVal ? 'var(--text)' : 'var(--muted)', fontStyle: savedVal ? 'normal' : 'italic' }}>
+              {savedVal ? (pl?.name ?? '—') : 'nezadáno'}
+            </span>
+            <span style={{ fontSize: '.7rem' }}>🔒</span>
+          </div>
+        </div>
+      )
+    }
+    const sortedPlayers = [...playerPool].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+    return (
+      <div key={tipType} style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.55rem .9rem', borderBottom: borderStyle }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
+          <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{points} b. za správný tip</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
+          <select
+            className="field-input field-select"
+            style={{ width: 'auto', minWidth: 140, fontSize: '.78rem', padding: '.3rem .5rem' }}
+            value={currentVal}
+            onChange={e => setSelectedPlayer(prev => ({ ...prev, [tipType]: e.target.value }))}
+          >
+            <option value="">— vyber hráče —</option>
+            {sortedPlayers.map(p => {
+              const t = teams.find(tm => tm.id === p.team_id)
+              return <option key={p.id} value={p.id}>{p.name}{t ? ` (${t.name})` : ''}</option>
+            })}
+          </select>
+          {changed && (
+            <button type="button" className="btn btn-s btn-sm"
+              onClick={() => saveSpecialTipPlayer(tipType)}
+              style={{ opacity: saving[tipType] ? .6 : 1, whiteSpace: 'nowrap' }}>
+              {saving[tipType] ? '…' : 'Uložit'}
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   const rows: { tipType: string; label: string; teamPool: Team[]; points: number }[] = [
     { tipType: 'tournament_winner', label: '🏆 Vítěz turnaje (vč. playoff)', teamPool: teams, points: 10 },
+    { tipType: 'most_goals_team', label: '⚽ Tým s nejvíce góly', teamPool: teams, points: 5 },
     ...sortedGroups.flatMap(g => {
       const groupTeams = teams.filter(t => g.team_ids.includes(t.id))
       const ligaGroup = isLeague && g.name === 'Liga'
@@ -340,13 +444,14 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
       ]
     }),
   ]
+  const allItems = rows.length + 1 // +1 for top_scorer player row
 
   return (
     <div style={{ marginBottom: '1.8rem' }}>
       <div style={groupHeader}>Speciální tipy</div>
       {anyMatchPlayed && !anyPlayoffPlayed && (
         <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.5rem', padding: '.3rem .8rem', background: 'rgba(0,0,0,.03)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-          🔒 Skupinové tipy jsou uzamčeny. Tip na vítěze turnaje lze stále změnit (zamkne se po nasazení týmů do play-off).
+          🔒 Skupinové tipy jsou uzamčeny. Tipy na vítěze turnaje, nejlepšího střelce a nejgólnatější tým lze stále změnit.
         </div>
       )}
       {anyPlayoffPlayed && (
@@ -355,11 +460,12 @@ function SpecialTipsSection({ groups, teams, tipsterId, specialTips, anyMatchPla
         </div>
       )}
       <div className="card" style={{ overflow: 'hidden', marginBottom: '.3rem' }}>
-        {rows.map((r, i) => renderRow(r.tipType, r.label, r.teamPool, r.points, i === rows.length - 1))}
+        {rows.map((r, i) => renderRow(r.tipType, r.label, r.teamPool, r.points, i === rows.length - 1 && allItems === rows.length))}
+        {renderPlayerRow('top_scorer', '🏅 Nejlepší střelec', players, 10, true)}
       </div>
       {!anyMatchPlayed && (
         <div style={{ fontSize: '.67rem', color: 'var(--muted)', padding: '0 .2rem' }}>
-          Skupinové tipy se uzamknou po prvním zápase. Vítěz turnaje se zamkne po nasazení týmů do play-off.
+          Skupinové tipy se uzamknou po prvním zápase. Vítěz, nejlepší střelec a nejgólnatější tým se zamknou po nasazení týmů do play-off.
         </div>
       )}
     </div>
@@ -781,7 +887,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function Tips({ matches, teams, groups, bracketRounds, bracketSlots, tournament, showToast }: Props) {
+export default function Tips({ matches, teams, players, groups, bracketRounds, bracketSlots, tournament, showToast }: Props) {
   const [tipsterId, setTipsterId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY))
   const [view, setView] = useState<'tips' | 'leaderboard'>('tips')
   const { tipsters } = useTipsters()
@@ -847,7 +953,7 @@ export default function Tips({ matches, teams, groups, bracketRounds, bracketSlo
       {view === 'tips' && (
         <>
           <SpecialTipsSection
-            groups={groups} teams={teams} tipsterId={tipsterId}
+            groups={groups} teams={teams} players={players} tipsterId={tipsterId}
             specialTips={specialTips} showToast={showToast}
             anyMatchPlayed={groupMatches.some(m => m.played)}
             anyPlayoffPlayed={

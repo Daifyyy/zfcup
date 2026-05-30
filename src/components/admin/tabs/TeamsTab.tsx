@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import { TEAM_COLORS } from '../../../lib/constants'
+import ImportTeamsModal from '../ImportTeamsModal'
 
 interface Props {
   teams: Team[]
@@ -98,6 +99,7 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState('')
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const roster = players.filter(p => p.team_id === team.id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
 
   const addPlayer = async () => {
@@ -132,6 +134,30 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
     refetchPlayers()
   }
 
+  const uploadAvatar = async (playerId: string, file: File) => {
+    if (uploadingAvatar) return
+    setUploadingAvatar(true)
+    try {
+      const path = `players/${playerId}.png`
+      const { error: upErr } = await supabase.storage.from('team-logos').upload(path, file, { upsert: true, contentType: file.type })
+      if (upErr) { showToast('Chyba uploadu: ' + upErr.message); return }
+      const { data: { publicUrl } } = supabase.storage.from('team-logos').getPublicUrl(path)
+      const url = `${publicUrl}?v=${Date.now()}`
+      const { error: dbErr } = await supabase.from('players').update({ avatar_url: url }).eq('id', playerId)
+      if (dbErr) { showToast('Chyba uložení: ' + dbErr.message); return }
+      showToast('Foto uloženo ✓')
+      refetchPlayers()
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const removeAvatar = async (playerId: string) => {
+    const { error } = await supabase.from('players').update({ avatar_url: null }).eq('id', playerId)
+    if (error) showToast('Chyba: ' + error.message)
+    else { showToast('Foto odstraněno ✓'); refetchPlayers() }
+  }
+
   const removePlayer = async (id: string) => {
     if (!confirm('Smazat hráče?')) return
     const { error } = await supabase.from('players').delete().eq('id', id)
@@ -151,28 +177,45 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
             return (
               <div key={p.id} className="a-item" style={{ padding: '.4rem .7rem', flexDirection: 'column', alignItems: 'stretch', gap: '.35rem' }}>
                 {isEditing ? (
-                  <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }}>
-                    <input
-                      className="field-input"
-                      value={editName}
-                      onChange={e => setEditName(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null) }}
-                      style={{ flex: 1, fontSize: '.8rem', padding: '.25rem .45rem' }}
-                      autoFocus
-                    />
-                    <select
-                      className="field-input field-select"
-                      value={editRole}
-                      onChange={e => setEditRole(e.target.value)}
-                      style={{ width: 130, flexShrink: 0, fontSize: '.78rem', padding: '.25rem .4rem' }}
-                    >
-                      <option value="">Žádná role</option>
-                      <option value="captain">Kapitán (C)</option>
-                      <option value="goalkeeper">Brankář (B)</option>
-                      <option value="both">Kapitán + Brankář</option>
-                    </select>
-                    <button type="button" className="btn btn-p btn-sm" onClick={saveEdit}>✓</button>
-                    <button type="button" className="btn btn-d btn-sm" onClick={() => setEditingId(null)}>✕</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem' }}>
+                    <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }}>
+                      <input
+                        className="field-input"
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditingId(null) }}
+                        style={{ flex: 1, fontSize: '.8rem', padding: '.25rem .45rem' }}
+                        autoFocus
+                      />
+                      <select
+                        className="field-input field-select"
+                        value={editRole}
+                        onChange={e => setEditRole(e.target.value)}
+                        style={{ width: 130, flexShrink: 0, fontSize: '.78rem', padding: '.25rem .4rem' }}
+                      >
+                        <option value="">Žádná role</option>
+                        <option value="captain">Kapitán (C)</option>
+                        <option value="goalkeeper">Brankář (B)</option>
+                        <option value="both">Kapitán + Brankář</option>
+                      </select>
+                      <button type="button" className="btn btn-p btn-sm" onClick={saveEdit}>✓</button>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => setEditingId(null)}>✕</button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                      {p.avatar_url
+                        ? <img src={p.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
+                        : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', color: 'var(--muted)' }}>📷</div>
+                      }
+                      <label style={{ cursor: 'pointer', fontSize: '.75rem', color: 'var(--accent)', fontWeight: 600, opacity: uploadingAvatar ? 0.5 : 1 }}>
+                        {uploadingAvatar ? 'Nahrávám…' : '📷 Nahrát foto'}
+                        <input type="file" accept="image/*" style={{ display: 'none' }}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(p.id, f) }} />
+                      </label>
+                      {p.avatar_url && (
+                        <button type="button" style={{ fontSize: '.72rem', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          onClick={() => removeAvatar(p.id)}>Smazat foto</button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
@@ -216,6 +259,7 @@ export default function TeamsTab({ teams, players, refetchTeams, refetchPlayers,
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
+  const [showImport, setShowImport] = useState(false)
 
   const addTeam = async () => {
     if (!name.trim()) { showToast('Zadej název'); return }
@@ -267,7 +311,17 @@ export default function TeamsTab({ teams, players, refetchTeams, refetchPlayers,
       <button type="button" className="btn btn-p" onClick={addTeam}>+ Přidat tým</button>
 
       <hr className="divider" />
-      <div className="sub-title">Týmy ({teams.length})</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.5rem' }}>
+        <div className="sub-title" style={{ margin: 0 }}>Týmy ({teams.length})</div>
+        <button type="button" className="btn btn-s btn-sm" onClick={() => setShowImport(true)}>📥 Import CSV/Excel</button>
+      </div>
+      <ImportTeamsModal
+        open={showImport}
+        existingTeams={teams}
+        onClose={() => setShowImport(false)}
+        onImported={() => { refetchTeams(); refetchPlayers() }}
+        showToast={showToast}
+      />
       {!teams.length ? (
         <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Žádné týmy.</p>
       ) : (

@@ -8,9 +8,11 @@ interface Props {
   onAdmin: () => void
   onKiosk: () => void
   onScoreboard: () => void
+  onPrint?: () => void
   isAdmin: boolean
   tipsEnabled?: boolean
   showBracket?: boolean
+  cardsEnabled?: boolean
 }
 
 const BASE_TABS: [Tab, string][] = [
@@ -23,9 +25,11 @@ const BASE_TABS: [Tab, string][] = [
   ['rules',     'Pravidla'],
 ]
 
-export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, isAdmin, tipsEnabled, showBracket = true }: Props) {
+export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, isAdmin, tipsEnabled, showBracket = true, cardsEnabled }: Props) {
   const baseTabs: [Tab, string][] = showBracket ? BASE_TABS : BASE_TABS.filter(([key]) => key !== 'bracket')
-  const TABS: [Tab, string][] = tipsEnabled ? [...baseTabs, ['tips', 'Tipy']] : baseTabs
+  let TABS: [Tab, string][] = [...baseTabs]
+  if (cardsEnabled) TABS = [...TABS, ['discipline', 'Disciplína']]
+  if (tipsEnabled) TABS = [...TABS, ['tips', 'Tipy']]
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
 
   return (
@@ -108,6 +112,39 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
           <span style={{ fontSize: '1rem', lineHeight: 1 }}>📋</span>
           <span className="hide-mobile">Tabule</span>
         </button>
+
+        {/* Print bulletin button — desktop only */}
+        {onPrint && (
+          <button
+            className="desktop-only"
+            onClick={onPrint}
+            title="Tisknutelný bulletin — program turnaje pro tisk"
+            style={{
+              background: 'none', border: '1.5px solid var(--border)',
+              borderRadius: 9, color: 'var(--muted)',
+              fontSize: '.72rem', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '.07em',
+              padding: '.35rem .85rem', cursor: 'pointer',
+              transition: 'all .15s', flexShrink: 0,
+              display: 'flex', alignItems: 'center', gap: '.35rem',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.borderColor = 'var(--accent)'
+              el.style.color = 'var(--accent)'
+              el.style.background = 'var(--accent-dim)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.borderColor = 'var(--border)'
+              el.style.color = 'var(--muted)'
+              el.style.background = 'none'
+            }}
+          >
+            <span style={{ fontSize: '1rem', lineHeight: 1 }}>🖨️</span>
+            <span className="hide-mobile">Bulletin</span>
+          </button>
+        )}
 
         {/* Kiosk button — desktop only */}
         <button

@@ -9,6 +9,8 @@ import type { Group } from '../../../hooks/useGroups'
 import type { Match } from '../../../hooks/useMatches'
 import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { BracketGoal } from '../../../hooks/useBracketGoals'
+import type { BracketAssist } from '../../../hooks/useBracketAssists'
+import type { BracketCard } from '../../../hooks/useBracketCards'
 import type { Tournament } from '../../../hooks/useTournament'
 import type { Referee } from '../../../hooks/useReferees'
 
@@ -20,23 +22,35 @@ interface Props {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   bracketGoals: BracketGoal[]
+  bracketAssists: BracketAssist[]
+  bracketCards: BracketCard[]
   referees?: Referee[]
   refetchBracket: () => Promise<void> | void
   refetchBracketGoals: () => void
+  refetchBracketAssists: () => void
+  refetchBracketCards: () => void
   tournament: Tournament | null
   showToast: (msg: string) => void
 }
 
 // ── Slot Editor (skóre + góly v jednom panelu, stejný layout jako MatchesTab) ──
 function SlotEditor({
-  slot, teams, players, bracketGoals, referees, refetchBracketGoals, showToast, onSave,
+  slot, teams, players, bracketGoals, bracketAssists, bracketCards,
+  referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards,
+  assistsEnabled, cardsEnabled, showToast, onSave,
 }: {
   slot: BracketSlot
   teams: Team[]
   players: Player[]
   bracketGoals: BracketGoal[]
+  bracketAssists: BracketAssist[]
+  bracketCards: BracketCard[]
   referees: Referee[]
   refetchBracketGoals: () => void
+  refetchBracketAssists: () => void
+  refetchBracketCards: () => void
+  assistsEnabled: boolean
+  cardsEnabled: boolean
   showToast: (m: string) => void
   onSave: (data: Partial<BracketSlot>) => Promise<void>
 }) {
@@ -56,11 +70,35 @@ function SlotEditor({
     }
     return c
   }
-  const [counts, setCounts] = useState<Record<string, number>>(() => buildCounts(slot.home_id, slot.away_id))
+  const buildAssistCounts = (homeId: string | null, awayId: string | null) => {
+    const c: Record<string, number> = {}
+    for (const p of [...players.filter(p => p.team_id === homeId), ...players.filter(p => p.team_id === awayId)]) {
+      const a = bracketAssists.find(a => a.player_id === p.id && a.slot_id === slot.id)
+      c[p.id] = a?.count ?? 0
+    }
+    return c
+  }
+  const buildCardData = (homeId: string | null, awayId: string | null) => {
+    const c: Record<string, { yellow: number; red: number }> = {}
+    for (const p of [...players.filter(p => p.team_id === homeId), ...players.filter(p => p.team_id === awayId)]) {
+      const playerCards = bracketCards.filter(c => c.player_id === p.id && c.slot_id === slot.id)
+      c[p.id] = {
+        yellow: playerCards.filter(c => c.type === 'yellow').length,
+        red: playerCards.some(c => c.type === 'red' || c.type === 'yellow_red') ? 1 : 0,
+      }
+    }
+    return c
+  }
 
-  // Re-init counts when teams change
+  const [counts, setCounts] = useState<Record<string, number>>(() => buildCounts(slot.home_id, slot.away_id))
+  const [assistCounts, setAssistCounts] = useState<Record<string, number>>(() => buildAssistCounts(slot.home_id, slot.away_id))
+  const [cardData, setCardData] = useState<Record<string, { yellow: number; red: number }>>(() => buildCardData(slot.home_id, slot.away_id))
+
+  // Re-init when teams change
   useEffect(() => {
     setCounts(buildCounts(s.home_id, s.away_id))
+    setAssistCounts(buildAssistCounts(s.home_id, s.away_id))
+    setCardData(buildCardData(s.home_id, s.away_id))
   }, [s.home_id, s.away_id, slot.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const changeScore = (k: 'home_score' | 'away_score', delta: number) => {
@@ -71,6 +109,15 @@ function SlotEditor({
   }
   const changeGoal = (pid: string, delta: number) =>
     setCounts(c => ({ ...c, [pid]: Math.max(0, (c[pid] ?? 0) + delta) }))
+  const changeAssist = (pid: string, delta: number) =>
+    setAssistCounts(c => ({ ...c, [pid]: Math.max(0, (c[pid] ?? 0) + delta) }))
+  const changeYellow = (pid: string, delta: number) =>
+    setCardData(c => ({ ...c, [pid]: { ...c[pid], yellow: Math.min(2, Math.max(0, (c[pid]?.yellow ?? 0) + delta)) } }))
+  const toggleRed = (pid: string) =>
+    setCardData(c => {
+      const cur = c[pid]?.red ?? 0
+      return { ...c, [pid]: { yellow: cur ? c[pid]?.yellow ?? 0 : 0, red: cur ? 0 : 1 } }
+    })
 
   const ht = teams.find(t => t.id === s.home_id)
   const at = teams.find(t => t.id === s.away_id)
@@ -87,20 +134,51 @@ function SlotEditor({
     if (savingRef.current) return
     savingRef.current = true
     setSaving(true)
-    // 1) Save goals — paralelně
     const allPlayers = [...homePlayers, ...awayPlayers]
-    const goalResults = await Promise.all(allPlayers.map(p => {
-      const count = counts[p.id] ?? 0
-      return count > 0
-        ? supabase.from('bracket_goals').upsert({ player_id: p.id, slot_id: slot.id, count }, { onConflict: 'player_id,slot_id' })
-        : supabase.from('bracket_goals').delete().match({ player_id: p.id, slot_id: slot.id })
-    }))
-    const goalErr = goalResults.find(r => r.error)?.error
-    if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); savingRef.current = false; setSaving(false); return }
-    refetchBracketGoals()
-    // 2) Save slot + auto-advance (shows toast)
-    const autoPlayed = s.played || s.home_score > 0 || s.away_score > 0
     try {
+      // 1) Save goals
+      const goalResults = await Promise.all(allPlayers.map(p => {
+        const count = counts[p.id] ?? 0
+        return count > 0
+          ? supabase.from('bracket_goals').upsert({ player_id: p.id, slot_id: slot.id, count }, { onConflict: 'player_id,slot_id' })
+          : supabase.from('bracket_goals').delete().match({ player_id: p.id, slot_id: slot.id })
+      }))
+      const goalErr = goalResults.find(r => r.error)?.error
+      if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); return }
+      refetchBracketGoals()
+
+      // 2) Save assists
+      if (assistsEnabled) {
+        const assistResults = await Promise.all(allPlayers.map(p => {
+          const count = assistCounts[p.id] ?? 0
+          return count > 0
+            ? supabase.from('bracket_assists').upsert({ player_id: p.id, slot_id: slot.id, count }, { onConflict: 'player_id,slot_id' })
+            : supabase.from('bracket_assists').delete().match({ player_id: p.id, slot_id: slot.id })
+        }))
+        const assistErr = assistResults.find(r => r.error)?.error
+        if (assistErr) { showToast('Chyba asistencí: ' + assistErr.message); return }
+        refetchBracketAssists()
+      }
+
+      // 3) Save cards
+      if (cardsEnabled) {
+        await supabase.from('bracket_cards').delete().eq('slot_id', slot.id)
+        const cardRows: { player_id: string; slot_id: string; type: string }[] = []
+        for (const p of allPlayers) {
+          const d = cardData[p.id]
+          if (!d) continue
+          for (let i = 0; i < (d.yellow ?? 0); i++) cardRows.push({ player_id: p.id, slot_id: slot.id, type: 'yellow' })
+          if (d.red) cardRows.push({ player_id: p.id, slot_id: slot.id, type: 'red' })
+        }
+        if (cardRows.length > 0) {
+          const { error: cErr } = await supabase.from('bracket_cards').insert(cardRows)
+          if (cErr) { showToast('Chyba kartiček: ' + cErr.message); return }
+        }
+        refetchBracketCards()
+      }
+
+      // 4) Save slot + auto-advance
+      const autoPlayed = s.played || s.home_score > 0 || s.away_score > 0
       await onSave({
         home_id: s.home_id, away_id: s.away_id,
         home_score: s.home_score, away_score: s.away_score,
@@ -116,18 +194,36 @@ function SlotEditor({
     }
   }
 
+  const stepper = (val: number, onMinus: () => void, onPlus: () => void, accent = false) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <button type="button" onClick={onMinus}
+        style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
+      <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: val > 0 ? (accent ? '#059669' : 'var(--accent)') : 'var(--muted)' }}>
+        {val}
+      </span>
+      <button type="button" onClick={onPlus}
+        style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${accent ? '#059669' : 'var(--accent)'}`, background: accent ? 'rgba(5,150,105,.08)' : 'var(--accent-dim)', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: accent ? '#059669' : 'var(--accent)' }}>+</button>
+    </div>
+  )
+
   const PlayerRow = ({ p, color }: { p: Player; color: string }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.38rem 0', borderBottom: '1px solid var(--border)' }}>
       <span className="team-dot" style={{ background: color }} />
       <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <button type="button" onClick={() => changeGoal(p.id, -1)}
-          style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
-        <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: (counts[p.id] ?? 0) > 0 ? 'var(--accent)' : 'var(--muted)' }}>
-          {counts[p.id] ?? 0}
-        </span>
-        <button type="button" onClick={() => changeGoal(p.id, +1)}
-          style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}>+</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {stepper(counts[p.id] ?? 0, () => changeGoal(p.id, -1), () => changeGoal(p.id, +1))}
+        {assistsEnabled && stepper(assistCounts[p.id] ?? 0, () => changeAssist(p.id, -1), () => changeAssist(p.id, +1), true)}
+        {cardsEnabled && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 2 }}>
+            <button type="button" onClick={() => changeYellow(p.id, -1)}
+              style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.7rem', color: 'var(--muted)' }}>−</button>
+            <span style={{ fontSize: '.85rem' }}>{'🟡'.repeat(Math.max(0, cardData[p.id]?.yellow ?? 0))}{cardData[p.id]?.yellow === 2 ? '→🔴' : ''}</span>
+            <button type="button" onClick={() => changeYellow(p.id, +1)}
+              style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid #d97706', background: 'rgba(217,119,6,.08)', cursor: 'pointer', fontSize: '.7rem', color: '#d97706' }}>+</button>
+            <button type="button" onClick={() => toggleRed(p.id)}
+              style={{ width: 22, height: 22, borderRadius: 4, border: `1px solid ${cardData[p.id]?.red ? '#dc2626' : 'var(--border)'}`, background: cardData[p.id]?.red ? 'rgba(220,38,38,.1)' : '#f8fafc', cursor: 'pointer', fontSize: '.8rem' }}>🔴</button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -205,10 +301,12 @@ function SlotEditor({
         </div>
       )}
 
-      {/* Góly hráčů — inline */}
+      {/* Góly / asistence / kartičky hráčů — inline */}
       {(homePlayers.length > 0 || awayPlayers.length > 0) && (
         <div style={{ marginBottom: '.75rem' }}>
-          <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.45rem' }}>⚽ Góly hráčů</div>
+          <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.45rem' }}>
+            ⚽ Góly{assistsEnabled ? ' + Asistence' : ''}{cardsEnabled ? ' + Kartičky' : ''}
+          </div>
           {ht && homePlayers.length > 0 && (
             <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.2rem', display: 'flex', alignItems: 'center', gap: 5 }}>
               <span className="team-dot" style={{ background: ht.color }} />{ht.name}
@@ -233,16 +331,23 @@ function SlotEditor({
 
 // ── Round Card ────────────────────────────────────────────────────────────────
 function RoundCard({
-  round, rSlots, teams, players, bracketGoals, referees, refetchBracketGoals,
-  showToast, matchDuration, onSave, onRemove, onApplyTimes,
+  round, rSlots, teams, players, bracketGoals, bracketAssists, bracketCards,
+  referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards,
+  assistsEnabled, cardsEnabled, showToast, matchDuration, onSave, onRemove, onApplyTimes,
 }: {
   round: BracketRound
   rSlots: BracketSlot[]
   teams: Team[]
   players: Player[]
   bracketGoals: BracketGoal[]
+  bracketAssists: BracketAssist[]
+  bracketCards: BracketCard[]
   referees: Referee[]
   refetchBracketGoals: () => void
+  refetchBracketAssists: () => void
+  refetchBracketCards: () => void
+  assistsEnabled: boolean
+  cardsEnabled: boolean
   showToast: (m: string) => void
   matchDuration: number
   onSave: (slotId: string, data: Partial<BracketSlot>) => Promise<void>
@@ -324,7 +429,12 @@ function RoundCard({
               {isOpen && (
                 <SlotEditor
                   slot={slot} teams={teams} players={players}
-                  bracketGoals={bracketGoals} referees={referees} refetchBracketGoals={refetchBracketGoals}
+                  bracketGoals={bracketGoals} bracketAssists={bracketAssists} bracketCards={bracketCards}
+                  referees={referees}
+                  refetchBracketGoals={refetchBracketGoals}
+                  refetchBracketAssists={refetchBracketAssists}
+                  refetchBracketCards={refetchBracketCards}
+                  assistsEnabled={assistsEnabled} cardsEnabled={cardsEnabled}
                   showToast={showToast}
                   onSave={data => onSave(slot.id, data) as Promise<void>}
                 />
@@ -338,7 +448,7 @@ function RoundCard({
 }
 
 // ── Main BracketTab ───────────────────────────────────────────────────────────
-export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, referees = [], refetchBracket, refetchBracketGoals, tournament, showToast }: Props) {
+export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, bracketAssists, bracketCards, referees = [], refetchBracket, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, tournament, showToast }: Props) {
   const [name, setName] = useState('')
   const [slotCount, setSlotCount] = useState('2')
   const [generating, setGenerating] = useState(false)
@@ -489,11 +599,13 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         .update({ scheduled_start: round._start, break_after: brk })
         .eq('id', round.id)
       if (rErr) throw rErr
-      for (let i = 0; i < rSlots.length; i++) {
-        const t = addMinutes(round._start, i * (dur + brk))
-        const { error: sErr } = await supabase.from('bracket_slots').update({ scheduled_time: t }).eq('id', rSlots[i].id)
-        if (sErr) throw sErr
-      }
+      await Promise.all(
+        rSlots.map((s, i) => {
+          const t = addMinutes(round._start, i * (dur + brk))
+          return supabase.from('bracket_slots').update({ scheduled_time: t }).eq('id', s.id)
+            .then(({ error }) => { if (error) throw error })
+        })
+      )
       await refetchBracket()
       showToast(`Časy rozepsány pro ${rSlots.length} zápasů ✓`)
     } catch (e: unknown) {
@@ -571,8 +683,14 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
             teams={teams}
             players={players}
             bracketGoals={bracketGoals}
+            bracketAssists={bracketAssists}
+            bracketCards={bracketCards}
             referees={referees}
             refetchBracketGoals={refetchBracketGoals}
+            refetchBracketAssists={refetchBracketAssists}
+            refetchBracketCards={refetchBracketCards}
+            assistsEnabled={tournament?.assists_enabled ?? false}
+            cardsEnabled={tournament?.cards_enabled ?? false}
             showToast={showToast}
             matchDuration={tournament?.match_duration ?? 20}
             onSave={saveSlot}

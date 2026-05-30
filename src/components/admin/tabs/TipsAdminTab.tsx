@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useTipsters } from '../../../hooks/useTipsters'
 import { calcGroupStandings } from '../../../lib/standings'
-import { evaluateSpecialTip, recalcTipsterPoints } from '../../../lib/tipsEval'
+import { evaluateSpecialTip, evaluateSpecialTipPlayer, recalcTipsterPoints } from '../../../lib/tipsEval'
 import type { Team } from '../../../hooks/useTeams'
+import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
 import type { Match } from '../../../hooks/useMatches'
 import type { Tournament } from '../../../hooks/useTournament'
@@ -14,6 +15,7 @@ interface Props {
   showToast: (msg: string) => void
   tournament: Tournament | null
   teams: Team[]
+  players: Player[]
   groups: Group[]
   matches: Match[]
   bracketSlots: BracketSlot[]
@@ -21,8 +23,8 @@ interface Props {
 }
 
 function getPoints(tipType: string): number {
-  if (tipType === 'tournament_winner') return 10
-  if (tipType.startsWith('group_winner:')) return 5
+  if (tipType === 'tournament_winner' || tipType === 'top_scorer') return 10
+  if (tipType.startsWith('group_winner:') || tipType === 'most_goals_team') return 5
   if (tipType.startsWith('group_last:')) return 3
   return 0
 }
@@ -197,10 +199,84 @@ function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId }: {
   )
 }
 
+// ── EvalRowPlayer: ruční vyhodnocení hráčského tipu (top_scorer) ─────────────
+function EvalRowPlayer({ tipType, label, playerPool, showToast }: {
+  tipType: string; label: string; playerPool: Player[]
+  showToast: (m: string) => void
+}) {
+  const [selected, setSelected] = useState('')
+  const [evaluating, setEvaluating] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [done, setDone] = useState(false)
+  const pts = getPoints(tipType)
+
+  useEffect(() => {
+    supabase.from('special_tips')
+      .select('id').eq('tip_type', tipType).eq('evaluated', true).limit(1)
+      .then(({ data }) => { if (data && data.length > 0) setDone(true) })
+  }, [tipType])
+
+  const evaluate = async () => {
+    if (!selected) { showToast('Vyber hráče'); return }
+    setEvaluating(true)
+    try {
+      await evaluateSpecialTipPlayer(tipType, [selected], pts)
+      await recalcTipsterPoints()
+      setDone(true)
+      showToast(`${label} vyhodnoceno ✓`)
+    } catch (e: unknown) {
+      showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
+    } finally { setEvaluating(false) }
+  }
+
+  const resetEval = async () => {
+    if (!confirm(`Zrušit vyhodnocení "${label}"?`)) return
+    setResetting(true)
+    try {
+      await supabase.from('special_tips').update({ evaluated: false, points_earned: 0 }).eq('tip_type', tipType)
+      await recalcTipsterPoints()
+      setDone(false)
+      showToast('Vyhodnocení zrušeno ✓')
+    } catch (e: unknown) {
+      showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
+    } finally { setResetting(false) }
+  }
+
+  const sortedPlayers = [...playerPool].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', padding: '.6rem .9rem', borderBottom: '1px solid var(--border)', background: done ? 'rgba(22,163,74,.04)' : 'transparent' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{pts} b. za správný tip</div>
+      </div>
+      {done ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
+          <span style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}>✓ Vyhodnoceno</span>
+          <button type="button" className="btn btn-d btn-sm" onClick={resetEval} style={{ opacity: resetting ? .6 : 1 }}>
+            {resetting ? '…' : 'Zrušit'}
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
+          <select className="field-input field-select" style={{ width: 'auto', minWidth: 140, fontSize: '.78rem', padding: '.3rem .5rem' }}
+            value={selected} onChange={e => setSelected(e.target.value)}>
+            <option value="">— správný hráč —</option>
+            {sortedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <button type="button" className="btn btn-s btn-sm" onClick={evaluate} style={{ opacity: evaluating ? .6 : 1, whiteSpace: 'nowrap' }}>
+            {evaluating ? '…' : 'Vyhodnotit'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Stav auto-vyhodnocení skupiny ─────────────────────────────────────────────
 type GroupEvalStatus = 'pending' | 'running' | 'done' | 'incomplete'
 
-export default function TipsAdminTab({ showToast, tournament, teams, groups, matches, bracketSlots, bracketRounds }: Props) {
+export default function TipsAdminTab({ showToast, tournament, teams, players, groups, matches, bracketSlots, bracketRounds }: Props) {
   const { tipsters } = useTipsters()
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const [recalcing, setRecalcing] = useState(false)
@@ -251,7 +327,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
       }
     }
 
-    runAutoEval()
+    runAutoEval().catch(e => showToast('Chyba auto-vyhodnocení: ' + String(e)))
   }, [groups.length, matches.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Záložní auto-vyhodnocení vítěze turnaje při načtení záložky Tipovačka
@@ -356,6 +432,18 @@ export default function TipsAdminTab({ showToast, tournament, teams, groups, mat
           teamPool={teams}
           showToast={showToast}
           autoWinnerId={autoTournamentWinnerId}
+        />
+        <EvalRow
+          tipType="most_goals_team"
+          label="⚽ Tým s nejvíce góly"
+          teamPool={teams}
+          showToast={showToast}
+        />
+        <EvalRowPlayer
+          tipType="top_scorer"
+          label="🏅 Nejlepší střelec"
+          playerPool={players}
+          showToast={showToast}
         />
 
         {/* Skupiny — automaticky */}

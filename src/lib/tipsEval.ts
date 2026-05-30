@@ -3,6 +3,7 @@ import { calcGroupStandings } from './standings'
 import type { Group } from '../hooks/useGroups'
 import type { BracketRound } from '../hooks/useBracket'
 import type { Match } from '../hooks/useMatches'
+import type { Team } from '../hooks/useTeams'
 
 // Vrátí true pokud se skutečně změnil nějaký záznam
 export async function evaluateSpecialTip(tipType: string, correctTeamId: string): Promise<boolean> {
@@ -10,6 +11,7 @@ export async function evaluateSpecialTip(tipType: string, correctTeamId: string)
     tournament_winner: 10,
     group_winner: 5,
     group_last: 3,
+    most_goals_team: 5,
   }
   const key = tipType === 'tournament_winner' ? 'tournament_winner'
     : tipType.startsWith('group_winner:') ? 'group_winner'
@@ -95,6 +97,77 @@ export async function checkLeagueTournamentWinner(ligaGroup: Group): Promise<boo
   if (!rows.length) return false
 
   const changed = await evaluateSpecialTip('tournament_winner', rows[0].id)
+  if (changed) await recalcTipsterPoints()
+  return changed
+}
+
+// Evaluates player-based special tips (predicted_player_id).
+// Handles ties: if multiple players share top scorer, all correct IDs are winners.
+export async function evaluateSpecialTipPlayer(tipType: string, correctPlayerIds: string[], pts: number): Promise<boolean> {
+  const { data: allTips } = await supabase
+    .from('special_tips').select('id, predicted_player_id, evaluated, points_earned').eq('tip_type', tipType)
+  if (!allTips?.length) return false
+
+  const correctSet = new Set(correctPlayerIds)
+  const correctIds = allTips
+    .filter(t => t.predicted_player_id && correctSet.has(t.predicted_player_id) && (!t.evaluated || t.points_earned !== pts))
+    .map(t => t.id)
+  const wrongIds = allTips
+    .filter(t => (!t.predicted_player_id || !correctSet.has(t.predicted_player_id)) && (!t.evaluated || t.points_earned !== 0))
+    .map(t => t.id)
+
+  if (!correctIds.length && !wrongIds.length) return false
+
+  const ops: Promise<unknown>[] = []
+  if (correctIds.length)
+    ops.push(supabase.from('special_tips').update({ evaluated: true, points_earned: pts }).in('id', correctIds))
+  if (wrongIds.length)
+    ops.push(supabase.from('special_tips').update({ evaluated: true, points_earned: 0 }).in('id', wrongIds))
+  await Promise.all(ops)
+  return true
+}
+
+// Vyhodnotí top_scorer: nejlepší střelec turnaje (skupiny + playoff).
+export async function checkTopScorer(): Promise<boolean> {
+  const [{ data: goals }, { data: bracketGoals }] = await Promise.all([
+    supabase.from('goals').select('player_id, count'),
+    supabase.from('bracket_goals').select('player_id, count'),
+  ])
+  const agg: Record<string, number> = {}
+  for (const g of [...(goals ?? []), ...(bracketGoals ?? [])]) {
+    agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
+  }
+  const maxGoals = Math.max(...Object.values(agg), 0)
+  if (maxGoals === 0) return false
+  const topIds = Object.entries(agg).filter(([, v]) => v === maxGoals).map(([id]) => id)
+
+  const changed = await evaluateSpecialTipPlayer('top_scorer', topIds, 10)
+  if (changed) await recalcTipsterPoints()
+  return changed
+}
+
+// Vyhodnotí most_goals_team: tým s nejvíce góly z celého turnaje.
+export async function checkMostGoalsTeam(teams: Team[]): Promise<boolean> {
+  const [{ data: goals }, { data: bracketGoals }, { data: players }] = await Promise.all([
+    supabase.from('goals').select('player_id, count'),
+    supabase.from('bracket_goals').select('player_id, count'),
+    supabase.from('players').select('id, team_id'),
+  ])
+  const playerTeam: Record<string, string> = {}
+  for (const p of (players ?? [])) playerTeam[p.id] = p.team_id
+
+  const agg: Record<string, number> = {}
+  for (const t of teams) agg[t.id] = 0
+  for (const g of [...(goals ?? []), ...(bracketGoals ?? [])]) {
+    const tid = playerTeam[g.player_id]
+    if (tid) agg[tid] = (agg[tid] ?? 0) + g.count
+  }
+  const maxGoals = Math.max(...Object.values(agg), 0)
+  if (maxGoals === 0) return false
+  const topTeamId = Object.entries(agg).find(([, v]) => v === maxGoals)?.[0]
+  if (!topTeamId) return false
+
+  const changed = await evaluateSpecialTip('most_goals_team', topTeamId)
   if (changed) await recalcTipsterPoints()
   return changed
 }

@@ -2,31 +2,40 @@ import type { Goal } from '../../hooks/useGoals'
 import type { Player } from '../../hooks/usePlayers'
 import type { Team } from '../../hooks/useTeams'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
+import type { Assist } from '../../hooks/useAssists'
+import type { BracketAssist } from '../../hooks/useBracketAssists'
+import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
 
 interface Props {
   goals: Goal[]
   bracketGoals: BracketGoal[]
+  assists: Assist[]
+  bracketAssists: BracketAssist[]
   players: Player[]
   teams: Team[]
+  tournament: Tournament | null
 }
 
-export default function Scorers({ goals, bracketGoals, players, teams }: Props) {
+export default function Scorers({ goals, bracketGoals, assists, bracketAssists, players, teams, tournament }: Props) {
   const gt = (id: string) => teams.find(t => t.id === id)
+  const showAssists = tournament?.assists_enabled ?? false
 
-  const agg: Record<string, number> = {}
-  for (const g of goals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
-  for (const g of bracketGoals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
+  const goalAgg: Record<string, number> = {}
+  for (const g of goals) goalAgg[g.player_id] = (goalAgg[g.player_id] ?? 0) + g.count
+  for (const g of bracketGoals) goalAgg[g.player_id] = (goalAgg[g.player_id] ?? 0) + g.count
 
-  const scorers = Object.entries(agg)
-    .map(([pid, goals]) => {
-      const player = players.find(p => p.id === pid)
-      if (!player) return null
-      return { id: pid, name: player.name, team_id: player.team_id, goals }
-    })
-    .filter(s => s !== null && s.goals > 0)
-    .sort((a, b) => b!.goals - a!.goals) as { id: string; name: string; team_id: string; goals: number }[]
+  const assistAgg: Record<string, number> = {}
+  if (showAssists) {
+    for (const a of assists) assistAgg[a.player_id] = (assistAgg[a.player_id] ?? 0) + a.count
+    for (const a of bracketAssists) assistAgg[a.player_id] = (assistAgg[a.player_id] ?? 0) + a.count
+  }
+
+  const scorers = players
+    .map(p => ({ id: p.id, name: p.name, team_id: p.team_id, goals: goalAgg[p.id] ?? 0, assists: assistAgg[p.id] ?? 0 }))
+    .filter(s => s.goals > 0 || (showAssists && s.assists > 0))
+    .sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists) || b.goals - a.goals)
 
   if (!scorers.length) return <Empty icon="⚽" text="Žádní střelci." />
 
@@ -74,6 +83,11 @@ export default function Scorers({ goals, bracketGoals, players, teams }: Props) 
                 }}>
                   {sc.goals}
                 </span>
+                {showAssists && sc.assists > 0 && (
+                  <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)', fontWeight: 600 }}>
+                    +{sc.assists}A
+                  </span>
+                )}
               </div>
             </div>
           )

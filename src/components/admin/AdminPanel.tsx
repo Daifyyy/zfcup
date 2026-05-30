@@ -7,8 +7,12 @@ import type { Player } from '../../hooks/usePlayers'
 import type { Group } from '../../hooks/useGroups'
 import type { Match } from '../../hooks/useMatches'
 import type { Goal } from '../../hooks/useGoals'
+import type { Assist } from '../../hooks/useAssists'
+import type { Card } from '../../hooks/useCards'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
+import type { BracketAssist } from '../../hooks/useBracketAssists'
+import type { BracketCard } from '../../hooks/useBracketCards'
 import type { Announcement } from '../../hooks/useAnnouncements'
 import type { RuleItem } from '../../hooks/useRuleItems'
 import type { Referee } from '../../hooks/useReferees'
@@ -51,11 +55,15 @@ interface Props {
   groups: Group[]
   matches: Match[]
   goals: Goal[]
+  assists: Assist[]
+  cards: Card[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   announcements: Announcement[]
   ruleItems: RuleItem[]
   bracketGoals: BracketGoal[]
+  bracketAssists: BracketAssist[]
+  bracketCards: BracketCard[]
   referees: Referee[]
   refetchTournament: () => void
   refetchTeams: () => void
@@ -63,8 +71,12 @@ interface Props {
   refetchGroups: () => void
   refetchMatches: () => void
   refetchGoals: () => void
+  refetchAssists: () => void
+  refetchCards: () => void
   refetchBracket: () => void
   refetchBracketGoals: () => void
+  refetchBracketAssists: () => void
+  refetchBracketCards: () => void
   refetchReferees: () => void
   refetchAnnouncements: () => void
   refetchRuleItems: () => void
@@ -83,15 +95,20 @@ export default function AdminPanel(props: Props) {
   const login = async () => {
     if (!email || !password) { setErr('Vyplňte email a heslo.'); return }
     setLoading(true); setErr('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) setErr('Špatné přihlašovací údaje.')
-    else { setEmail(''); setPassword('') }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) setErr('Špatné přihlašovací údaje.')
+      else { setEmail(''); setPassword('') }
+    } catch {
+      setErr('Chyba připojení. Zkuste znovu.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const logout = async () => {
-    await supabase.auth.signOut()
-    showToast('Odhlášen ✓')
+    const { error } = await supabase.auth.signOut()
+    showToast(error ? 'Chyba odhlášení: ' + error.message : 'Odhlášen ✓')
   }
 
   const tabProps = { ...props, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals }
@@ -229,7 +246,7 @@ export default function AdminPanel(props: Props) {
               {aTab === 'matches'       && <MatchesTab {...tabProps} />}
               {aTab === 'scorers'       && <ScorersTab {...tabProps} />}
               {aTab === 'bracket'       && <BracketTab {...tabProps} />}
-              {aTab === 'tips'          && <TipsAdminTab showToast={showToast} tournament={props.tournament} teams={props.teams} groups={props.groups} matches={props.matches} bracketSlots={props.bracketSlots} bracketRounds={props.bracketRounds} />}
+              {aTab === 'tips'          && <TipsAdminTab showToast={showToast} tournament={props.tournament} teams={props.teams} players={props.players} groups={props.groups} matches={props.matches} bracketSlots={props.bracketSlots} bracketRounds={props.bracketRounds} />}
               {aTab === 'settings'      && <SettingsTab {...tabProps} />}
             </div>
           </>

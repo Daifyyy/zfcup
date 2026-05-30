@@ -151,11 +151,14 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
     if (p1 !== p2) { showToast('Hesla se neshodují'); return }
     if (p1.length < 6) { showToast('Heslo musí mít alespoň 6 znaků'); return }
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password: p1 })
-    setLoading(false)
-    if (error) { showToast('Chyba: ' + error.message); return }
-    setP1(''); setP2('')
-    showToast('Heslo změněno ✓')
+    try {
+      const { error } = await supabase.auth.updateUser({ password: p1 })
+      if (error) { showToast('Chyba: ' + error.message); return }
+      setP1(''); setP2('')
+      showToast('Heslo změněno ✓')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const resetTournamentData = async () => {
@@ -168,7 +171,8 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
     // Hard tables: must succeed
     const hardTables = ['goals', 'tips', 'matches', 'groups']
     for (const table of softTables) {
-      await supabase.from(table).delete().neq('id', NULL_ID)
+      const { error } = await supabase.from(table).delete().neq('id', NULL_ID)
+      if (error) console.warn(`Soft delete ${table}:`, error.message)
     }
     for (const table of hardTables) {
       const { error } = await supabase.from(table).delete().neq('id', NULL_ID)
@@ -430,6 +434,51 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           <button type="button" className="btn btn-s" onClick={saveLeagueParams}>💾 Uložit parametry</button>
         </div>
       )}
+
+      <hr className="divider" />
+      <div className="sub-title">Volitelné moduly</div>
+      {[
+        {
+          key: 'assists_enabled' as const,
+          enabled: tournament?.assists_enabled ?? false,
+          title: 'Asistence',
+          desc: (on: boolean) => on ? 'Pole pro asistenci viditelné při zadávání zápasů a v přehledu střelců' : 'Asistence jsou skryté — zadávají se jen góly',
+        },
+        {
+          key: 'cards_enabled' as const,
+          enabled: tournament?.cards_enabled ?? false,
+          title: 'Kartičky & disciplína',
+          desc: (on: boolean) => on ? 'Záložka Disciplína viditelná; kartičky se zadávají u každého zápasu' : 'Kartičky jsou vypnuté',
+        },
+      ].map(({ key, enabled, title, desc }) => (
+        <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.7rem .9rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, marginBottom: '.55rem' }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '.85rem' }}>{title}</div>
+            <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: 2 }}>{desc(enabled)}</div>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (!tournament) return
+              const { error } = await supabase.from('tournament').update({ [key]: !enabled }).eq('id', tournament.id)
+              if (error) showToast('Chyba: ' + error.message)
+              else { showToast((enabled ? `${title} vypnuto` : `${title} zapnuto ✓`)); refetchTournament() }
+            }}
+            style={{
+              width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
+              background: enabled ? 'var(--accent)' : '#cbd5e1',
+              position: 'relative', transition: 'background .2s',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 3, borderRadius: '50%',
+              width: 18, height: 18, background: '#fff',
+              left: enabled ? 23 : 3,
+              transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+            }} />
+          </button>
+        </div>
+      ))}
 
       <hr className="divider" />
       <div className="sub-title">Tipovačka</div>

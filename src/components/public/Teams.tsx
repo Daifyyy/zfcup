@@ -86,7 +86,11 @@ export default function Teams({ teams, players, goals }: Props) {
                         borderRadius: 5,
                         fontSize: '.8rem',
                       }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem', flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '.35rem', flex: 1, minWidth: 0 }}>
+                          {p.avatar_url
+                            ? <img src={p.avatar_url} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                            : <span className="team-dot" style={{ background: t.color, flexShrink: 0 }} />
+                          }
                           <span style={{ color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {p.name}
                           </span>

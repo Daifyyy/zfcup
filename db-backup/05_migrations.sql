@@ -116,3 +116,74 @@ ALTER TABLE tournament
 -- -------------------------------------------------------
 ALTER TABLE tournament
   ADD COLUMN IF NOT EXISTS format_id TEXT DEFAULT '';
+
+-- -------------------------------------------------------
+-- NOVÉ MODULY (2026-05-30)
+-- -------------------------------------------------------
+
+-- TOURNAMENT — volitelné moduly: asistence a kartičky
+ALTER TABLE tournament
+  ADD COLUMN IF NOT EXISTS assists_enabled BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS cards_enabled   BOOLEAN DEFAULT false;
+
+-- PLAYERS — foto hráče
+ALTER TABLE players
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- SPECIAL_TIPS — top_scorer tip (predicted_player_id)
+ALTER TABLE special_tips
+  ADD COLUMN IF NOT EXISTS predicted_player_id UUID REFERENCES players(id) ON DELETE SET NULL;
+
+-- ASSISTS (skupinová fáze)
+CREATE TABLE IF NOT EXISTS assists (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id  UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  match_id   UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  count      INTEGER NOT NULL DEFAULT 1,
+  UNIQUE(player_id, match_id)
+);
+ALTER TABLE assists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON assists;
+DROP POLICY IF EXISTS "admin_write" ON assists;
+CREATE POLICY "public_read" ON assists FOR SELECT USING (true);
+CREATE POLICY "admin_write" ON assists FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- BRACKET_ASSISTS (playoff)
+CREATE TABLE IF NOT EXISTS bracket_assists (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id  UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  slot_id    UUID NOT NULL REFERENCES bracket_slots(id) ON DELETE CASCADE,
+  count      INTEGER NOT NULL DEFAULT 1,
+  UNIQUE(player_id, slot_id)
+);
+ALTER TABLE bracket_assists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON bracket_assists;
+DROP POLICY IF EXISTS "admin_write" ON bracket_assists;
+CREATE POLICY "public_read" ON bracket_assists FOR SELECT USING (true);
+CREATE POLICY "admin_write" ON bracket_assists FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- CARDS (skupinová fáze)
+CREATE TABLE IF NOT EXISTS cards (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id  UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  match_id   UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  type       TEXT NOT NULL CHECK (type IN ('yellow', 'red', 'yellow_red'))
+);
+ALTER TABLE cards ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON cards;
+DROP POLICY IF EXISTS "admin_write" ON cards;
+CREATE POLICY "public_read" ON cards FOR SELECT USING (true);
+CREATE POLICY "admin_write" ON cards FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- BRACKET_CARDS (playoff)
+CREATE TABLE IF NOT EXISTS bracket_cards (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id  UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  slot_id    UUID NOT NULL REFERENCES bracket_slots(id) ON DELETE CASCADE,
+  type       TEXT NOT NULL CHECK (type IN ('yellow', 'red', 'yellow_red'))
+);
+ALTER TABLE bracket_cards ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON bracket_cards;
+DROP POLICY IF EXISTS "admin_write" ON bracket_cards;
+CREATE POLICY "public_read" ON bracket_cards FOR SELECT USING (true);
+CREATE POLICY "admin_write" ON bracket_cards FOR ALL TO authenticated USING (true) WITH CHECK (true);

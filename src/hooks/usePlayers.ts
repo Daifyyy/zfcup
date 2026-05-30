@@ -7,6 +7,7 @@ export interface Player {
   name: string
   number: number | null
   role: string | null  // 'captain' | 'goalkeeper' | 'both' | null
+  avatar_url: string | null
 }
 
 export function usePlayers(teamId?: string) {

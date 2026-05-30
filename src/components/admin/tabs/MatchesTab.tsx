@@ -4,6 +4,8 @@ import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Match } from '../../../hooks/useMatches'
 import type { Goal } from '../../../hooks/useGoals'
+import type { Assist } from '../../../hooks/useAssists'
+import type { Card } from '../../../hooks/useCards'
 import type { Group } from '../../../hooks/useGroups'
 import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { Tournament } from '../../../hooks/useTournament'
@@ -17,6 +19,8 @@ interface Props {
   players: Player[]
   matches: Match[]
   goals: Goal[]
+  assists: Assist[]
+  cards: Card[]
   groups: Group[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
@@ -24,6 +28,8 @@ interface Props {
   referees?: Referee[]
   refetchMatches: () => void
   refetchGoals: () => void
+  refetchAssists: () => void
+  refetchCards: () => void
   showToast: (msg: string) => void
 }
 
@@ -41,18 +47,25 @@ const DEF_FORM: MatchForm = { round: '', home_id: '', away_id: '', home_score: '
 
 // ── Inline editor: skóre + góly v jednom panelu ────────────────────────────
 function InlineMatchEditor({
-  match, group, teams, players, goals, referees, showToast, onClose, refetchMatches, refetchGoals,
+  match, group, teams, players, goals, assists, cards, tournament, groups, referees,
+  showToast, onClose, refetchMatches, refetchGoals, refetchAssists, refetchCards,
 }: {
   match: Match
   group: Group | null
   teams: Team[]
   players: Player[]
   goals: Goal[]
+  assists: Assist[]
+  cards: Card[]
+  tournament: Tournament | null
+  groups: Group[]
   referees: Referee[]
   showToast: (m: string) => void
   onClose: () => void
   refetchMatches: () => void
   refetchGoals: () => void
+  refetchAssists: () => void
+  refetchCards: () => void
 }) {
   const [homeScore, setHomeScore] = useState(match.home_score ?? 0)
   const [awayScore, setAwayScore] = useState(match.away_score ?? 0)
@@ -76,8 +89,47 @@ function InlineMatchEditor({
   }
   const [counts, setCounts] = useState<Record<string, number>>(initCounts)
 
+  const initAssistCounts = () => {
+    const c: Record<string, number> = {}
+    for (const p of allPlayers) {
+      const a = assists.find(a => a.player_id === p.id && a.match_id === match.id)
+      c[p.id] = a?.count ?? 0
+    }
+    return c
+  }
+  const [assistCounts, setAssistCounts] = useState<Record<string, number>>(initAssistCounts)
+
+  const initCardData = () => {
+    const c: Record<string, { yellow: number; red: number }> = {}
+    for (const p of allPlayers) {
+      const card = cards.find(c => c.player_id === p.id && c.match_id === match.id)
+      c[p.id] = {
+        yellow: card?.type === 'yellow' ? 1 : card?.type === 'yellow_red' ? 2 : 0,
+        red: card?.type === 'red' ? 1 : 0,
+      }
+    }
+    return c
+  }
+  const [cardData, setCardData] = useState<Record<string, { yellow: number; red: number }>>(initCardData)
+
   const changeGoal = (pid: string, delta: number) =>
     setCounts(c => ({ ...c, [pid]: Math.max(0, (c[pid] ?? 0) + delta) }))
+
+  const changeAssist = (pid: string, delta: number) =>
+    setAssistCounts(c => ({ ...c, [pid]: Math.max(0, (c[pid] ?? 0) + delta) }))
+
+  const changeYellow = (pid: string, delta: number) =>
+    setCardData(c => {
+      const cur = c[pid] ?? { yellow: 0, red: 0 }
+      const next = Math.max(0, Math.min(2, cur.yellow + delta))
+      return { ...c, [pid]: { ...cur, yellow: next, red: next === 2 ? 0 : cur.red } }
+    })
+
+  const toggleRed = (pid: string) =>
+    setCardData(c => {
+      const cur = c[pid] ?? { yellow: 0, red: 0 }
+      return { ...c, [pid]: { ...cur, red: cur.red === 1 ? 0 : 1, yellow: cur.red === 0 ? 0 : cur.yellow } }
+    })
 
   const changeScore = (side: 'home' | 'away', delta: number) => {
     if (side === 'home') {
@@ -119,6 +171,36 @@ function InlineMatchEditor({
     )
     const goalErr = goalResults.find(r => r.error)?.error
     if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); savingRef.current = false; setSaving(false); return }
+
+    // 3) Asistence (pokud modul zapnut)
+    if (tournament?.assists_enabled) {
+      const assistResults = await Promise.all(
+        Object.entries(assistCounts).map(([player_id, count]) =>
+          count > 0
+            ? supabase.from('assists').upsert({ player_id, match_id: match.id, count }, { onConflict: 'player_id,match_id' })
+            : supabase.from('assists').delete().match({ player_id, match_id: match.id })
+        )
+      )
+      const assistErr = assistResults.find(r => r.error)?.error
+      if (assistErr) { showToast('Chyba asistencí: ' + assistErr.message); savingRef.current = false; setSaving(false); return }
+      refetchAssists()
+    }
+
+    // 4) Kartičky (pokud modul zapnut) — smazat staré, vložit nové
+    if (tournament?.cards_enabled) {
+      await supabase.from('cards').delete().eq('match_id', match.id)
+      const newCards = Object.entries(cardData).flatMap(([player_id, { yellow, red }]) => {
+        if (yellow === 2) return [{ player_id, match_id: match.id, type: 'yellow_red' as const }]
+        if (red === 1) return [{ player_id, match_id: match.id, type: 'red' as const }]
+        if (yellow === 1) return [{ player_id, match_id: match.id, type: 'yellow' as const }]
+        return []
+      })
+      if (newCards.length > 0) {
+        const { error: cardErr } = await supabase.from('cards').insert(newCards)
+        if (cardErr) { showToast('Chyba kartiček: ' + cardErr.message); savingRef.current = false; setSaving(false); return }
+      }
+      refetchCards()
+    }
 
     refetchMatches()
     refetchGoals()
@@ -259,6 +341,97 @@ function InlineMatchEditor({
         </div>
       )}
 
+      {/* Asistence (modul zapnut) */}
+      {tournament?.assists_enabled && allPlayers.length > 0 && (
+        <>
+          <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem', marginTop: '.65rem' }}>
+            🅰 Asistence
+          </div>
+          <div style={{ marginBottom: '.75rem' }}>
+            {ht && homePlayers.length > 0 && (
+              <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.15rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span className="team-dot" style={{ background: ht.color }} />{ht.name}
+              </div>
+            )}
+            {homePlayers.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.38rem 0', borderBottom: '1px solid var(--border)' }}>
+                <span className="team-dot" style={{ background: ht?.color ?? '#94a3b8' }} />
+                <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <button type="button" onClick={() => changeAssist(p.id, -1)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
+                  <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: assistCounts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
+                    {assistCounts[p.id] ?? 0}
+                  </span>
+                  <button type="button" onClick={() => changeAssist(p.id, +1)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}>+</button>
+                </div>
+              </div>
+            ))}
+            {at && awayPlayers.length > 0 && (
+              <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: '.55rem', marginBottom: '.15rem', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span className="team-dot" style={{ background: at.color }} />{at.name}
+              </div>
+            )}
+            {awayPlayers.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.38rem 0', borderBottom: '1px solid var(--border)' }}>
+                <span className="team-dot" style={{ background: at?.color ?? '#94a3b8' }} />
+                <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <button type="button" onClick={() => changeAssist(p.id, -1)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
+                  <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: assistCounts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
+                    {assistCounts[p.id] ?? 0}
+                  </span>
+                  <button type="button" onClick={() => changeAssist(p.id, +1)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--accent)', background: 'var(--accent-dim)', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--accent)' }}>+</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Kartičky (modul zapnut) */}
+      {tournament?.cards_enabled && allPlayers.length > 0 && (
+        <>
+          <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem', marginTop: '.65rem' }}>
+            🟡 Kartičky
+          </div>
+          <div style={{ marginBottom: '.75rem' }}>
+            {[...homePlayers, ...awayPlayers].map(p => {
+              const cd = cardData[p.id] ?? { yellow: 0, red: 0 }
+              const teamColor = homePlayers.includes(p) ? ht?.color ?? '#94a3b8' : at?.color ?? '#94a3b8'
+              const cardBtnStyle = (active: boolean, color: string): React.CSSProperties => ({
+                padding: '2px 8px', borderRadius: 5, fontSize: '.72rem', fontWeight: 700, cursor: 'pointer',
+                border: `1px solid ${active ? color : 'var(--border)'}`,
+                background: active ? color : '#f8fafc',
+                color: active ? '#fff' : 'var(--muted)',
+              })
+              return (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.35rem 0', borderBottom: '1px solid var(--border)' }}>
+                  <span className="team-dot" style={{ background: teamColor }} />
+                  <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button type="button" style={cardBtnStyle(cd.yellow >= 1, '#d97706')} onClick={() => changeYellow(p.id, cd.yellow >= 1 ? -1 : +1)}>
+                      🟡 {cd.yellow > 0 ? `×${cd.yellow}` : ''}
+                    </button>
+                    {cd.yellow === 2 && (
+                      <span style={{ fontSize: '.72rem', color: '#dc2626', fontWeight: 700 }}>→🔴</span>
+                    )}
+                    {cd.yellow < 2 && (
+                      <button type="button" style={cardBtnStyle(cd.red === 1, '#dc2626')} onClick={() => toggleRed(p.id)}>
+                        🔴
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
       <div style={{ display: 'flex', gap: '.4rem' }}>
         <button type="button" className="btn btn-p btn-sm" onClick={saveAll}>
           {saving ? 'Ukládám…' : '💾 Uložit vše'}
@@ -269,7 +442,7 @@ function InlineMatchEditor({
   )
 }
 
-export default function MatchesTab({ teams, players, matches, goals, groups, bracketRounds, bracketSlots, tournament, referees = [], refetchMatches, refetchGoals, showToast }: Props) {
+export default function MatchesTab({ teams, players, matches, goals, assists, cards, groups, bracketRounds, bracketSlots, tournament, referees = [], refetchMatches, refetchGoals, refetchAssists, refetchCards, showToast }: Props) {
   const [form, setForm] = useState<MatchForm>(DEF_FORM)
   const [inlineEditId, setInlineEditId] = useState<string | null>(null)
   const [seeding, setSeeding] = useState(false)
@@ -492,11 +665,17 @@ export default function MatchesTab({ teams, players, matches, goals, groups, bra
                         teams={teams}
                         players={players}
                         goals={goals}
+                        assists={assists}
+                        cards={cards}
+                        tournament={tournament}
+                        groups={groups}
                         referees={referees}
                         showToast={showToast}
                         onClose={() => setInlineEditId(null)}
                         refetchMatches={refetchMatches}
                         refetchGoals={refetchGoals}
+                        refetchAssists={refetchAssists}
+                        refetchCards={refetchCards}
                       />
                     )}
                   </div>

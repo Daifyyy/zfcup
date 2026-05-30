@@ -33,7 +33,7 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 ## DB Schema — důležité tabulky
 - `matches`: group_id (nullable FK), round (TEXT NOT NULL), home_id, away_id, home_score, away_score (INTEGER), played (BOOL), scheduled_time (TEXT NOT NULL)
 - `goals`: player_id, match_id, count — UNIQUE(player_id, match_id), FK na matches
-- `players`: id, team_id, name, number (nullable), role (TEXT nullable: `'captain' | 'goalkeeper' | 'both'`)
+- `players`: id, team_id, name, number (nullable), role (TEXT nullable: `'captain' | 'goalkeeper' | 'both'`), `avatar_url TEXT` — URL fotky hráče (Storage bucket `team-logos`, path `players/{id}.png`)
 - `bracket_slots`: id, round_id, position, home_id, away_id, home_score, away_score, played, **scheduled_time (TEXT nullable)** — migrační SQL: `ALTER TABLE bracket_slots ADD COLUMN IF NOT EXISTS scheduled_time TEXT;`
 - `bracket_goals`: id, slot_id (FK → bracket_slots), player_id (FK → players), count, UNIQUE(slot_id, player_id)
   - Samostatná tabulka od `goals` — `goals` má FK na `matches`, playoff sloty nejsou v `matches`
@@ -42,9 +42,15 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `tipsters`: id, name (TEXT UNIQUE), pin (CHAR(4)), total_points (INTEGER DEFAULT 0)
 - `tips`: id, tipster_id (FK → tipsters), match_id (FK → matches), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, match_id)
 - `bracket_tips`: id, tipster_id (FK → tipsters), slot_id (FK → bracket_slots), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, slot_id)
-- `special_tips`: id, tipster_id (FK → tipsters), tip_type (TEXT), predicted_team_id (UUID FK → teams), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, tip_type)
+- `special_tips`: id, tipster_id (FK → tipsters), tip_type (TEXT), predicted_team_id (UUID FK → teams nullable), **predicted_player_id (UUID FK → players nullable)** — pro `top_scorer` tip, points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, tip_type)
+- `assists`: id, player_id (FK → players), match_id (FK → matches), count, UNIQUE(player_id, match_id) — asistence skupinová fáze; stejný vzor jako `goals`
+- `bracket_assists`: id, player_id (FK → players), slot_id (FK → bracket_slots), count, UNIQUE(player_id, slot_id) — asistence playoff
+- `cards`: id, player_id (FK → players), match_id (FK → matches), type (TEXT: `'yellow'|'red'|'yellow_red'`) — kartičky skupinová fáze (více řádků na hráče/zápas)
+- `bracket_cards`: id, player_id (FK → players), slot_id (FK → bracket_slots), type — kartičky playoff
 - `tournament`: obsahuje všechny globální parametry turnaje:
   - `tips_enabled BOOLEAN` — řídí viditelnost záložky Tipy
+  - `assists_enabled BOOLEAN DEFAULT false` — volitelný modul asistencí; zobrazí ±stepper v InlineMatchEditor/SlotEditor + sloupec A v Střelcích
+  - `cards_enabled BOOLEAN DEFAULT false` — volitelný modul kartiček; zobrazí sekci karet v editoru + záložku Disciplína v navigaci
   - `format TEXT DEFAULT 'groups'` (`'groups'` | `'league'`)
   - `match_duration INT DEFAULT 20`, `halves SMALLINT DEFAULT 1`, `playoff_kickoff TEXT DEFAULT ''`, `round_break INT DEFAULT 5`
   - `tips_lock_from TEXT DEFAULT ''` — datum YYYY-MM-DD pro datový zámek tipování
@@ -53,8 +59,10 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
   - `rules_content TEXT DEFAULT ''` — starý jednoblokový text pravidel (nepoužíván, nahrazen `rule_items`)
   - `league_has_playoff BOOLEAN DEFAULT true` — liga s playoff (QF+SF+Finále) nebo bez (vítěz = 1. místo tabulky)
   - `logo_url TEXT` — URL loga turnaje (Storage bucket `team-logos`, path `tournament-logo.png`); zobrazuje se v Overview vpravo vedle popisu
+  - `format_id TEXT DEFAULT ''` — ID zvoleného formátu z registru (`'groups_qf'`, `'league_sf'`, …); prázdný string = zpětná kompatibilita (formát se odvodí z legacy polí)
 
 ### SQL migrace (spustit jednou v Supabase SQL Editor)
+Kompletní migrace jsou v `db-backup/05_migrations.sql`. Nové migrace (2026-05-30) — spustit pro nové moduly:
 ```sql
 ALTER TABLE tournament
   ADD COLUMN IF NOT EXISTS format TEXT DEFAULT 'groups',
@@ -79,6 +87,7 @@ ALTER TABLE announcements
 ALTER TABLE tournament ADD COLUMN IF NOT EXISTS rules_content TEXT DEFAULT '';
 ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAULT true;
 ALTER TABLE tournament ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE tournament ADD COLUMN IF NOT EXISTS format_id TEXT DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS rule_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -90,6 +99,57 @@ ALTER TABLE rule_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public_read" ON rule_items FOR SELECT USING (true);
 CREATE POLICY "admin_write" ON rule_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
 ```
+
+Migrace pro nové moduly (viz `db-backup/05_migrations.sql`):
+```sql
+ALTER TABLE tournament
+  ADD COLUMN IF NOT EXISTS assists_enabled BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS cards_enabled   BOOLEAN DEFAULT false;
+ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE special_tips ADD COLUMN IF NOT EXISTS predicted_player_id UUID REFERENCES players(id) ON DELETE SET NULL;
+-- + CREATE TABLE assists, bracket_assists, cards, bracket_cards s RLS (viz 05_migrations.sql)
+```
+
+## Volitelné moduly
+
+### Asistence (`assists_enabled`)
+- Toggle v Admin → Nastavení → Volitelné moduly
+- Hooky: `useAssists` (tabulka `assists`), `useBracketAssists` (tabulka `bracket_assists`) — stejný vzor jako `useGoals`/`useBracketGoals`
+- Admin UI: ±stepper vedle gólů v `InlineMatchEditor` (MatchesTab) a `SlotEditor` (BracketTab) — podmíněno na `tournament?.assists_enabled`
+- Veřejné zobrazení: Scorers.tsx — sloupec `+NA` vedle gólů, řazení dle `G+A`
+
+### Kartičky & disciplína (`cards_enabled`)
+- Toggle v Admin → Nastavení → Volitelné moduly
+- Hooky: `useCards` (tabulka `cards`), `useBracketCards` (tabulka `bracket_cards`) — záznamy jsou INSERT/DELETE (ne upsert), jeden řádek per kartička
+- Admin UI: žlutá ±stepper (max 2) + červená toggle pro každého hráče v editoru zápasu — podmíněno na `tournament?.cards_enabled`
+- Veřejné zobrazení: záložka **Disciplína** (`src/components/public/Discipline.tsx`) — zobrazí se v navigaci jen pokud `cards_enabled`
+- `BottomNav` a `Header` přijímají prop `cardsEnabled?: boolean`
+
+### Import týmů z CSV/Excel
+- Komponenta: `src/components/admin/ImportTeamsModal.tsx`
+- Spuštění: Admin → Týmy → 📥 Import CSV/Excel
+- Používá balíček `xlsx` (již v package.json)
+- Varianta A: jeden list, sloupce `Tým|Hráč|Číslo|Role`; Varianta B: více listů, každý = tým
+- Role: K→captain, B→goalkeeper, KB/BK→both, prázdné→null
+- Barvy týmů: auto-přiřazení z `TEAM_COLORS`, přeskočí již použité
+
+### Fotky hráčů
+- `players.avatar_url TEXT` — URL fotky v Supabase Storage (`team-logos/players/{id}.png`)
+- Upload v Admin → Týmy → ✎ hráče → sekce fotky (upload + smazat)
+- Veřejné zobrazení: Teams.tsx — kruhový avatar 22px před jménem; fallback = barevná tečka týmu
+
+### Speciální tipy — nové typy
+- `top_scorer` (10 b.) — nejlepší střelec; ukládá `predicted_player_id`; zpracování: `evaluateSpecialTipPlayer(tipType, [playerIds], pts)` — podporuje více vítězů (sdílené první místo)
+- `most_goals_team` (5 b.) — tým s nejvíce góly; ukládá `predicted_team_id`; zamkne se s `tournament_winner`
+- Eval funkce: `checkTopScorer()`, `checkMostGoalsTeam(teams)` v `src/lib/tipsEval.ts`
+- Admin: `EvalRowPlayer` komponenta pro ruční vyhodnocení hráčských tipů v `TipsAdminTab`
+
+### Tisknutelný bulletin
+- Komponenta: `src/components/public/PrintBulletin.tsx`
+- Spuštění: Header desktop → 🖨️ Bulletin (prop `onPrint` na Header, stav `printOpen` v App.tsx)
+- Auto-spustí `window.print()` po 400ms od otevření
+- Obsah: záhlaví turnaje, harmonogram + tabulky skupin, playoff bracket (přehledné tisknutelné tabulky)
+- `@media print` v inline `<style>` — skryje tlačítka a zbytek aplikace
 
 ## Pravidla kódování
 - Komponenty do `src/components/`, stránky (záložky) jsou inline v App.tsx
@@ -147,6 +207,7 @@ CREATE POLICY "admin_write" ON rule_items FOR ALL TO authenticated USING (true) 
 - `bracket` — Play-off jako flat list zápasů oddělených koly (ne pavouk), finále zlatě; stacked layout (home/away řádky); **skryta v navigaci i renderu při `format='league' && !league_has_playoff`**
 - `info` — Info o turnaji + oznámení/média (stejný render jako Overview)
 - `rules` — Pravidla soutěže; zobrazuje `rule_items` jako karty (title + body HTML); komponenta `src/hooks/useRuleItems.ts` + `src/components/public/Rules.tsx`; viditelná vždy
+- `discipline` — Disciplína (kartičky); viditelná jen pokud `tournament.cards_enabled === true`; `src/components/public/Discipline.tsx`; agreguje `cards` + `bracket_cards` per hráč, řadí dle závažnosti
 - `tips` — Tipovačka; viditelná jen pokud `tournament.tips_enabled === true`
 
 ### Admin záložky (AdminPanel slide-in)
@@ -163,11 +224,12 @@ Záložky aktivně používané při turnaji (**Zápasy, Play-off, Tipovačka**)
 - `matches` — Sjednocený inline editor: "✎ Upravit" → skóre (±stepery) + soupisky + góly + "💾 Uložit vše"
 - `bracket` — 2-krokový flow: Step 1 = generovat strukturu, Step 2 = nasadit týmy (po dokončení skupin); SlotEditor se stacked layoutem + inline góly
 - `tips` — Tipovačka admin: pořadí sekcí: 1) Vyhodnocení speciálních tipů, 2) Přepočet bodů, 3) Nebezpečná zóna, 4) Tipéři
-- `settings` — Nastavení; sekce **vždy viditelné**:
-  - **Formát turnaje**: toggle Skupiny / Liga
+- `settings` — Nastavení; sekce:
+  - **Formát turnaje** — radio picker ze všech `TOURNAMENT_FORMATS`; výběr uloží `format_id` + sync legacy polí (`format`, `num_groups`, `advancing_per_group`, `league_has_playoff`)
   - **Počet hřišť** (`num_pitches`, 1–4): ovlivňuje plánování časů pro skupiny i ligu — N zápasů hraje simultánně, každý slot má N zápasů
   - **Scénář** (jen groups): num_teams, num_groups, advancing_per_group
   - **Parametry ligového zápasu** (jen league): toggle **Playoff po lize** (Ano/Ne = `league_has_playoff`), match_duration, round_break, halves, playoff_kickoff
+  - **Volitelné moduly** — toggle Asistence (`assists_enabled`) + toggle Kartičky & disciplína (`cards_enabled`)
   - **Datum turnaje** (`tips_lock_from`) + toggle Tipovačka
 
 ## Parametr `num_pitches` — počet hřišť
@@ -231,24 +293,67 @@ return rounds * Math.ceil(realPairs / numPitches)
 
 ## Bracket (Play-off) — architektura
 
-### Playoff formáty dle konfigurace
-`advancingPerGroup` = `tournament.advancing_per_group` (nastavitelné v SettingsTab).
-`totalAdvancing = advancingPerGroup × groups.length`.
+### Formátový registr (`src/lib/formats.ts`)
 
-| Scénář | totalAdvancing | groupFormat | Struktura |
-|--------|---------------|-------------|-----------|
-| 1 skupina | — | `sf` | top-4 → SF(2)+O3+Final |
-| 2 skupiny, top-2 (6–10 t.) | 4 | `sf` | A1vsB2, B1vsA2 → SF |
-| 3 skupiny, top-2 (12 t.) | 6 | `six` | rank 6 týmů, top-2 bye do SF, 3.vs6./4.vs5. v QF |
-| 4 skupiny, top-2 (8–12 t.) | 8 | `qf` | (A+B), (C+D) páry → QF(4)+SF |
-| 2 skupiny, top-4 (12–14 t.) | 8 | `qf` | křížové A1vsB4 atd. → QF(4)+SF |
-| Liga | 6 (vždy) | — | top-6, 3.vs6./4.vs5. v QF, 1./2. předsazeni do SF |
+Každý formát je pojmenovaný objekt v `TOURNAMENT_FORMATS`. Přidat nový formát = 1 soubor v `src/lib/bracket-formats/` + 1 řádek v registru.
 
-- **Krok 1** (`generateStructure`): vytvoří `bracket_rounds` + prázdné `bracket_slots`
-- **Krok 2** (`seedTeams`): doplní týmy z tabulky skupin; podmínka: všechny skupinové zápasy odehrané; tlačítko bez `disabled` — check uvnitř onClick
+```typescript
+interface TournamentFormatDef {
+  id: string
+  label: string
+  description: string
+  groupConfig: { tournamentFormat, defaultGroups, defaultAdvancingPerGroup, leagueHasPlayoff?, consolationPerGroup? }
+  fns: { generate(), seed(params), autoAdvance(params) }
+}
+```
+
+**Pomocné funkce:**
+- `getFormatDef(formatId)` — vrátí def dle `tournament.format_id`
+- `getLegacyFormatDef(tournament, groups)` — zpětná kompatibilita pro turnaje bez `format_id` (odvozuje formát z legacy polí)
+- `getAdvancingCutoffs(formatId, tournament)` — vrátí cutoffs pro Standings zbarvení
+
+### Registrované formáty (11 celkem)
+
+| ID | Label | Struktura | Skupin | Postupující/sk. |
+|----|-------|-----------|--------|-----------------|
+| `league` | Liga | Jen tabulka | 1 | — |
+| `league_playoff` | Liga + Play-off | QF(2)+SF+O3+Final | 1 | top-6 |
+| `league_sf` | Liga + Semifinále | SF(2)+O3+Final | 1 | top-4 |
+| `groups_sf` | Skupiny + Semifinále | SF(2)+O3+Final | 1–2 | 2 |
+| `groups_six` | Skupiny + 6 (bye) | QF(2)+SF+O3+Final | 3 | 2 |
+| `groups_six_cross` | Skupiny + Křížový QF | QF(3)+SF+O3+Final | 3 | 2 |
+| `groups_qf` | Skupiny + Čtvrtfinále | QF(4)+SF+O3+Final | 4 | 2 |
+| `groups_qf_full` | Skupiny + QF + Umístění | QF+O7-8SF+SF+O5+O3+Final | 4 | 2 |
+| `groups_full_placement` | Skupiny + Plný pavouk | Útěšné QF+QF+…+Final (10 kol) | 2 | 4+2 útěcha |
+| `knockout_8` | Pavouk 8 týmů (bez skupin) | QF(4)+SF+O3+Final | 0 | manuální |
+| `groups_ro16` | Skupiny + Osmifinále (R16) | R16(8)+QF+SF+O3+Final | 8 | 2 |
+
+### BracketTab flow
+
+- **Krok 1** — `generateStructure`: smaže stávající kola/sloty, zavolá `formatDef.fns.generate()`
+- **Krok 2** — `seedTeams`: zavolá `formatDef.fns.seed({groups, matches, bracketRounds, bracketSlots, advancingPerGroup})`
+- **saveSlot**: po uložení výsledku zavolá `formatDef.fns.autoAdvance(...)` → posune vítěze/poraženého; při finále (`position === maxPos`) zavolá `checkTournamentWinner()`
+- `formatDef = getFormatDef(tournament.format_id) ?? getLegacyFormatDef(tournament, groups)`
 - **SlotEditor**: stacked layout, ±stepery skóre, inline góly, pole Čas, jediné "💾 Uložit vše"
-- Auto-advance QF→SF: `isLeague || groupFormat === 'six'` → vítěz do SF na stejné pozici jako `away_id`
-- **bracket_goals SQL** (spustit jednou v Supabase):
+
+### Auto-advance konvence (všechny formáty)
+
+```typescript
+// V autoAdvance: slot.position % 2 === 0 → field = 'home_id', jinak 'away_id'
+// Párové sloty (0+1) → cílový slot index Math.floor(pos/2)
+// Terminal kola (O3, O7, O9, O11…) → default case, return { toast: 'Uloženo ✓' }
+```
+
+### Scoreboard/Kiosk — detekce kol (barvy)
+```typescript
+const isFinal   = /finále/i.test(name) && !/[3579]/i.test(name)  // gold
+const isThird   = /o\s*3/i.test(name) || /třet/i.test(name)       // bronze
+const isFifth   = /o\s*5/i.test(name) || /5[\.-]/i.test(name)     // indigo
+const isSeventh = /o\s*7/i.test(name) || /7[\.-]/i.test(name)     // slate
+const isNinth   = /o\s*9/i.test(name) || /9[\.-]/i.test(name)     // muted
+```
+
+### bracket_goals SQL (spustit jednou v Supabase)
 ```sql
 CREATE TABLE bracket_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -273,7 +378,7 @@ Skrytý modul. Viditelnost řídí `tournament.tips_enabled`. Tipéři: jméno +
 | Skupiny   | 3 b.           | 1 b.                 |
 | Playoff   | 5 b.           | 2 b.                 |
 
-Speciální tipy: Vítěz turnaje **10 b.**, Vítěz skupiny **5 b.**, Poslední skupiny **3 b.**
+Speciální tipy: Vítěz turnaje **10 b.**, Nejlepší střelec **10 b.**, Vítěz skupiny **5 b.**, Tým s nejvíce góly **5 b.**, Poslední skupiny **3 b.**
 
 ### Vyhodnocení tipů — kdo co spouští
 | Typ | Kdy | Kdo spouští |

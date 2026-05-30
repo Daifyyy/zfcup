@@ -286,16 +286,12 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
     return          { bg: 'transparent',             borderLeft: '3px solid transparent',          numColor: C.muted }
   }
 
-  // Top 10 scorers — aggregate group goals + bracket_goals
+  // Top 10 scorers — aggregate group goals + bracket_goals (O(n) pass)
+  const goalsAgg: Record<string, number> = {}
+  for (const g of goals) goalsAgg[g.player_id] = (goalsAgg[g.player_id] ?? 0) + g.count
+  for (const g of bracketGoals) goalsAgg[g.player_id] = (goalsAgg[g.player_id] ?? 0) + g.count
   const scorers = players
-    .map(p => ({
-      id: p.id,
-      name: p.name,
-      team: teams.find(t => t.id === p.team_id),
-      total:
-        goals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0) +
-        bracketGoals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0),
-    }))
+    .map(p => ({ id: p.id, name: p.name, team: teams.find(t => t.id === p.team_id), total: goalsAgg[p.id] ?? 0 }))
     .filter(r => r.total > 0)
     .sort((a, b) => b.total - a.total)
     .slice(0, 10)

@@ -6,6 +6,10 @@ import { usePlayers } from './hooks/usePlayers'
 import { useGroups } from './hooks/useGroups'
 import { useMatches } from './hooks/useMatches'
 import { useGoals } from './hooks/useGoals'
+import { useAssists } from './hooks/useAssists'
+import { useBracketAssists } from './hooks/useBracketAssists'
+import { useCards } from './hooks/useCards'
+import { useBracketCards } from './hooks/useBracketCards'
 import { useBracket } from './hooks/useBracket'
 import { useBracketGoals } from './hooks/useBracketGoals'
 import { useAnnouncements } from './hooks/useAnnouncements'
@@ -21,21 +25,24 @@ import Scorers from './components/public/Scorers'
 import Bracket from './components/public/Bracket'
 import Info from './components/public/Info'
 import Rules from './components/public/Rules'
+import Discipline from './components/public/Discipline'
 import Tips from './components/public/Tips'
+import PrintBulletin from './components/public/PrintBulletin'
 import AdminPanel from './components/admin/AdminPanel'
 import KioskMode from './components/kiosk/KioskMode'
 import Scoreboard from './components/public/Scoreboard'
 import Toast from './components/ui/Toast'
 import type { Session } from '@supabase/supabase-js'
 
-export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket' | 'info' | 'rules' | 'tips'
-const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket', 'info', 'rules', 'tips']
+export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket' | 'info' | 'rules' | 'tips' | 'discipline'
+const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket', 'info', 'rules', 'tips', 'discipline']
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('overview')
   const [adminOpen, setAdminOpen] = useState(false)
   const [kiosk, setKiosk] = useState(() => new URLSearchParams(window.location.search).get('kiosk') === '1')
   const [scoreboard, setScoreboard] = useState(false)
+  const [printOpen, setPrintOpen] = useState(false)
   const [session, setSession] = useState<Session | null>(null)
   const [toast, setToast] = useState('')
   const [toastShow, setToastShow] = useState(false)
@@ -47,6 +54,10 @@ export default function App() {
   const { groups, refetch: refetchGroups } = useGroups()
   const { matches, refetch: refetchMatches } = useMatches()
   const { goals, refetch: refetchGoals } = useGoals()
+  const { assists, refetch: refetchAssists } = useAssists()
+  const { bracketAssists, refetch: refetchBracketAssists } = useBracketAssists()
+  const { cards, refetch: refetchCards } = useCards()
+  const { bracketCards, refetch: refetchBracketCards } = useBracketCards()
   const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket()
   const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals()
   const { announcements, refetch: refetchAnnouncements } = useAnnouncements()
@@ -162,20 +173,23 @@ export default function App() {
         onAdmin={() => setAdminOpen(true)}
         onKiosk={() => setKiosk(true)}
         onScoreboard={() => setScoreboard(true)}
+        onPrint={() => setPrintOpen(true)}
         isAdmin={!!session}
         tipsEnabled={tournament?.tips_enabled ?? false}
         showBracket={showBracket}
+        cardsEnabled={tournament?.cards_enabled ?? false}
       />
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
-        {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} players={players} teams={teams} />}
+        {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} players={players} teams={teams} tournament={tournament} />}
         {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
+        {tab === 'discipline' && tournament?.cards_enabled && <Discipline cards={cards} bracketCards={bracketCards} players={players} teams={teams} matches={matches} bracketSlots={bracketSlots} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
         {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
-        {tab === 'tips'      && <Tips matches={matches} teams={teams} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
+        {tab === 'tips'      && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
       </main>
       {scoreboard && (
         <Scoreboard
@@ -197,6 +211,10 @@ export default function App() {
           session={session}
           tournament={tournament}
           bracketGoals={bracketGoals}
+          bracketAssists={bracketAssists}
+          bracketCards={bracketCards}
+          assists={assists}
+          cards={cards}
           referees={referees}
           refetchTournament={refetchTournament}
           refetchTeams={refetchTeams}
@@ -204,16 +222,31 @@ export default function App() {
           refetchGroups={refetchGroups}
           refetchMatches={refetchMatches}
           refetchGoals={refetchGoals}
+          refetchAssists={refetchAssists}
+          refetchCards={refetchCards}
           refetchBracket={refetchBracket}
           refetchBracketGoals={refetchBracketGoals}
+          refetchBracketAssists={refetchBracketAssists}
+          refetchBracketCards={refetchBracketCards}
           refetchReferees={refetchReferees}
           refetchAnnouncements={refetchAnnouncements}
           refetchRuleItems={refetchRuleItems}
           onClose={() => setAdminOpen(false)}
         />
       )}
-      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} />
+      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} />
       <Toast message={toast} show={toastShow} />
+      {printOpen && (
+        <PrintBulletin
+          tournament={tournament}
+          teams={teams}
+          groups={groups}
+          matches={matches}
+          bracketRounds={bracketRounds}
+          bracketSlots={bracketSlots}
+          onClose={() => setPrintOpen(false)}
+        />
+      )}
     </div>
   )
 }

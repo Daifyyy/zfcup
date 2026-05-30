@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
 import type { Group } from '../../../hooks/useGroups'
@@ -214,8 +214,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
 
   const preview = previewEnd()
 
-  // Týmy které jsou již zařazeny do nějaké skupiny
-  const assignedTeamIds = new Set(groups.flatMap(g => g.team_ids))
+  const assignedTeamIds = useMemo(() => new Set(groups.flatMap(g => g.team_ids)), [groups])
 
   return (
     <div>
@@ -420,8 +419,9 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
       {!groups.length ? (
         <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Žádné skupiny.</p>
       ) : groups.map(g => {
-        const cnt = matches.filter(m => m.group_id === g.id).length
-        const playedCnt = matches.filter(m => m.group_id === g.id && m.played).length
+        const gMatches = matches.filter(m => m.group_id === g.id)
+        const cnt = gMatches.length
+        const playedCnt = gMatches.filter(m => m.played).length
         return (
           <div key={g.id} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem 1rem', marginBottom: '.6rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.4rem' }}>
