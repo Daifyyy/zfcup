@@ -263,7 +263,7 @@ function SpecialTipsSection({ groups, teams, players, tipsterId, specialTips, an
       saveError = error
     } else {
       const { error } = await supabase.from('special_tips').insert({
-        tipster_id: tipsterId, tip_type: tipType, predicted_player_id: playerId, points_earned: 0, evaluated: false,
+        tipster_id: tipsterId, tip_type: tipType, predicted_player_id: playerId, predicted_team_id: null, points_earned: 0, evaluated: false,
       })
       saveError = error
     }

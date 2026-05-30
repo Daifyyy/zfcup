@@ -90,7 +90,7 @@ function parseSheets(wb: XLSX.WorkBook, fileName: string): ImportedTeam[] {
           role: parseRole(String(row[roleKey] ?? '')),
         })
       }
-      if (players.length > 0 || sheetName !== 'Sheet1') {
+      if (players.length > 0) {
         teams.push({ name: sheetName, players })
       }
     }

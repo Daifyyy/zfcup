@@ -164,10 +164,14 @@ export async function checkMostGoalsTeam(teams: Team[]): Promise<boolean> {
   }
   const maxGoals = Math.max(...Object.values(agg), 0)
   if (maxGoals === 0) return false
-  const topTeamId = Object.entries(agg).find(([, v]) => v === maxGoals)?.[0]
-  if (!topTeamId) return false
+  const topTeamIds = Object.entries(agg).filter(([, v]) => v === maxGoals).map(([id]) => id)
+  if (topTeamIds.length === 0) return false
 
-  const changed = await evaluateSpecialTip('most_goals_team', topTeamId)
+  let changed = false
+  for (const id of topTeamIds) {
+    const c = await evaluateSpecialTip('most_goals_team', id)
+    if (c) changed = true
+  }
   if (changed) await recalcTipsterPoints()
   return changed
 }

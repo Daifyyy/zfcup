@@ -144,8 +144,8 @@ function SlotEditor({
           : supabase.from('bracket_goals').delete().match({ player_id: p.id, slot_id: slot.id })
       }))
       const goalErr = goalResults.find(r => r.error)?.error
-      if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); return }
-      refetchBracketGoals()
+      if (goalErr) showToast('Chyba gólů: ' + goalErr.message)
+      else refetchBracketGoals()
 
       // 2) Save assists
       if (assistsEnabled) {
@@ -156,8 +156,8 @@ function SlotEditor({
             : supabase.from('bracket_assists').delete().match({ player_id: p.id, slot_id: slot.id })
         }))
         const assistErr = assistResults.find(r => r.error)?.error
-        if (assistErr) { showToast('Chyba asistencí: ' + assistErr.message); return }
-        refetchBracketAssists()
+        if (assistErr) showToast('Chyba asistencí: ' + assistErr.message)
+        else refetchBracketAssists()
       }
 
       // 3) Save cards
@@ -172,7 +172,7 @@ function SlotEditor({
         }
         if (cardRows.length > 0) {
           const { error: cErr } = await supabase.from('bracket_cards').insert(cardRows)
-          if (cErr) { showToast('Chyba kartiček: ' + cErr.message); return }
+          if (cErr) showToast('Chyba kartiček: ' + cErr.message)
         }
         refetchBracketCards()
       }

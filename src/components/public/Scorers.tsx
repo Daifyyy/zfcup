@@ -83,8 +83,8 @@ export default function Scorers({ goals, bracketGoals, assists, bracketAssists, 
                 }}>
                   {sc.goals}
                 </span>
-                {showAssists && sc.assists > 0 && (
-                  <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)', fontWeight: 600 }}>
+                {showAssists && (
+                  <span style={{ fontSize: 'var(--fs-small)', color: sc.assists > 0 ? 'var(--muted)' : 'transparent', fontWeight: 600 }}>
                     +{sc.assists}A
                   </span>
                 )}

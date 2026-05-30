@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { useTipsters } from '../../../hooks/useTipsters'
 import { calcGroupStandings } from '../../../lib/standings'
-import { evaluateSpecialTip, evaluateSpecialTipPlayer, recalcTipsterPoints } from '../../../lib/tipsEval'
+import { evaluateSpecialTip, evaluateSpecialTipPlayer, recalcTipsterPoints, checkTopScorer } from '../../../lib/tipsEval'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
@@ -217,11 +217,21 @@ function EvalRowPlayer({ tipType, label, playerPool, showToast }: {
   }, [tipType])
 
   const evaluate = async () => {
-    if (!selected) { showToast('Vyber hráče'); return }
     setEvaluating(true)
     try {
-      await evaluateSpecialTipPlayer(tipType, [selected], pts)
-      await recalcTipsterPoints()
+      if (tipType === 'top_scorer') {
+        // Auto-detect: najde všechny hráče s max góly (ošetří ties)
+        const changed = await checkTopScorer()
+        if (!changed && selected) {
+          // Fallback: manuální override pokud auto nenašlo žádné tipy
+          await evaluateSpecialTipPlayer(tipType, [selected], pts)
+          await recalcTipsterPoints()
+        }
+      } else {
+        if (!selected) { showToast('Vyber hráče'); setEvaluating(false); return }
+        await evaluateSpecialTipPlayer(tipType, [selected], pts)
+        await recalcTipsterPoints()
+      }
       setDone(true)
       showToast(`${label} vyhodnoceno ✓`)
     } catch (e: unknown) {
@@ -259,11 +269,17 @@ function EvalRowPlayer({ tipType, label, playerPool, showToast }: {
         </div>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
-          <select className="field-input field-select" style={{ width: 'auto', minWidth: 140, fontSize: '.78rem', padding: '.3rem .5rem' }}
-            value={selected} onChange={e => setSelected(e.target.value)}>
-            <option value="">— správný hráč —</option>
-            {sortedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          {tipType === 'top_scorer' ? (
+            <span style={{ fontSize: '.7rem', color: 'var(--muted)', maxWidth: 160 }}>
+              Auto-detekce z dat (zvládne remízy)
+            </span>
+          ) : (
+            <select className="field-input field-select" style={{ width: 'auto', minWidth: 140, fontSize: '.78rem', padding: '.3rem .5rem' }}
+              value={selected} onChange={e => setSelected(e.target.value)}>
+              <option value="">— správný hráč —</option>
+              {sortedPlayers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
           <button type="button" className="btn btn-s btn-sm" onClick={evaluate} style={{ opacity: evaluating ? .6 : 1, whiteSpace: 'nowrap' }}>
             {evaluating ? '…' : 'Vyhodnotit'}
           </button>

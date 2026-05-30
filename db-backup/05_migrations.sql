@@ -187,3 +187,9 @@ DROP POLICY IF EXISTS "public_read" ON bracket_cards;
 DROP POLICY IF EXISTS "admin_write" ON bracket_cards;
 CREATE POLICY "public_read" ON bracket_cards FOR SELECT USING (true);
 CREATE POLICY "admin_write" ON bracket_cards FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- -------------------------------------------------------
+-- SPECIAL_TIPS — predicted_team_id nullable (2026-05-30)
+-- Nutné pro top_scorer tip (ukládá predicted_player_id, ne team)
+-- -------------------------------------------------------
+ALTER TABLE special_tips ALTER COLUMN predicted_team_id DROP NOT NULL;
