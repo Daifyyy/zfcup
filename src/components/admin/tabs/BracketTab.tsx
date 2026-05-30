@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
-import { calcGroupStandings } from '../../../lib/standings'
 import { addMinutes } from '../../../lib/constants'
 import { checkTournamentWinner } from '../../../lib/tipsEval'
+import { getFormatDef, getLegacyFormatDef } from '../../../lib/formats'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
@@ -345,33 +345,21 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
 
   const isLeague = tournament?.format === 'league'
 
-  // Group completion status
   const groupMatches = matches.filter(m => groups.some(g => g.id === m.group_id))
   const playedCount = groupMatches.filter(m => m.played).length
   const allGroupsComplete = groupMatches.length > 0 && playedCount === groupMatches.length
 
   const totalTeams = teams.length
-  const isSingleGroup = !isLeague && groups.length === 1
-  // Use saved setting if available; fallback to size-based heuristic
   const advancingPerGroup = tournament?.advancing_per_group
     || (Math.round(totalTeams / Math.max(1, groups.length)) >= 6 ? 4 : 2)
-  const totalAdvancing = advancingPerGroup * groups.length
-  const crossSeed = tournament?.playoff_style === 'cross'
-  const groupFormat: 'sf' | 'six' | 'six_cross' | 'qf' =
-    isSingleGroup ? 'sf'
-    : totalAdvancing <= 4 ? 'sf'
-    : totalAdvancing === 6 && crossSeed ? 'six_cross'
-    : totalAdvancing === 6 ? 'six'
-    : 'qf'
-  const formatLabel = isLeague
-    ? 'Liga top-6 playoff'
-    : groupFormat === 'sf' ? 'Semifinále'
-    : groupFormat === 'six' ? 'Čtvrtfinále se dvěma bye (6 týmů)'
-    : groupFormat === 'six_cross' ? 'Křížový QF — 3 zápasy bez přímého postupu'
-    : 'Čtvrtfinále'
+
+  const formatDef = getFormatDef(tournament?.format_id ?? '') ?? getLegacyFormatDef(tournament, groups)
+  const formatLabel = formatDef?.label ?? 'Neznámý formát'
+  const formatDescription = formatDef?.description ?? ''
 
   // ── Step 1: Create bracket structure (all slots TBD) ─────────────────
   const generateStructure = async () => {
+    if (!formatDef) { showToast('Nejdříve vyber formát v Nastavení'); return }
     if (!isLeague && groups.length < 1) { showToast('Potřebuješ aspoň 1 skupinu'); return }
     if (!confirm(`Vytvořit strukturu playoff (${formatLabel})? Stávající pavouk bude smazán.`)) return
 
@@ -381,51 +369,8 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         await supabase.from('bracket_slots').delete().in('round_id', bracketRounds.map(r => r.id))
         await supabase.from('bracket_rounds').delete().in('id', bracketRounds.map(r => r.id))
       }
-
-      const createRound = async (roundName: string, count: number, pos: number) => {
-        const { data: round, error } = await supabase
-          .from('bracket_rounds').insert({ name: roundName, position: pos }).select().single()
-        if (error) throw error
-        const slots = Array.from({ length: count }, (_, i) => ({
-          round_id: round.id, position: i,
-          home_id: null, away_id: null,
-          home_score: 0, away_score: 0, played: false,
-        }))
-        const { error: se } = await supabase.from('bracket_slots').insert(slots)
-        if (se) throw se
-      }
-
-      if (isLeague) {
-        // Liga: QF(2) → SF(2) → O3(1) → Final(1)
-        await createRound('Čtvrtfinále', 2, 0)
-        await createRound('Semifinále',  2, 1)
-        await createRound('O 3. místo',  1, 2)
-        await createRound('Finále',      1, 3)
-      } else if (groupFormat === 'sf') {
-        await createRound('Semifinále', 2, 0)
-        await createRound('O 3. místo', 1, 1)
-        await createRound('Finále',     1, 2)
-      } else if (groupFormat === 'six') {
-        // 6 postupujících (3 skupiny × top-2): QF(2) + SF(2 pre-seed) → jako liga
-        await createRound('Čtvrtfinále', 2, 0)
-        await createRound('Semifinále',  2, 1)
-        await createRound('O 3. místo',  1, 2)
-        await createRound('Finále',      1, 3)
-      } else if (groupFormat === 'six_cross') {
-        // Křížový: QF(3) + SF(1) + O3(1) + Finále(1) — bez přímého postupu
-        await createRound('Čtvrtfinále', 3, 0)
-        await createRound('Semifinále',  1, 1)
-        await createRound('O 3. místo',  1, 2)
-        await createRound('Finále',      1, 3)
-      } else {
-        // QF: počet slotů = totalAdvancing / 2 (dynamicky dle počtu skupin)
-        const qfSlots = Math.max(2, totalAdvancing / 2)
-        await createRound('Čtvrtfinále', qfSlots, 0)
-        await createRound('Semifinále',  2, 1)
-        await createRound('O 3. místo',  1, 2)
-        await createRound('Finále',      1, 3)
-      }
-
+      await formatDef.fns.generate()
+      await refetchBracket()
       showToast('Struktura playoff vytvořena ✓')
     } catch (e: unknown) {
       showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
@@ -436,6 +381,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
 
   // ── Step 2: Seed teams from completed standings ───────────────────────
   const seedTeams = async () => {
+    if (!formatDef) { showToast('Nejdříve vyber formát v Nastavení'); return }
     if (!bracketRounds.length) { showToast('Nejdříve vytvoř strukturu playoff'); return }
     if (!allGroupsComplete) {
       showToast(`Skupiny nejsou dohrány (${playedCount}/${groupMatches.length} zápasů)`)
@@ -443,154 +389,16 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     }
     if (!confirm('Nasadit týmy do playoff dle tabulky? Vyplní se TBD sloty prvního kola.')) return
 
-    const fill = (arr: string[], i: number): string | null => arr[i] ?? null
-    const firstRound = bracketRounds.find(r => r.position === 0)
-    if (!firstRound) { showToast('Struktura playoff nenalezena'); return }
-    const firstSlots = [...bracketSlots]
-      .filter(s => s.round_id === firstRound.id)
-      .sort((a, b) => a.position - b.position)
-
     setGenerating(true)
     try {
-      if (isLeague) {
-        // Liga: top-6 z jedné skupiny "Liga"
-        const ligaGroup = groups.find(g => g.name === 'Liga')
-        if (!ligaGroup) { showToast('Skupinu "Liga" nenalezena — nejprve vygeneruj ligový rozpis'); setGenerating(false); return }
-        const standings = calcGroupStandings(ligaGroup, matches).slice(0, 6).map(r => r.id)
-        // QF: slot 0 = 3.(idx2) vs 6.(idx5), slot 1 = 4.(idx3) vs 5.(idx4)
-        const qfPairs = [
-          { home: fill(standings, 2), away: fill(standings, 5) },
-          { home: fill(standings, 3), away: fill(standings, 4) },
-        ]
-        for (let i = 0; i < qfPairs.length; i++) {
-          const slot = firstSlots[i]
-          if (!slot) continue
-          const { error } = await supabase.from('bracket_slots')
-            .update({ home_id: qfPairs[i].home, away_id: qfPairs[i].away }).eq('id', slot.id)
-          if (error) throw error
-        }
-        // SF: seed 2. a 1. jako home (away bude doplněno auto-advance po QF)
-        const sfRound = bracketRounds.find(r => r.position === 1)
-        if (sfRound) {
-          const sfSlots = [...bracketSlots].filter(s => s.round_id === sfRound.id).sort((a, b) => a.position - b.position)
-          // SF slot 0: home = 2. místo (idx1), SF slot 1: home = 1. místo (idx0)
-          const sfSeeds = [fill(standings, 1), fill(standings, 0)]
-          for (let i = 0; i < sfSeeds.length; i++) {
-            const slot = sfSlots[i]
-            if (!slot) continue
-            const { error } = await supabase.from('bracket_slots')
-              .update({ home_id: sfSeeds[i], away_id: null }).eq('id', slot.id)
-            if (error) throw error
-          }
-        }
-      } else if (isSingleGroup) {
-        const standings = calcGroupStandings(groups[0], matches).slice(0, 4).map(r => r.id)
-        const pairs = [
-          { home: fill(standings, 0), away: fill(standings, 3) },
-          { home: fill(standings, 1), away: fill(standings, 2) },
-        ]
-        for (let i = 0; i < pairs.length; i++) {
-          const slot = firstSlots[i]
-          if (!slot) continue
-          const { error } = await supabase.from('bracket_slots')
-            .update({ home_id: pairs[i].home, away_id: pairs[i].away }).eq('id', slot.id)
-          if (error) throw error
-        }
-      } else if (groupFormat === 'six_cross') {
-        // Křížový playoff: skupiny seřazeny abecedně
-        const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
-        const grpStandings = sortedGroups.map(g =>
-          calcGroupStandings(g, matches).slice(0, 3).map(r => r.id)
-        )
-        // 2 skupiny × top-3: 1A vs 3B / 2A vs 2B / 1B vs 3A
-        // 3 skupiny × top-2: 1A vs 2B / 1B vs 2C / 1C vs 2A (cross-rotation)
-        const grpA = grpStandings[0] ?? []
-        const grpB = grpStandings[1] ?? []
-        const grpC = grpStandings[2] ?? []
-        const qfPairs = sortedGroups.length >= 3
-          ? [
-              { home: fill(grpA, 0), away: fill(grpB, 1) },  // 1A vs 2B
-              { home: fill(grpB, 0), away: fill(grpC, 1) },  // 1B vs 2C
-              { home: fill(grpC, 0), away: fill(grpA, 1) },  // 1C vs 2A
-            ]
-          : [
-              { home: fill(grpA, 0), away: fill(grpB, 2) },  // 1A vs 3B
-              { home: fill(grpA, 1), away: fill(grpB, 1) },  // 2A vs 2B
-              { home: fill(grpB, 0), away: fill(grpA, 2) },  // 1B vs 3A
-            ]
-        for (let i = 0; i < qfPairs.length; i++) {
-          const slot = firstSlots[i]
-          if (!slot) continue
-          const { error } = await supabase.from('bracket_slots')
-            .update({ home_id: qfPairs[i].home, away_id: qfPairs[i].away }).eq('id', slot.id)
-          if (error) throw error
-        }
-      } else if (groupFormat === 'six') {
-        // 6 postupujících napříč skupinami (3 skupiny × top-2)
-        // Seřadit: vítězi skupin (body→GD→vstřelené), pak runners-up
-        const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
-        const winners = sortedGroups.map(g => calcGroupStandings(g, matches)[0]).filter(Boolean)
-        const runnerUps = sortedGroups.map(g => calcGroupStandings(g, matches)[1]).filter(Boolean)
-        const rankRows = (rows: ReturnType<typeof calcGroupStandings>) =>
-          [...rows].sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf)
-        const ranked = [...rankRows(winners), ...rankRows(runnerUps)].map(r => r.id)
-        // QF: slot 0 = 3. vs 6., slot 1 = 4. vs 5.
-        const qfPairs = [
-          { home: fill(ranked, 2), away: fill(ranked, 5) },
-          { home: fill(ranked, 3), away: fill(ranked, 4) },
-        ]
-        for (let i = 0; i < qfPairs.length; i++) {
-          const slot = firstSlots[i]
-          if (!slot) continue
-          const { error } = await supabase.from('bracket_slots')
-            .update({ home_id: qfPairs[i].home, away_id: qfPairs[i].away }).eq('id', slot.id)
-          if (error) throw error
-        }
-        // SF: seed 2. a 1. jako home (bye — away doplní auto-advance po QF)
-        const sfRound = bracketRounds.find(r => r.position === 1)
-        if (sfRound) {
-          const sfSlots = [...bracketSlots].filter(s => s.round_id === sfRound.id).sort((a, b) => a.position - b.position)
-          const sfSeeds = [fill(ranked, 1), fill(ranked, 0)]
-          for (let i = 0; i < sfSeeds.length; i++) {
-            const slot = sfSlots[i]
-            if (!slot) continue
-            const { error } = await supabase.from('bracket_slots')
-              .update({ home_id: sfSeeds[i], away_id: null }).eq('id', slot.id)
-            if (error) throw error
-          }
-        }
-      } else {
-        // QF: párovat skupiny po dvojicích (0,1), (2,3), …
-        const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
-        const grouped = sortedGroups.map(g =>
-          calcGroupStandings(g, matches).slice(0, advancingPerGroup).map(r => r.id)
-        )
-        const qfPairs: { home: string | null; away: string | null }[] = []
-        for (let i = 0; i < sortedGroups.length; i += 2) {
-          const G = grouped[i]    ?? []
-          const H = grouped[i + 1] ?? []
-          if (advancingPerGroup >= 4) {
-            // 4 postupující z každé skupiny — křížové nasazení 1.vs4. a 2.vs3.
-            qfPairs.push({ home: fill(G, 0), away: fill(H, 3) })
-            qfPairs.push({ home: fill(H, 1), away: fill(G, 2) })
-            qfPairs.push({ home: fill(H, 0), away: fill(G, 3) })
-            qfPairs.push({ home: fill(G, 1), away: fill(H, 2) })
-          } else {
-            // 2 postupující z každé skupiny — A1 vs B2, B1 vs A2
-            qfPairs.push({ home: fill(G, 0), away: fill(H, 1) })
-            qfPairs.push({ home: fill(H, 0), away: fill(G, 1) })
-          }
-        }
-        for (let i = 0; i < qfPairs.length; i++) {
-          const slot = firstSlots[i]
-          if (!slot) continue
-          const { error } = await supabase.from('bracket_slots')
-            .update({ home_id: qfPairs[i].home, away_id: qfPairs[i].away }).eq('id', slot.id)
-          if (error) throw error
-        }
-      }
-
-      refetchBracket()
+      await formatDef.fns.seed({
+        groups,
+        matches,
+        bracketRounds,
+        bracketSlots,
+        advancingPerGroup,
+      })
+      await refetchBracket()
       showToast('Týmy nasazeny do playoff ✓')
     } catch (e: unknown) {
       showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
@@ -633,129 +441,39 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     const { error } = await supabase.from('bracket_slots').update(payload).eq('id', slotId)
     if (error) { showToast('Chyba: ' + error.message); return }
 
-    // ── Auto-advance winner to next round ──────────────────────────────
     const isDecisive = data.played && data.home_score !== data.away_score
     const hasBothTeams = data.home_id && data.away_id
     if (!isDecisive || !hasBothTeams) { await refetchBracket(); showToast('Uloženo ✓'); return }
-
-    // Helper volaný na konci každé větve — vyhodnotí vítěze turnaje po odehrání finále
-    const evalTournamentWinner = () => checkTournamentWinner(bracketRounds)
 
     const slot = bracketSlots.find(s => s.id === slotId)
     const currentRound = slot ? bracketRounds.find(r => r.id === slot.round_id) : null
     if (!slot || !currentRound) { await refetchBracket(); showToast('Uloženo ✓'); return }
 
     const maxPos = Math.max(...bracketRounds.map(r => r.position))
-    if (currentRound.position >= maxPos - 1) {
+
+    // Final match — check tournament winner
+    if (currentRound.position === maxPos) {
       await refetchBracket()
-      const evaluated = await evalTournamentWinner()
+      const evaluated = await checkTournamentWinner(bracketRounds)
       showToast(evaluated ? 'Uloženo ✓ · 🏆 Vítěz turnaje vyhodnocen' : 'Uloženo ✓')
       return
     }
 
-    const homeWins = (data.home_score ?? 0) > (data.away_score ?? 0)
-    const winner = homeWins ? data.home_id! : data.away_id!
-    const loser  = homeWins ? data.away_id! : data.home_id!
-    const isEven = slot.position % 2 === 0
-
-    const slotsOf = (roundId: string) =>
-      [...bracketSlots].filter(s => s.round_id === roundId).sort((a, b) => a.position - b.position)
-
-    const isSemifinal = currentRound.position === maxPos - 2
-
-    // six_cross: custom advance per QF slot position
-    if (groupFormat === 'six_cross') {
-      if (currentRound.position === 0) {
-        // QF round
-        if (slot.position === 1) {
-          // 2A vs 2B → winner to Final home_id, loser to O3 home_id
-          const finalRound = bracketRounds.find(r => r.position === maxPos)
-          const thirdRound = bracketRounds.find(r => r.position === maxPos - 1)
-          const finalSlot  = finalRound ? slotsOf(finalRound.id)[0] : null
-          const thirdSlot  = thirdRound ? slotsOf(thirdRound.id)[0] : null
-          const ops: Promise<unknown>[] = []
-          if (finalSlot) ops.push(supabase.from('bracket_slots').update({ home_id: winner }).eq('id', finalSlot.id))
-          if (thirdSlot) ops.push(supabase.from('bracket_slots').update({ home_id: loser  }).eq('id', thirdSlot.id))
-          await Promise.all(ops)
-        } else {
-          // slot 0 (1A vs 3B) → SF home_id; slot 2 (1B vs 3A) → SF away_id
-          const sfRound = bracketRounds.find(r => r.position === 1)
-          if (sfRound) {
-            const sfSlot = slotsOf(sfRound.id)[0]
-            if (sfSlot) {
-              const field = slot.position === 0 ? 'home_id' : 'away_id'
-              await supabase.from('bracket_slots').update({ [field]: winner }).eq('id', sfSlot.id)
-            }
-          }
-        }
-        await refetchBracket()
-        showToast('Uloženo ✓ — vítěz postoupil')
-        return
-      }
-      if (currentRound.position === 1) {
-        // SF round → winner to Final away_id, loser to O3 away_id
-        const finalRound = bracketRounds.find(r => r.position === maxPos)
-        const thirdRound = bracketRounds.find(r => r.position === maxPos - 1)
-        const finalSlot  = finalRound ? slotsOf(finalRound.id)[0] : null
-        const thirdSlot  = thirdRound ? slotsOf(thirdRound.id)[0] : null
-        const ops: Promise<unknown>[] = []
-        if (finalSlot) ops.push(supabase.from('bracket_slots').update({ away_id: winner }).eq('id', finalSlot.id))
-        if (thirdSlot) ops.push(supabase.from('bracket_slots').update({ away_id: loser  }).eq('id', thirdSlot.id))
-        await Promise.all(ops)
-        await refetchBracket()
-        showToast('Uloženo ✓ — vítěz postoupil do finále')
-        return
-      }
-    }
-
-    // Liga/six QF: winner → SF slot at SAME index as away_id (home pre-seeded)
-    const isLigaStyle = isLeague || (groupFormat === 'six')
-    if (isLigaStyle && currentRound.position === 0) {
-      const sfRound = bracketRounds.find(r => r.position === 1)
-      if (sfRound) {
-        const sfSlots = slotsOf(sfRound.id)
-        const targetSlot = sfSlots[slot.position]
-        if (targetSlot) {
-          await supabase.from('bracket_slots').update({ away_id: winner }).eq('id', targetSlot.id)
-          await refetchBracket()
-          showToast('Uloženo ✓ — vítěz postoupil do semifinále')
-          return
-        }
-      }
+    // Delegate auto-advance to format
+    if (!formatDef) { await refetchBracket(); showToast('Uloženo ✓'); return }
+    try {
+      const result = await formatDef.fns.autoAdvance({
+        slot: { ...slot, ...data } as BracketSlot,
+        data,
+        currentRound,
+        allRounds: bracketRounds,
+        allSlots: bracketSlots,
+      })
       await refetchBracket()
-      showToast('Uloženo ✓')
-      return
-    }
-
-    if (isSemifinal) {
-      const finalRound = bracketRounds.find(r => r.position === maxPos)
-      const thirdRound = bracketRounds.find(r => r.position === maxPos - 1)
-      const finalSlot  = finalRound ? slotsOf(finalRound.id)[0] : null
-      const thirdSlot  = thirdRound ? slotsOf(thirdRound.id)[0] : null
-      const field = isEven ? 'home_id' : 'away_id'
-
-      const ops: Promise<unknown>[] = []
-      if (finalSlot)
-        ops.push(supabase.from('bracket_slots').update({ [field]: winner }).eq('id', finalSlot.id))
-      if (thirdSlot)
-        ops.push(supabase.from('bracket_slots').update({ [field]: loser }).eq('id', thirdSlot.id))
-      await Promise.all(ops)
+      showToast(result.toast)
+    } catch (e: unknown) {
       await refetchBracket()
-      showToast('Uloženo ✓ — vítěz postoupil do finále')
-    } else {
-      const nextRound = bracketRounds.find(r => r.position === currentRound.position + 1)
-      if (!nextRound) { await refetchBracket(); showToast('Uloženo ✓'); return }
-      const nextSlots = slotsOf(nextRound.id)
-      const targetSlot = nextSlots[Math.floor(slot.position / 2)]
-      const field = isEven ? 'home_id' : 'away_id'
-      if (targetSlot) {
-        await supabase.from('bracket_slots').update({ [field]: winner }).eq('id', targetSlot.id)
-        await refetchBracket()
-        showToast('Uloženo ✓ — vítěz postoupil dál')
-      } else {
-        await refetchBracket()
-        showToast('Uloženo ✓')
-      }
+      showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
     }
   }
 
@@ -792,17 +510,9 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         <div style={{ fontWeight: 600, marginBottom: '.35rem', fontSize: '.82rem' }}>📋 Krok 1 — Vytvořit strukturu</div>
         <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '.6rem' }}>
           Vytvoří prázdný pavouk (všechna místa TBD). Lze udělat <strong>před turnajem</strong>.<br />
-          {isLeague
-            ? <><strong>Liga (top 6):</strong> Čtvrtfinále (3.vs6., 4.vs5.) → Semifinále (2.vs QF, 1.vs QF) → O 3. místo + Finále</>
-            : isSingleGroup
-              ? <><strong>1 skupina:</strong> Top 4 → Semifinále → O 3. místo + Finále</>
-              : groupFormat === 'sf'
-                ? <><strong>Skupiny (top-2):</strong> A1vsB2, B1vsA2 → Semifinále → O 3. místo + Finále</>
-                : groupFormat === 'six'
-                  ? <><strong>6 postupujících (3 skupiny × top-2):</strong> 3.vs6., 4.vs5. v QF; 1. a 2. s bajem do SF</>
-                  : groupFormat === 'six_cross'
-                    ? <><strong>Křížový QF (bez přímého postupu):</strong> 1A vs 3B · 2A vs 2B · 1B vs 3A — vítěz středního zápasu přímo do finále</>
-                    : <><strong>QF ({totalAdvancing / 2} zápasů):</strong> Skupiny spárovány po dvojicích → Semifinále → O 3. místo + Finále</>
+          {formatDef
+            ? <><strong>{formatLabel}:</strong> {formatDescription}</>
+            : <span style={{ color: 'var(--danger)' }}>⚠️ Nejdříve vyber formát v záložce Nastavení</span>
           }
         </div>
         <button type="button" className="btn btn-s" onClick={generateStructure} style={{ opacity: generating ? 0.6 : 1 }}>
@@ -816,16 +526,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '.6rem' }}>
           {allGroupsComplete
             ? <>✅ Všechny zápasy jsou odehrány. Lze nasadit týmy.<br />
-               {isLeague
-                 ? 'Liga: 3.vs6. a 4.vs5. v QF; 2. a 1. předsazeni do SF.'
-                 : isSingleGroup
-                   ? 'Doplní 1. vs 4., 2. vs 3. ze skupiny.'
-                   : groupFormat === 'six'
-                     ? '6 týmů: 3.vs6. a 4.vs5. v QF; 1. a 2. (celkové pořadí) s bajem do SF.'
-                     : groupFormat === 'six_cross'
-                       ? '6 týmů: 1A vs 3B · 2A vs 2B · 1B vs 3A. Vítěz prostředního zápasu jde přímo do finále.'
-                       : `Skupiny spárovány po dvojicích — ${totalAdvancing} týmů do QF.`
-               }</>
+               {formatDescription}</>
             : <>⏳ Zápasy nejsou dohrány — odehráno <strong>{playedCount}/{groupMatches.length}</strong> zápasů.</>
           }
         </div>

@@ -307,9 +307,12 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
     <div style={{ padding: '.5rem .8rem', display: 'flex', flexDirection: 'column', gap: '.4rem', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
       {sorted.map(round => {
         const roundSlots = [...slots].filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
-        const isFinal = /finále/i.test(round.name) && !/3/i.test(round.name)
-        const isThird = /3/i.test(round.name) || /třet/i.test(round.name) || /bronze/i.test(round.name)
-        const accentColor = isFinal ? C.gold : isThird ? C.bronze : C.accent
+        const isFinal   = /finále/i.test(round.name) && !/[3579]/i.test(round.name)
+        const isThird   = /o\s*3/i.test(round.name) || /třet/i.test(round.name) || /bronze/i.test(round.name)
+        const isFifth   = /o\s*5/i.test(round.name) || /5[\.-]/i.test(round.name)
+        const isSeventh = /o\s*7/i.test(round.name) || /7[\.-]/i.test(round.name)
+        const isNinth   = /o\s*9/i.test(round.name) || /9[\.-]/i.test(round.name)
+        const accentColor = isFinal ? C.gold : isThird ? C.bronze : isFifth ? '#6366f1' : isSeventh ? '#64748b' : isNinth ? '#94a3b8' : C.accent
         return (
           <div key={round.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{
@@ -322,7 +325,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
               paddingBottom: '.14rem',
               borderBottom: `1px solid ${accentColor}`,
             }}>
-              {isFinal ? '🏆' : isThird ? '🥉' : '⚔️'} {round.name}
+              {isFinal ? '🏆' : isThird ? '🥉' : isFifth ? '5️⃣' : isSeventh ? '7️⃣' : isNinth ? '9️⃣' : '⚔️'} {round.name}
             </div>
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '.15rem', overflow: 'hidden' }}>
               {roundSlots.map(s => {
@@ -552,10 +555,13 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
           .filter(s => s.round_id === round.id)
           .sort((a, b) => a.position - b.position)
 
-        const isFinal = /finále/i.test(round.name) && !/3/i.test(round.name)
-        const isThird = /3/i.test(round.name) || /třet/i.test(round.name) || /bronze/i.test(round.name)
+        const isFinal   = /finále/i.test(round.name) && !/[3579]/i.test(round.name)
+        const isThird   = /o\s*3/i.test(round.name) || /třet/i.test(round.name) || /bronze/i.test(round.name)
+        const isFifth   = /o\s*5/i.test(round.name) || /5[\.-]/i.test(round.name)
+        const isSeventh = /o\s*7/i.test(round.name) || /7[\.-]/i.test(round.name)
+        const isNinth   = /o\s*9/i.test(round.name) || /9[\.-]/i.test(round.name)
 
-        const accentColor = isFinal ? C.gold : isThird ? C.bronze : C.accent
+        const accentColor = isFinal ? C.gold : isThird ? C.bronze : isFifth ? '#6366f1' : isSeventh ? '#64748b' : isNinth ? '#94a3b8' : C.accent
         const borderColor = isFinal ? 'rgba(217,119,6,.35)' : isThird ? 'rgba(146,64,14,.25)' : C.border
 
         return (
@@ -570,7 +576,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
               borderBottom: `2px solid ${accentColor}`,
               display: 'flex', alignItems: 'center', gap: '.4rem',
             }}>
-              {isFinal ? '🏆' : isThird ? '🥉' : '⚔️'} {round.name}
+              {isFinal ? '🏆' : isThird ? '🥉' : isFifth ? '5️⃣' : isSeventh ? '7️⃣' : isNinth ? '9️⃣' : '⚔️'} {round.name}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
               {roundSlots.map(slot => {

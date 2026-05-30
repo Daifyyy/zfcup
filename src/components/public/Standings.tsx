@@ -5,6 +5,7 @@ import type { Team } from '../../hooks/useTeams'
 import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
+import { getAdvancingCutoffs } from '../../lib/formats'
 
 interface Props {
   groups: Group[]
@@ -14,23 +15,32 @@ interface Props {
 }
 
 // Barevné zvýraznění řádku dle pozice a formátu
-function rowStyle(i: number, isLeague: boolean, totalRows: number): {
+function rowStyle(i: number, advancing: number, consolation: number, sfCutoff?: number, qfCutoff?: number): {
   bg: string; borderLeft: string; badge: string | null; badgeColor: string
 } {
-  if (isLeague) {
-    if (i < 2)  return { bg: 'rgba(22,163,74,.07)',  borderLeft: '4px solid rgba(22,163,74,.55)',  badge: '→ SF', badgeColor: '#15803d' }
-    if (i < 6)  return { bg: 'rgba(245,158,11,.07)', borderLeft: '4px solid rgba(245,158,11,.5)', badge: '→ QF', badgeColor: '#b45309' }
-    return        { bg: 'transparent',               borderLeft: '4px solid transparent',         badge: null,   badgeColor: '' }
+  // League mode (sfCutoff/qfCutoff defined)
+  if (sfCutoff !== undefined) {
+    if (i < sfCutoff) return { bg: 'rgba(22,163,74,.07)', borderLeft: '4px solid rgba(22,163,74,.55)', badge: '→ SF', badgeColor: '#15803d' }
+    if (qfCutoff !== undefined && i < qfCutoff) return { bg: 'rgba(245,158,11,.07)', borderLeft: '4px solid rgba(245,158,11,.5)', badge: '→ QF', badgeColor: '#b45309' }
+    return { bg: 'transparent', borderLeft: '4px solid transparent', badge: null, badgeColor: '' }
   }
-  // Skupinový formát — 1. skupiny postupuje (zelená), 2. může postupovat (modrá)
-  if (i === 0) return { bg: 'rgba(22,163,74,.07)',  borderLeft: '4px solid rgba(22,163,74,.55)',  badge: '🥇', badgeColor: '#15803d' }
-  if (i === 1 && totalRows > 2) return { bg: 'rgba(37,99,235,.04)', borderLeft: '4px solid rgba(37,99,235,.3)', badge: null, badgeColor: '' }
-  return          { bg: 'transparent',              borderLeft: '4px solid transparent',         badge: null, badgeColor: '' }
+  // Groups mode
+  if (advancing > 0 && i < advancing) return { bg: 'rgba(22,163,74,.07)', borderLeft: '4px solid rgba(22,163,74,.55)', badge: i === 0 ? '🥇' : '→ Playoff', badgeColor: '#15803d' }
+  if (consolation > 0 && i < advancing + consolation) return { bg: 'rgba(245,158,11,.07)', borderLeft: '4px solid rgba(245,158,11,.4)', badge: '→ Útěcha', badgeColor: '#b45309' }
+  return { bg: 'transparent', borderLeft: '4px solid transparent', badge: null, badgeColor: '' }
 }
 
 export default function Standings({ groups, matches, teams, tournament }: Props) {
   const gt = (id: string) => teams.find(t => t.id === id)
   const isLeague = tournament?.format === 'league'
+
+  const cutoffs = tournament
+    ? getAdvancingCutoffs(tournament.format_id ?? '', tournament)
+    : { advancing: 1 }
+  const sfCutoff = cutoffs.sfCutoff
+  const qfCutoff = cutoffs.qfCutoff
+  const advancing = cutoffs.advancing ?? 1
+  const consolation = cutoffs.consolation ?? 0
 
   if (!groups.length) return <Empty icon="📊" text="Nejsou definovány žádné skupiny. Přidej je v admin panelu → Skupiny." />
 
@@ -60,24 +70,32 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
                   {group.team_ids.length} týmů · {playedCount} odehráno
                 </span>
                 {/* Legenda */}
-                {isLeague && (
+                {(sfCutoff !== undefined || advancing > 0 || consolation > 0) && rows.length > 1 && (
                   <div style={{ display: 'flex', gap: '.6rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 'var(--fs-label)', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(22,163,74,.55)' }} />
-                      1–2 → Semifinále
-                    </span>
-                    <span style={{ fontSize: 'var(--fs-label)', color: '#b45309', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(245,158,11,.55)' }} />
-                      3–6 → Čtvrtfinále
-                    </span>
-                  </div>
-                )}
-                {!isLeague && rows.length > 1 && (
-                  <div style={{ display: 'flex', gap: '.6rem', marginLeft: 'auto' }}>
-                    <span style={{ fontSize: 'var(--fs-label)', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(22,163,74,.55)' }} />
-                      Vítěz skupiny
-                    </span>
+                    {sfCutoff !== undefined && (
+                      <span style={{ fontSize: 'var(--fs-label)', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(22,163,74,.55)' }} />
+                        1–{sfCutoff} → Semifinále
+                      </span>
+                    )}
+                    {qfCutoff !== undefined && (
+                      <span style={{ fontSize: 'var(--fs-label)', color: '#b45309', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(245,158,11,.55)' }} />
+                        {sfCutoff !== undefined ? `${sfCutoff + 1}–${qfCutoff}` : `1–${qfCutoff}`} → Čtvrtfinále
+                      </span>
+                    )}
+                    {sfCutoff === undefined && advancing > 0 && (
+                      <span style={{ fontSize: 'var(--fs-label)', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(22,163,74,.55)' }} />
+                        Vítěz skupiny → Playoff
+                      </span>
+                    )}
+                    {consolation > 0 && (
+                      <span style={{ fontSize: 'var(--fs-label)', color: '#b45309', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(245,158,11,.55)' }} />
+                        → Útěcha
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -106,8 +124,8 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
                       {h}
                     </th>
                   ))}
-                  {/* Sloupec pro badge postupu (liga) */}
-                  {isLeague && <th style={{ width: 48 }} />}
+                  {/* Sloupec pro badge postupu */}
+                  {(sfCutoff !== undefined || advancing > 0) && <th style={{ width: 48 }} />}
                 </tr>
               </thead>
               <tbody>
@@ -115,7 +133,7 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
                   const team = gt(row.id)
                   const rankClass = i === 0 ? 'rank rank-1' : i === 1 ? 'rank rank-2' : i === 2 ? 'rank rank-3' : 'rank'
                   const gdColor = row.gd > 0 ? 'var(--success)' : row.gd < 0 ? 'var(--danger)' : 'var(--muted)'
-                  const rs = rowStyle(i, isLeague, rows.length)
+                  const rs = rowStyle(i, advancing, consolation, sfCutoff, qfCutoff)
                   return (
                     <tr key={row.id} style={{
                       borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none',
@@ -128,8 +146,8 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {team && <TeamLogo team={team} size={24} />}
                           <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
-                          {/* Skupinový formát — badge 🥇 u vítěze */}
-                          {rs.badge && !isLeague && (
+                          {/* Badge 🥇 u vítěze skupiny (skupinový formát) */}
+                          {rs.badge && sfCutoff === undefined && i === 0 && (
                             <span style={{ fontSize: '.65rem', marginLeft: 2 }}>{rs.badge}</span>
                           )}
                         </div>
@@ -146,15 +164,26 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
                           {row.pts}
                         </span>
                       </td>
-                      {/* Badge → SF / → QF v liga modu */}
-                      {isLeague && (
+                      {/* Badge → SF / → QF / → Playoff / → Útěcha */}
+                      {(sfCutoff !== undefined || advancing > 0) && (
                         <td style={{ textAlign: 'center', padding: 'var(--pad-cell)' }}>
-                          {rs.badge && (
+                          {rs.badge && sfCutoff !== undefined && (
                             <span style={{
                               fontSize: 'var(--fs-label)', fontWeight: 700,
                               color: rs.badgeColor,
-                              background: i < 2 ? 'rgba(22,163,74,.12)' : 'rgba(245,158,11,.12)',
-                              border: `1px solid ${i < 2 ? 'rgba(22,163,74,.3)' : 'rgba(245,158,11,.3)'}`,
+                              background: sfCutoff !== undefined && i < sfCutoff ? 'rgba(22,163,74,.12)' : 'rgba(245,158,11,.12)',
+                              border: `1px solid ${sfCutoff !== undefined && i < sfCutoff ? 'rgba(22,163,74,.3)' : 'rgba(245,158,11,.3)'}`,
+                              borderRadius: 20, padding: '2px 7px', whiteSpace: 'nowrap',
+                            }}>
+                              {rs.badge}
+                            </span>
+                          )}
+                          {rs.badge && sfCutoff === undefined && rs.badge !== '🥇' && (
+                            <span style={{
+                              fontSize: 'var(--fs-label)', fontWeight: 700,
+                              color: rs.badgeColor,
+                              background: consolation > 0 && i >= advancing ? 'rgba(245,158,11,.12)' : 'rgba(22,163,74,.12)',
+                              border: `1px solid ${consolation > 0 && i >= advancing ? 'rgba(245,158,11,.3)' : 'rgba(22,163,74,.3)'}`,
                               borderRadius: 20, padding: '2px 7px', whiteSpace: 'nowrap',
                             }}>
                               {rs.badge}

@@ -110,3 +110,9 @@ ALTER TABLE tournament
 -- -------------------------------------------------------
 -- UPDATE groups SET tiebreaker = 'score_then_h2h'
 -- WHERE tiebreaker != 'score_then_h2h';
+
+-- -------------------------------------------------------
+-- TOURNAMENT — format_id pro nový systém formátů
+-- -------------------------------------------------------
+ALTER TABLE tournament
+  ADD COLUMN IF NOT EXISTS format_id TEXT DEFAULT '';

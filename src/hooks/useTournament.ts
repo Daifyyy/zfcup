@@ -23,6 +23,7 @@ export interface Tournament {
   league_has_playoff: boolean
   logo_url: string | null
   playoff_style?: string
+  format_id?: string
 }
 
 export function useTournament() {
