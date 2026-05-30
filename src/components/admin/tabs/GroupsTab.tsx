@@ -6,6 +6,7 @@ import type { Match } from '../../../hooks/useMatches'
 import type { Tournament } from '../../../hooks/useTournament'
 import { matchCount, addMinutes } from '../../../lib/constants'
 import { generateLeagueSchedule, leagueMatchCount, leagueSlotCount } from '../../../lib/leagueSchedule'
+import { getFormatDef } from '../../../lib/formats'
 
 interface Props {
   teams: Team[]
@@ -69,8 +70,13 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   const [leagueBreakWindowDur, setLeagueBreakWindowDur] = useState('60')
   const [leagueGenerating, setLeagueGenerating] = useState(false)
 
+  // Tiebreaker edit state
+  const [editingTiebreakerGroupId, setEditingTiebreakerGroupId] = useState<string | null>(null)
+  const [tiebreakerDraft, setTiebreakerDraft] = useState<'score_first' | 'h2h_first' | 'score_then_h2h'>('score_then_h2h')
+
   const leagueGroup = groups.find(g => g.name === 'Liga')
   const isLeague = tournament?.format === 'league'
+  const formatDef = getFormatDef(tournament?.format_id ?? '')
 
   const toggleLeagueTeam = (id: string) =>
     setLeagueTeamIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
@@ -150,6 +156,12 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   const toggle = (id: string) =>
     setForm(f => ({ ...f, teamIds: f.teamIds.includes(id) ? f.teamIds.filter(x => x !== id) : [...f.teamIds, id] }))
 
+  const saveTiebreaker = async (groupId: string) => {
+    const { error } = await supabase.from('groups').update({ tiebreaker: tiebreakerDraft }).eq('id', groupId)
+    if (error) showToast('Chyba: ' + error.message)
+    else { showToast('Tiebreaker uložen ✓'); refetchGroups(); setEditingTiebreakerGroupId(null) }
+  }
+
   const previewEnd = () => {
     if (!form.start_time || !form.teamIds.length) return null
     const n = form.teamIds.length
@@ -157,7 +169,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
     const dur = parseInt(form.match_duration) || 20
     const brk = parseInt(form.break_between) || 5
     const numPitches = tournament?.num_pitches ?? 2
-    const numGroups = tournament?.num_groups ?? 1
+    const numGroups = groups.length + 1
     const pitchesPerGroup = Math.max(1, Math.floor(numPitches / numGroups))
     const numSlots = Math.ceil(total / pitchesPerGroup)
     const end = addMinutes(form.start_time, numSlots * (dur + brk) - brk)
@@ -184,7 +196,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
     const dur = parseInt(form.match_duration) || 20
     const brk = parseInt(form.break_between) || 5
     const numPitches = tournament?.num_pitches ?? 2
-    const numGroups = tournament?.num_groups ?? 1
+    const numGroups = groups.length > 0 ? groups.length + 1 : 1
     const pitchesPerGroup = Math.max(1, Math.floor(numPitches / numGroups))
     const matchRows = pairs.map((p, i) => ({
       group_id: grp.id,
@@ -332,6 +344,21 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
 
       {!isLeague && (
         <>
+          {/* Hint o formátu */}
+          {formatDef && formatDef.groupConfig.defaultGroups > 0 && (
+            <div style={{
+              padding: '.55rem .8rem', borderRadius: 8, marginBottom: '.75rem', fontSize: '.76rem',
+              background: groups.length === formatDef.groupConfig.defaultGroups
+                ? 'rgba(22,163,74,.07)' : 'rgba(245,158,11,.09)',
+              border: `1px solid ${groups.length === formatDef.groupConfig.defaultGroups
+                ? 'rgba(22,163,74,.25)' : 'rgba(245,158,11,.3)'}`,
+              color: groups.length === formatDef.groupConfig.defaultGroups ? '#166534' : '#92400e',
+            }}>
+              {groups.length === formatDef.groupConfig.defaultGroups
+                ? `✓ Formát „${formatDef.label}" — počet skupin odpovídá (${groups.length})`
+                : `⚠ Formát „${formatDef.label}" doporučuje ${formatDef.groupConfig.defaultGroups} skupin — aktuálně vytvořeno ${groups.length}`}
+            </div>
+          )}
           <div className="sub-title">Vytvořit skupinu</div>
       <div className="field-group">
         <label className="field-label">Název skupiny</label>
@@ -429,12 +456,36 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
           <div key={g.id} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem 1rem', marginBottom: '.6rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.4rem' }}>
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.95rem', letterSpacing: '.06em', flex: 1 }}>{g.name}</span>
+              <button type="button" className="btn btn-s btn-sm" onClick={() => {
+                setEditingTiebreakerGroupId(editingTiebreakerGroupId === g.id ? null : g.id)
+                setTiebreakerDraft(g.tiebreaker as typeof tiebreakerDraft)
+              }}>⚙ Tiebreaker</button>
               <button type="button" className="btn btn-d btn-sm" onClick={() => removeGroup(g)}>Smazat</button>
             </div>
             <div style={{ fontSize: '.71rem', color: 'var(--muted)', marginBottom: '.4rem' }}>
               {g.team_ids.length} týmů · {cnt} zápasů ({playedCnt} odehráno) · {g.schedule === 'twice' ? '2×' : '1×'} každý s každým
               {g.start_time && ` · od ${g.start_time}`}
+              {' · '}{g.tiebreaker === 'score_first' ? 'Tiebreaker A' : g.tiebreaker === 'h2h_first' ? 'Tiebreaker B' : 'Tiebreaker C'}
             </div>
+            {editingTiebreakerGroupId === g.id && (
+              <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 7, padding: '.6rem .75rem', marginBottom: '.5rem' }}>
+                <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--accent)', marginBottom: '.4rem' }}>Změnit tiebreaker</div>
+                {([
+                  ['score_first', 'A: Skóre → vstřelené góly'],
+                  ['h2h_first', 'B: Vzájemný zápas → skóre → vstřelené'],
+                  ['score_then_h2h', 'C: Skóre → vstřelené → vzájemný zápas'],
+                ] as const).map(([val, label]) => (
+                  <div key={val} className="radio-item" onClick={() => setTiebreakerDraft(val)} style={{ marginBottom: '.2rem' }}>
+                    <input type="radio" readOnly checked={tiebreakerDraft === val} />
+                    <label style={{ fontSize: '.76rem' }}>{label}</label>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', gap: '.4rem', marginTop: '.5rem' }}>
+                  <button type="button" className="btn btn-p btn-sm" onClick={() => saveTiebreaker(g.id)}>💾 Uložit</button>
+                  <button type="button" className="btn btn-s btn-sm" onClick={() => setEditingTiebreakerGroupId(null)}>Zrušit</button>
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {g.team_ids.map(id => {
                 const t = teams.find(t => t.id === id)

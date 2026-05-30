@@ -24,11 +24,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
     playoff_kickoff: '',
     round_break: 5,
   })
-  const [scenario, setScenario] = useState({
-    num_teams: 0,
-    num_groups: 2,
-    advancing_per_group: 2,
-  })
+  const [advancingPerGroup, setAdvancingPerGroup] = useState(2)
   const [numPitches, setNumPitches] = useState(2)
   const [savingFormat, setSavingFormat] = useState(false)
 
@@ -40,11 +36,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       playoff_kickoff: tournament.playoff_kickoff ?? '',
       round_break: tournament.round_break ?? 5,
     })
-    setScenario({
-      num_teams: tournament.num_teams ?? 0,
-      num_groups: tournament.num_groups ?? 2,
-      advancing_per_group: tournament.advancing_per_group ?? 2,
-    })
+    setAdvancingPerGroup(tournament.advancing_per_group ?? 2)
     setNumPitches(tournament.num_pitches ?? 2)
   }, [tournament?.id])
 
@@ -82,11 +74,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       const { error } = await supabase.from('tournament').update(updates).eq('id', tournament.id)
       if (error) showToast('Chyba: ' + error.message)
       else {
-        setScenario(s => ({
-          ...s,
-          num_groups: def.groupConfig.defaultGroups,
-          advancing_per_group: def.groupConfig.defaultAdvancingPerGroup,
-        }))
+        setAdvancingPerGroup(def.groupConfig.defaultAdvancingPerGroup)
         showToast(`Formát: ${def.label} ✓`)
         refetchTournament()
       }
@@ -115,36 +103,10 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
     else { showToast('Parametry uloženy ✓'); refetchTournament() }
   }
 
-  const saveScenario = async () => {
-    if (!tournament) return
-    const { error } = await supabase.from('tournament').update({
-      num_teams: scenario.num_teams,
-      num_groups: scenario.num_groups,
-      advancing_per_group: scenario.advancing_per_group,
-    }).eq('id', tournament.id)
-    if (error) showToast('Chyba: ' + error.message)
-    else { showToast('Scénář uložen ✓'); refetchTournament() }
-  }
-
-  // Derived scenario preview
   const isLeagueFormat = tournament?.format === 'league'
   const leagueHasPlayoff = tournament?.league_has_playoff ?? true
-  const totalAdvancing = isLeagueFormat ? 6 : scenario.num_groups * scenario.advancing_per_group
-  const playoffStyle = tournament?.playoff_style ?? 'standard'
-  const playoffLabel = isLeagueFormat
-    ? (leagueHasPlayoff
-        ? 'Top-6 → Čtvrtfinále (2) + Semifinále (2) + Finále'
-        : 'Bez playoff — vítěz dle tabulky po odehrání všech zápasů')
-    : totalAdvancing <= 4
-      ? `${totalAdvancing} týmů → Semifinále (${totalAdvancing / 2} zápasy) + Finále`
-      : totalAdvancing === 6
-        ? (playoffStyle === 'cross'
-            ? '6 týmů → Křížový QF (3 zápasy, bez bye) + SF (1) + Finále'
-            : '6 týmů → Čtvrtfinále (2, 2 bye) + Semifinále (2) + Finále')
-        : `${totalAdvancing} týmů → Čtvrtfinále (${totalAdvancing / 2} zápasy) + Semifinále (2) + Finále`
-
-  const teamsPerGroup = scenario.num_groups > 0 ? Math.round(scenario.num_teams / scenario.num_groups) : 0
-  const maxAdvancing = Math.max(1, teamsPerGroup - 1)
+  const currentFormatDef = getFormatDef(tournament?.format_id ?? '')
+  const formatPreviewText = currentFormatDef?.description ?? ''
 
   const changePassword = async () => {
     if (!p1) { showToast('Zadejte nové heslo'); return }
@@ -292,95 +254,40 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
         </div>
       </div>
 
-      {/* Scénář — skupinový formát */}
-      {tournament?.format !== 'league' && (
-        <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem .95rem', marginBottom: '.75rem' }}>
-          <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.6rem' }}>
-            Nastavení scénáře
+      {/* Postupující — jen pro skupinový formát */}
+      {!isLeagueFormat && (
+        <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .95rem', marginBottom: '.75rem' }}>
+          <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.5rem' }}>
+            Postupující z každé skupiny
           </div>
-          <div className="field-row">
+          <div className="field-row" style={{ alignItems: 'flex-end' }}>
             <div className="field-group">
-              <label className="field-label">Počet týmů</label>
-              <select className="field-input field-select"
-                value={scenario.num_teams}
-                onChange={e => setScenario(s => ({ ...s, num_teams: parseInt(e.target.value) || 0 }))}>
-                <option value={0}>— vybrat —</option>
-                <option value={6}>6</option>
-                <option value={8}>8</option>
-                <option value={10}>10</option>
-                <option value={12}>12</option>
-                <option value={14}>14</option>
-                <option value={-1}>vlastní</option>
-              </select>
-            </div>
-            <div className="field-group">
-              <label className="field-label">Počet skupin</label>
-              <select className="field-input field-select"
-                value={scenario.num_groups}
-                onChange={e => setScenario(s => ({ ...s, num_groups: parseInt(e.target.value) || 2 }))}>
-                <option value={1}>1 (jednoskupinový)</option>
-                <option value={2}>2</option>
-                <option value={3}>3</option>
-                <option value={4}>4</option>
-                <option value={6}>6</option>
-              </select>
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field-group">
-              <label className="field-label">Postupující z každé skupiny</label>
-              <select className="field-input field-select"
-                value={scenario.advancing_per_group}
-                onChange={e => setScenario(s => ({ ...s, advancing_per_group: parseInt(e.target.value) || 2 }))}>
-                {[1, 2, 3, 4].filter(v => v <= maxAdvancing || maxAdvancing === 0).map(v => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+              <label className="field-label">Počet postupujících (1–4)</label>
+              <input
+                className="field-input"
+                type="number"
+                min="1"
+                max="4"
+                value={advancingPerGroup}
+                onChange={e => setAdvancingPerGroup(Math.min(4, Math.max(1, parseInt(e.target.value) || 1)))}
+              />
             </div>
             <div className="field-group" style={{ justifyContent: 'flex-end' }}>
-              {teamsPerGroup > 0 && (
-                <div style={{ fontSize: '.71rem', color: 'var(--muted)', marginTop: '.3rem' }}>
-                  {teamsPerGroup} týmů/skupinu
-                </div>
-              )}
+              <button type="button" className="btn btn-s" onClick={async () => {
+                if (!tournament) return
+                const { error } = await supabase.from('tournament').update({ advancing_per_group: advancingPerGroup }).eq('id', tournament.id)
+                if (error) showToast('Chyba: ' + error.message)
+                else { showToast(`Postupující: ${advancingPerGroup} ✓`); refetchTournament() }
+              }}>💾 Uložit</button>
             </div>
           </div>
-          {/* Playoff preview */}
-          <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 7, padding: '.5rem .7rem', fontSize: '.74rem', color: 'var(--accent)', marginBottom: '.6rem' }}>
-            🏆 {playoffLabel}
-          </div>
-          {/* Playoff style — zobrazit jen když totalAdvancing === 6 */}
-          {totalAdvancing === 6 && (
-            <div style={{ marginBottom: '.6rem' }}>
-              <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.3rem' }}>Styl playoff (6 postupujících)</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {(['standard', 'cross'] as const).map(style => (
-                  <button
-                    key={style}
-                    type="button"
-                    onClick={async () => {
-                      if (!tournament) return
-                      const { error } = await supabase.from('tournament').update({ playoff_style: style }).eq('id', tournament.id)
-                      if (error) showToast('Chyba: ' + error.message)
-                      else { showToast(style === 'cross' ? 'Křížový playoff ✓' : 'Standard playoff ✓'); refetchTournament() }
-                    }}
-                    style={{
-                      padding: '.3rem .75rem', borderRadius: 7, fontSize: '.78rem', cursor: 'pointer',
-                      border: `2px solid ${playoffStyle === style ? 'var(--accent)' : 'var(--border)'}`,
-                      background: playoffStyle === style ? 'var(--accent-dim)' : '#f8fafc',
-                      color: playoffStyle === style ? 'var(--accent)' : 'var(--muted)',
-                      fontWeight: playoffStyle === style ? 700 : 500,
-                    }}
-                  >
-                    {style === 'standard' ? 'Standard (2 QF + bye)' : 'Křížový (3 QF, bez bye)'}
-                  </button>
-                ))}
-              </div>
+          {formatPreviewText && (
+            <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 7, padding: '.4rem .65rem', fontSize: '.74rem', color: 'var(--accent)', marginTop: '.5rem' }}>
+              🏆 {formatPreviewText}
             </div>
           )}
-          <button type="button" className="btn btn-s" onClick={saveScenario}>💾 Uložit scénář</button>
-          <div style={{ fontSize: '.69rem', color: 'var(--muted)', marginTop: '.4rem' }}>
-            Uložení nezmění existující skupiny ani pavouk — slouží jen jako reference pro generátor playoff.
+          <div style={{ fontSize: '.69rem', color: 'var(--muted)', marginTop: '.35rem' }}>
+            Ovlivňuje zbarvení tabulky skupin (zelená = postupující). Výběr formátu nastaví výchozí hodnotu.
           </div>
         </div>
       )}
@@ -403,9 +310,11 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
             </button>
           </div>
           {/* Playoff preview */}
-          <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 7, padding: '.45rem .65rem', fontSize: '.74rem', color: 'var(--accent)', marginBottom: '.7rem' }}>
-            🏆 {playoffLabel}
-          </div>
+          {formatPreviewText && (
+            <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 7, padding: '.45rem .65rem', fontSize: '.74rem', color: 'var(--accent)', marginBottom: '.7rem' }}>
+              🏆 {formatPreviewText}
+            </div>
+          )}
           <div className="field-row">
             <div className="field-group">
               <label className="field-label">Délka zápasu (min)</label>
