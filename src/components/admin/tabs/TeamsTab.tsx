@@ -136,9 +136,12 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
 
   const uploadAvatar = async (playerId: string, file: File) => {
     if (uploadingAvatar) return
+    if (!['image/png', 'image/jpeg'].includes(file.type)) { showToast('Pouze PNG nebo JPG'); return }
+    if (file.size > 204_800) { showToast('Max velikost je 200 KB'); return }
     setUploadingAvatar(true)
     try {
-      const path = `players/${playerId}.png`
+      const ext = file.type === 'image/jpeg' ? 'jpg' : 'png'
+      const path = `players/${playerId}.${ext}`
       const { error: upErr } = await supabase.storage.from('team-logos').upload(path, file, { upsert: true, contentType: file.type })
       if (upErr) { showToast('Chyba uploadu: ' + upErr.message); return }
       const { data: { publicUrl } } = supabase.storage.from('team-logos').getPublicUrl(path)
@@ -208,7 +211,7 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
                       }
                       <label style={{ cursor: 'pointer', fontSize: '.75rem', color: 'var(--accent)', fontWeight: 600, opacity: uploadingAvatar ? 0.5 : 1 }}>
                         {uploadingAvatar ? 'Nahrávám…' : '📷 Nahrát foto'}
-                        <input type="file" accept="image/*" style={{ display: 'none' }}
+                        <input type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style={{ display: 'none' }}
                           onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(p.id, f) }} />
                       </label>
                       {p.avatar_url && (
