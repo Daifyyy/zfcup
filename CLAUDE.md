@@ -33,7 +33,7 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 ## DB Schema — důležité tabulky
 - `matches`: group_id (nullable FK), round (TEXT NOT NULL), home_id, away_id, home_score, away_score (INTEGER), played (BOOL), scheduled_time (TEXT NOT NULL)
 - `goals`: player_id, match_id, count — UNIQUE(player_id, match_id), FK na matches
-- `players`: id, team_id, name, number (nullable), role (TEXT nullable: `'captain' | 'goalkeeper' | 'both'`), `avatar_url TEXT` — URL fotky hráče (Storage bucket `team-logos`, path `players/{id}.png`)
+- `players`: id, team_id, name, number (nullable), role (TEXT nullable: `'captain' | 'goalkeeper' | 'both'`), `avatar_url TEXT` — URL fotky hráče (Storage bucket `team-logos`, path `players/{id}.png` nebo `.jpg`); upload validace: pouze PNG/JPG, max 200 KB
 - `bracket_slots`: id, round_id, position, home_id, away_id, home_score, away_score, played, **scheduled_time (TEXT nullable)** — migrační SQL: `ALTER TABLE bracket_slots ADD COLUMN IF NOT EXISTS scheduled_time TEXT;`
 - `bracket_goals`: id, slot_id (FK → bracket_slots), player_id (FK → players), count, UNIQUE(slot_id, player_id)
   - Samostatná tabulka od `goals` — `goals` má FK na `matches`, playoff sloty nejsou v `matches`
@@ -42,7 +42,7 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `tipsters`: id, name (TEXT UNIQUE), pin (CHAR(4)), total_points (INTEGER DEFAULT 0)
 - `tips`: id, tipster_id (FK → tipsters), match_id (FK → matches), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, match_id)
 - `bracket_tips`: id, tipster_id (FK → tipsters), slot_id (FK → bracket_slots), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, slot_id)
-- `special_tips`: id, tipster_id (FK → tipsters), tip_type (TEXT), predicted_team_id (UUID FK → teams nullable), **predicted_player_id (UUID FK → players nullable)** — pro `top_scorer` tip, points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, tip_type)
+- `special_tips`: id, tipster_id (FK → tipsters), tip_type (TEXT), predicted_team_id (UUID FK → teams **nullable** — spustit `ALTER TABLE special_tips ALTER COLUMN predicted_team_id DROP NOT NULL;`), **predicted_player_id (UUID FK → players nullable)** — pro `top_scorer` tip INSERT musí obsahovat `predicted_team_id: null`; points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, tip_type)
 - `assists`: id, player_id (FK → players), match_id (FK → matches), count, UNIQUE(player_id, match_id) — asistence skupinová fáze; stejný vzor jako `goals`
 - `bracket_assists`: id, player_id (FK → players), slot_id (FK → bracket_slots), count, UNIQUE(player_id, slot_id) — asistence playoff
 - `cards`: id, player_id (FK → players), match_id (FK → matches), type (TEXT: `'yellow'|'red'|'yellow_red'`) — kartičky skupinová fáze (více řádků na hráče/zápas)
@@ -107,6 +107,8 @@ ALTER TABLE tournament
   ADD COLUMN IF NOT EXISTS cards_enabled   BOOLEAN DEFAULT false;
 ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE special_tips ADD COLUMN IF NOT EXISTS predicted_player_id UUID REFERENCES players(id) ON DELETE SET NULL;
+-- Uvolnit NOT NULL constraint na predicted_team_id (nutné pro top_scorer tipy):
+ALTER TABLE special_tips ALTER COLUMN predicted_team_id DROP NOT NULL;
 -- + CREATE TABLE assists, bracket_assists, cards, bracket_cards s RLS (viz 05_migrations.sql)
 ```
 
@@ -132,16 +134,21 @@ ALTER TABLE special_tips ADD COLUMN IF NOT EXISTS predicted_player_id UUID REFER
 - Varianta A: jeden list, sloupce `Tým|Hráč|Číslo|Role`; Varianta B: více listů, každý = tým
 - Role: K→captain, B→goalkeeper, KB/BK→both, prázdné→null
 - Barvy týmů: auto-přiřazení z `TEAM_COLORS`, přeskočí již použité
+- **List "Sheet1" s hráči se importuje** — podmínka je pouze `players.length > 0` (ne `|| sheetName !== 'Sheet1'`)
 
 ### Fotky hráčů
-- `players.avatar_url TEXT` — URL fotky v Supabase Storage (`team-logos/players/{id}.png`)
+- `players.avatar_url TEXT` — URL fotky v Supabase Storage (`team-logos/players/{id}.png` nebo `.jpg`)
 - Upload v Admin → Týmy → ✎ hráče → sekce fotky (upload + smazat)
+- **Validace uploadu**: pouze PNG nebo JPG (`image/png` | `image/jpeg`), max **200 KB** — avatar se zobrazuje 22px, vyšší rozlišení zbytečné
+- Přípona se zachová dle MIME typu: JPEG → `.jpg`, PNG → `.png`
 - Veřejné zobrazení: Teams.tsx — kruhový avatar 22px před jménem; fallback = barevná tečka týmu
 
 ### Speciální tipy — nové typy
 - `top_scorer` (10 b.) — nejlepší střelec; ukládá `predicted_player_id`; zpracování: `evaluateSpecialTipPlayer(tipType, [playerIds], pts)` — podporuje více vítězů (sdílené první místo)
 - `most_goals_team` (5 b.) — tým s nejvíce góly; ukládá `predicted_team_id`; zamkne se s `tournament_winner`
 - Eval funkce: `checkTopScorer()`, `checkMostGoalsTeam(teams)` v `src/lib/tipsEval.ts`
+  - **`checkMostGoalsTeam` podporuje remízy** — používá `.filter()` místo `.find()`, evaluuje všechny týmy s maximálním počtem gólů
+  - **`checkTopScorer` se volá automaticky** z `EvalRowPlayer` — detekuje remízy, ruční dropdown slouží jen jako fallback přepsání
 - Admin: `EvalRowPlayer` komponenta pro ruční vyhodnocení hráčských tipů v `TipsAdminTab`
 
 ### Tisknutelný bulletin
@@ -163,6 +170,8 @@ ALTER TABLE special_tips ADD COLUMN IF NOT EXISTS predicted_player_id UUID REFER
 - `refetch()` z hooků exponovat přes `useRef` pattern — umožňuje okamžitý refresh po save (viz useMatches, useGoals, useBracketGoals, useBracket)
 - Nikdy service_role key ve frontendu
 - Chyby vždy ošetři — ukaž uživateli toast, ne console.error
+- **`dangerouslySetInnerHTML` — vždy sanitizovat**: používej `sanitizeHtml(html)` z `src/lib/sanitize.ts` (DOMPurify wrapper); nikdy nevkládej raw HTML z DB přímo. Platí pro Overview.tsx, Info.tsx, Rules.tsx a všechny budoucí komponenty s `rich-content`.
+- **Hook fetch — `if (!error)` pattern**: hooky nesmí mazat state při selhání Supabase dotazu. Vždy: `const { data, error } = await supabase...` a pak `if (!error) setState(data ?? [])`. Zachová poslední platná data při přechodném výpadku sítě.
 - Všechny `<button>` musí mít `type="button"` — bez toho může dojít k nechtěnému submit
 - **Nikdy nepoužívat `disabled` atribut na tlačítkách v admin formulářích** — Android ignoruje touch eventy na disabled elementech; místo toho proveď kontrolu uvnitř onClick a zobraz toast; používej `style={{ opacity: 0.5 }}` pro vizuální stav
 - **async save funkce — vždy try-finally**: `setSaving(false)` / `savingRef.current = false` musí být v `finally` bloku — jinak tlačítko uvízne při výjimce (síťová chyba, timeout, RLS). Platí pro `InlineMatchEditor.saveAll`, `SlotEditor.saveAll`, `EvalRow.evaluate`, atd.
@@ -181,10 +190,16 @@ ALTER TABLE special_tips ADD COLUMN IF NOT EXISTS predicted_player_id UUID REFER
 - **Tipy — upsert místo insert/update**: `saveAll` používá `supabase.from('tips').upsert({...}, {onConflict: 'tipster_id,match_id'})` — předchází UNIQUE constraint violation.
 - **useBracket exportuje `refetch()`**: useRef pattern — volá se po každém `saveSlot` a `seedTeams` pro okamžitý UI update.
 - **Admin panel backdrop — drag z panelu ven**: `onClick` na backdrops by zavřel panel i při drag (mousedown uvnitř, mouseup venku). Oprava: `mouseDownOnBackdrop = useRef(false)` → `onMouseDown` nastaví flag jen když klik začal přímo na backdrops; `onClick` kontroluje oba podmínky. Viz `AdminPanel.tsx`.
-- **WYSIWYG editor (RichTextEditor)**: `src/components/ui/RichTextEditor.tsx` (TipTap + StarterKit). Používá se pro `tournament.description`, `tournament.rules_content` (legacy), `announcements.body`, `rule_items.body`. Výstup je HTML string; ve veřejném view renderovat přes `dangerouslySetInnerHTML` s třídou `rich-content`. Zpětně kompatibilní — plain text je validní HTML.
+- **WYSIWYG editor (RichTextEditor)**: `src/components/ui/RichTextEditor.tsx` (TipTap + StarterKit). Používá se pro `tournament.description`, `tournament.rules_content` (legacy), `announcements.body`, `rule_items.body`. Výstup je HTML string; ve veřejném view renderovat přes `dangerouslySetInnerHTML={{ __html: sanitizeHtml(x) }}` s třídou `rich-content`. Sanitizace zajišťuje `src/lib/sanitize.ts` (DOMPurify, povolené tagy: p, br, strong, em, u, s, ul, ol, li, h1–h4, a, blockquote, hr, span). Zpětně kompatibilní — plain text je validní HTML.
 - **Oznámení — nadpis je volitelný**: `AnnouncementsTab` nevaliduje povinný nadpis. Příspěvky bez nadpisu zobrazují *(bez nadpisu)* v admin seznamu; ve veřejném view se podmíněně renderuje jen `body` / media.
 - **Čistý start (`resetTournamentData`)**: soft tables (`bracket_goals`, `bracket_slots`, `bracket_rounds`, `bracket_tips`, `special_tips`) — chyby ignorovány; hard tables (`goals`, `tips`, `matches`, `groups`) — chyba zastaví. Po úspěchu volá všechny refetch funkce pro okamžitý UI update.
 - **InfoTab `save`** volá `refetchTournament()` — bez toho se změny projeví až po 120s pollingu.
+- **BracketTab SlotEditor.saveAll — chyba gólů/asistencí/kartiček neblokuje onSave()**: při chybě dílčích uložení se zobrazí toast, ale `onSave()` se vždy zavolá → auto-advance a `checkTournamentWinner` proběhnou i při částečném selhání.
+- **Race conditions — guard na začátku funkce**: `generateLeague()` v GroupsTab a `seedPlayoff()` v MatchesTab mají `if (loading/seeding) return` na začátku — zabraňuje duplicitnímu spuštění při rychlém dvojkliku. Per CLAUDE.md nelze použít `disabled`; guard musí být uvnitř funkce.
+- **GroupsTab.generateLeague — kontrolovat chyby DELETE**: oba DELETE (zápasy i skupina) musí zkontrolovat error a `throw` při selhání — jinak se generují nové zápasy do neexistující skupiny nebo zbývají osiřelé záznamy.
+- **SettingsTab.resetData — UPDATE tournamentu musí cílit `.eq('id', tournament.id)`**: nikdy nepoužívat `.neq()` pro "reset všech" — jinak UPDATE zasáhne všechny řádky tabulky (v multi-tenant scénáři nebo při neočekávaném stavu).
+- **Scorers.tsx — `+0A` vždy viditelné**: při `showAssists === true` zobrazovat `+0A` s `color: transparent` aby sloupce byly zarovnané; bez toho mají řádky bez asistencí jinou šířku.
+- **Results.tsx — StatusFilter**: záložka Zápasy má toggle Vše / Nadcházející / Výsledky; filtr se kombinuje s dropdown filtrem týmu. Stav `statusFilter: 'all' | 'played' | 'upcoming'`.
 
 ## Styl a UX
 - Světlé téma: pozadí `#f8fafc`, karty bílé se shadow, akcent `#2563eb` (modrá)
@@ -282,7 +297,7 @@ return rounds * Math.ceil(realPairs / numPitches)
 ### Generování harmonogramu (`src/lib/leagueSchedule.ts`)
 - **Circle-method round-robin**: N týmů → doplnit BYE na sudé → (N-1) kol
 - **DP optimalizace**: `computeSplits(pairs)` + `dpOptimize(rounds)` minimalizuje back-to-back přechody; `bestAssignments` dává optimální pořadí párů (slotA → slotB) pro každé kolo
-- **Rotační loop**: zkusí všechna N rotací pole týmů, vybere nejlepší; zastaví se při cost=0
+- **Rotační loop**: zkusí max `Math.min(teamIds.length, 8)` rotací pole týmů, vybere nejlepší; zastaví se při cost=0 — limit zabraňuje O(n×DP) zpomalení pro 20+ týmů
 - **N-pitches slot loop**: `orderedPairs = [...slotA, ...slotB]` → batches po `numPitches` → každý batch = 1 time slot
 - Parametry: `generateLeagueSchedule(teamIds, startTime, matchDuration, roundBreak, breakWindowStart?, breakWindowDuration?, numPitches=2)`
 
