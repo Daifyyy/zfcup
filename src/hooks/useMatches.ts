@@ -22,10 +22,10 @@ export function useMatches() {
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('matches').select('*')
+      const { data, error } = await supabase.from('matches').select('*')
         .order('scheduled_time', { nullsFirst: false })
         .order('id')
-      setMatches(data ?? [])
+      if (!error) setMatches(data ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch

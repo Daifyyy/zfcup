@@ -36,8 +36,8 @@ export function useTournament() {
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('tournament').select('*').single()
-      setTournament(data)
+      const { data, error } = await supabase.from('tournament').select('*').single()
+      if (!error) setTournament(data)
       setLoading(false)
     }
     fetchRef.current = fetch

@@ -31,12 +31,12 @@ export function useBracket() {
 
   useEffect(() => {
     async function fetch() {
-      const [{ data: r }, { data: s }] = await Promise.all([
+      const [{ data: r, error: rErr }, { data: s, error: sErr }] = await Promise.all([
         supabase.from('bracket_rounds').select('*').order('position'),
         supabase.from('bracket_slots').select('*').order('position'),
       ])
-      setRounds(r ?? [])
-      setSlots(s ?? [])
+      if (!rErr) setRounds(r ?? [])
+      if (!sErr) setSlots(s ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch

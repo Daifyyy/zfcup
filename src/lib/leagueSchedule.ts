@@ -156,7 +156,8 @@ export function generateLeagueSchedule(
   let bestAssignments: Split[] = []
   let bestCost = Infinity
 
-  for (let rot = 0; rot < teamIds.length; rot++) {
+  const maxRotations = Math.min(teamIds.length, 8)
+  for (let rot = 0; rot < maxRotations; rot++) {
     const rotated = [...teamIds.slice(rot), ...teamIds.slice(0, rot)]
     const rounds = circleRounds(rotated)
     const assignments = dpOptimize(rounds)
