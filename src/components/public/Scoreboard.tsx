@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { calcGroupStandings } from '../../lib/standings'
 import { addMinutes } from '../../lib/constants'
 import QRCode from '../ui/QRCode'
@@ -70,16 +70,15 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
   const gt = (id: string) => teams.find(t => t.id === id)
   const isLeague = tournament?.format === 'league'
 
-  // Top 5 scorers — aggregate group goals + bracket_goals
-  const scorers = players
-    .map(p => ({
-      name: p.name,
-      team: teams.find(t => t.id === p.team_id),
-      total:
-        goals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0) +
-        bracketGoals.filter(g => g.player_id === p.id).reduce((s, g) => s + g.count, 0),
-    }))
-    .filter(r => r.total > 0)
+  // Top 5 scorers — aggregate group goals + bracket_goals (memoized)
+  const scorers = useMemo(() => {
+    const agg: Record<string, number> = {}
+    for (const g of goals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
+    for (const g of bracketGoals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
+    return players
+      .filter(p => (agg[p.id] ?? 0) > 0)
+      .map(p => ({ name: p.name, team: teams.find(t => t.id === p.team_id), total: agg[p.id] }))
+  }, [players, goals, bracketGoals, teams])
     .sort((a, b) => b.total - a.total)
     .slice(0, 5)
 

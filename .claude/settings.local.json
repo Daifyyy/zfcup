@@ -22,7 +22,18 @@
       "Bash(./node_modules/.bin/tsc --noEmit)",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 80)",
       "PowerShell(.\\\\node_modules\\\\.bin\\\\tsc --noEmit 2>&1 | Select-Object -First 80)",
-      "PowerShell(npm run *)"
+      "PowerShell(npm run *)",
+      "Bash(sed -i 's/setInterval\\(fetch, 10_000\\)/setInterval\\(fetch, 30_000\\)/g' src/hooks/useBracket.ts src/hooks/useBracketGoals.ts src/hooks/useBracketTips.ts src/hooks/useGoals.ts src/hooks/useMatches.ts src/hooks/useSpecialTips.ts src/hooks/useTips.ts src/hooks/useTipsters.ts)",
+      "Bash(sed -i 's/setInterval\\(fetch, 30_000\\)/setInterval\\(fetch, 60_000\\)/g' src/hooks/useAnnouncements.ts)",
+      "Bash(sed -i 's/setInterval\\(fetch, 60_000\\)/setInterval\\(fetch, 120_000\\)/g' src/hooks/useGroups.ts src/hooks/usePlayers.ts src/hooks/useReferees.ts src/hooks/useTeams.ts src/hooks/useTournament.ts)",
+      "Bash(findstr /r \"top.*6\\\\|playoff.*top\" src/**/*.tsx src/**/*.ts)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\denis\\\\Documents\\\\zf-cup\" -Recurse -File | Where-Object { $_.Extension -in @\\('.sql', '.md'\\) } | Select-Object -First 30 FullName)",
+      "Bash(Get-ChildItem -Path C:\\\\Users\\\\denis\\\\Documents\\\\zf-cup -Force)",
+      "Bash(Select-Object -Property Name, PSIsContainer)",
+      "Bash(Get-ChildItem *)",
+      "PowerShell(head *)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)"
     ]
   }
 }

@@ -201,8 +201,10 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       if (error) { showToast('Chyba (' + table + '): ' + error.message); return }
     }
     await supabase.from('tipsters').update({ total_points: 0 }).neq('id', NULL_ID)
-    await supabase.from('tournament').update({ name: '', subtitle: '', date: '', venue: '', description: '' })
-      .neq('id', NULL_ID)
+    if (tournament?.id) {
+      await supabase.from('tournament').update({ name: '', subtitle: '', date: '', venue: '', description: '' })
+        .eq('id', tournament.id)
+    }
     refetchGroups(); refetchMatches(); refetchGoals(); refetchBracket(); refetchBracketGoals(); refetchTournament()
     showToast('Vše smazáno')
   }

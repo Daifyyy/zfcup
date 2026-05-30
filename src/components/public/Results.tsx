@@ -84,17 +84,20 @@ const SECTION_HEADER = {
   borderRadius: '0 8px 8px 0',
 }
 
+type StatusFilter = 'all' | 'played' | 'upcoming'
+
 export default function Results({ matches, teams, tournament, referees = [] }: Props) {
   const [teamFilter, setTeamFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const isLeague = tournament?.format === 'league'
   const refName = (m: Match) => m.referee_id ? referees.find(r => r.id === m.referee_id)?.name : undefined
 
   if (!matches.length) return <Empty icon="📋" text="Žádné zápasy." />
 
-  // Filtr týmu
-  const filtered = teamFilter === 'all'
-    ? matches
-    : matches.filter(m => m.home_id === teamFilter || m.away_id === teamFilter)
+  // Filtr týmu + stavu
+  const filtered = matches
+    .filter(m => teamFilter === 'all' || m.home_id === teamFilter || m.away_id === teamFilter)
+    .filter(m => statusFilter === 'all' || (statusFilter === 'played' ? m.played : !m.played))
 
   // Seřazené týmy pro dropdown
   const sortedTeams = [...teams].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -111,8 +114,16 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
 
     return (
       <div>
-        <div className="sec-head">
+        <div className="sec-head" style={{ flexWrap: 'wrap', gap: '.5rem' }}>
           <span className="sec-title">Zápasy</span>
+          <div style={{ display: 'flex', gap: '.3rem', flexShrink: 0 }}>
+            {(['all', 'upcoming', 'played'] as StatusFilter[]).map(s => (
+              <button key={s} type="button" onClick={() => setStatusFilter(s)}
+                style={{ fontSize: '.7rem', fontWeight: 700, padding: '.25rem .6rem', borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer', background: statusFilter === s ? 'var(--accent)' : '#f8fafc', color: statusFilter === s ? '#fff' : 'var(--muted)', transition: 'all .15s' }}>
+                {s === 'all' ? 'Vše' : s === 'upcoming' ? 'Nadcházející' : 'Výsledky'}
+              </button>
+            ))}
+          </div>
           <select
             className="field-input field-select"
             value={teamFilter}
@@ -171,8 +182,16 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
 
   return (
     <div>
-      <div className="sec-head">
+      <div className="sec-head" style={{ flexWrap: 'wrap', gap: '.5rem' }}>
         <span className="sec-title">Zápasy</span>
+        <div style={{ display: 'flex', gap: '.3rem', flexShrink: 0 }}>
+          {(['all', 'upcoming', 'played'] as StatusFilter[]).map(s => (
+            <button key={s} type="button" onClick={() => setStatusFilter(s)}
+              style={{ fontSize: '.7rem', fontWeight: 700, padding: '.25rem .6rem', borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer', background: statusFilter === s ? 'var(--accent)' : '#f8fafc', color: statusFilter === s ? '#fff' : 'var(--muted)', transition: 'all .15s' }}>
+              {s === 'all' ? 'Vše' : s === 'upcoming' ? 'Nadcházející' : 'Výsledky'}
+            </button>
+          ))}
+        </div>
         <select
           className="field-input field-select"
           value={teamFilter}

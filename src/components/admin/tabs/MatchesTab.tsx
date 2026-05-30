@@ -454,6 +454,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
   const hasBracket = bracketRounds.length > 0
 
   const seedPlayoff = async () => {
+    if (seeding) return
     if (!allGroupsComplete) { showToast('Nejdříve dohraj všechny zápasy'); return }
     if (!hasBracket) { showToast('Nejdříve vytvoř strukturu playoff v záložce Play-off'); return }
     if (!confirm('Nasadit týmy do playoff dle tabulky?')) return

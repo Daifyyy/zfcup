@@ -1,0 +1,10 @@
+/plan okay potřebuji zkontrolovat jak máme podchycené různé možnosti a scénáře turnajů. Měli bychom umět podchytiti
+  ligový způsob turnaje,skupinový a vyřazovací a mít podchycené různé startovní počty a jejich logiku týmů:
+  6,8,10,12,14.  Nunté je zachovat všechna bezpčenostní upozornění i vzhledem k ostatním modulům, správnost
+  vyhodnocování.
+  
+  2) Důležitá věc je pro formát "tabule" podchytit všechny možnosti týmů a jejich zápasů tak aby byli vždy všechny viditelné správně a vešli se na obrazovku.
+  3) Formát hřiště. Je potřeba jako další ze základních parametrů při základání turnaje mít možnost na kolik hřišť se hraje. To je nutné pro správné naplánování zápasů a jejich herních časů výkopu.
+  4) Lepší informační stránka "Přehled" potřebujio navrhnout jak tam lépe vkládat a zobrazovat obrázky, interkativní pravidla a podobné doplnující informace. Možnost i vložení videí nejspíše přes embed odkaz na youtube. Navrhni plán.
+  5) Vyvinout na součansou úroveň i modul TV/Kiosk může se hodit. Cyklovat mezi Zápasy, Tabulka(Zorbazení tabuelk týmů a střelců), Pavouk(pokud je aktivní)
+  

@@ -87,6 +87,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   }
 
   const generateLeague = async () => {
+    if (leagueGenerating) return
     if (leagueTeamIds.length < 3) { showToast('Vyber alespoň 3 týmy'); return }
     if (!confirm(leagueGroup
       ? `Smazat stávající ligový rozpis a vygenerovat nový pro ${leagueTeamIds.length} týmů?`
@@ -96,8 +97,10 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
     try {
       // Smazat existující ligovou skupinu a zápasy
       if (leagueGroup) {
-        await supabase.from('matches').delete().eq('group_id', leagueGroup.id)
-        await supabase.from('groups').delete().eq('id', leagueGroup.id)
+        const { error: delMatchErr } = await supabase.from('matches').delete().eq('group_id', leagueGroup.id)
+        if (delMatchErr) throw new Error('Nepodařilo se smazat staré zápasy: ' + delMatchErr.message)
+        const { error: delGrpErr } = await supabase.from('groups').delete().eq('id', leagueGroup.id)
+        if (delGrpErr) throw new Error('Nepodařilo se smazat starou skupinu: ' + delGrpErr.message)
       }
 
       // Vytvořit skupinu "Liga"

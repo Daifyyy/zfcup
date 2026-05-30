@@ -1,5 +1,6 @@
 import type { Tournament } from '../../hooks/useTournament'
 import type { RuleItem } from '../../hooks/useRuleItems'
+import { sanitizeHtml } from '../../lib/sanitize'
 
 interface Props {
   tournament: Tournament | null
@@ -31,7 +32,7 @@ export default function Rules({ tournament, ruleItems }: Props) {
                 <div
                   className="rich-content"
                   style={{ fontSize: 'var(--fs-body)', color: 'var(--muted)', lineHeight: 1.7 }}
-                  dangerouslySetInnerHTML={{ __html: r.body }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(r.body) }}
                 />
               )}
             </div>
