@@ -408,6 +408,19 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
 
   return (
     <div>
+      {/* Workflow přehled */}
+      <div style={{ background: 'rgba(0,0,0,.03)', border: '1px solid var(--border)', borderRadius: 10, padding: '.75rem 1rem', marginBottom: '1rem', fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.55 }}>
+        <div style={{ fontWeight: 700, color: '#374151', marginBottom: '.3rem', fontSize: '.78rem' }}>ℹ️ Co je automatické a co ruční</div>
+        <div style={{ marginBottom: '.4rem' }}>
+          <span style={{ fontWeight: 600, color: '#15803d' }}>Automaticky</span> (bez zásahu):{' '}
+          skupinové tipy po každém zápase · playoff tipy po každém slotu · Vítěz skupiny / Poslední při otevření této záložky
+        </div>
+        <div>
+          <span style={{ fontWeight: 600, color: '#b45309' }}>Ručně</span> (tlačítkem níže):{' '}
+          Nejlepší střelec · Tým s nejvíce góly · Vítěz turnaje (záloha) · Přepočet bodů po manuálních změnách
+        </div>
+      </div>
+
       {/* Návod k tipovačce */}
       <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.2)', borderRadius: 10, padding: '.85rem 1rem', marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '.8rem' }}>
         <div style={{ flex: 1 }}>

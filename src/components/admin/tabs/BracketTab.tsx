@@ -471,7 +471,11 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
   const generateStructure = async () => {
     if (!formatDef) { showToast('Nejdříve vyber formát v Nastavení'); return }
     if (!isLeague && groups.length < 1) { showToast('Potřebuješ aspoň 1 skupinu'); return }
-    if (!confirm(`Vytvořit strukturu playoff (${formatLabel})? Stávající pavouk bude smazán.`)) return
+    const hasResults = bracketSlots.some(s => s.played) || bracketGoals.length > 0
+    const confirmMsg = hasResults
+      ? `Vytvořit strukturu playoff (${formatLabel})?\n\n⚠ Stávající pavouk včetně výsledků a gólů bude smazán. Tuto akci nelze vrátit.`
+      : `Vytvořit strukturu playoff (${formatLabel})? Stávající pavouk bude smazán.`
+    if (!confirm(confirmMsg)) return
 
     setGenerating(true)
     try {
@@ -615,8 +619,35 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
 
   const sorted = [...bracketRounds].sort((a, b) => a.position - b.position)
 
+  const bracketStep = !bracketRounds.length ? 1
+    : !bracketSlots.some(s => s.home_id || s.away_id) ? 2
+    : 3
+
   return (
     <div>
+      {/* Stepper */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: '1rem', fontSize: '.72rem', fontWeight: 700 }}>
+        {([
+          [1, 'Vytvořit strukturu'],
+          [2, 'Nasadit týmy'],
+          [3, 'Zadávat výsledky'],
+        ] as const).map(([n, label], i) => (
+          <div key={n} style={{ display: 'flex', alignItems: 'center' }}>
+            {i > 0 && <div style={{ width: 24, height: 1, background: 'var(--border)', margin: '0 4px' }} />}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', borderRadius: 20,
+              background: bracketStep === n ? 'var(--accent)' : bracketStep > n ? 'rgba(22,163,74,.1)' : 'var(--border)',
+              color: bracketStep === n ? '#fff' : bracketStep > n ? '#166534' : 'var(--muted)',
+              whiteSpace: 'nowrap',
+            }}>
+              <span style={{ width: 16, height: 16, borderRadius: '50%', background: bracketStep === n ? 'rgba(255,255,255,.3)' : 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '.68rem' }}>{bracketStep > n ? '✓' : n}</span>
+              {label}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Step 1 — Structure */}
       <div className="info-box" style={{ marginBottom: '.75rem' }}>
         <div style={{ fontWeight: 600, marginBottom: '.35rem', fontSize: '.82rem' }}>📋 Krok 1 — Vytvořit strukturu</div>

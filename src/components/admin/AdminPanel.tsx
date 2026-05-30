@@ -233,6 +233,10 @@ export default function AdminPanel(props: Props) {
                   </button>
                 )
               })}
+              <div style={{ fontSize: '.62rem', color: 'var(--muted)', padding: '.25rem .75rem .4rem', borderTop: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(22,163,74,.15)', border: '1px solid rgba(22,163,74,.35)', borderRadius: 2, marginRight: 4, verticalAlign: 'middle' }} />
+                Zelené záložky — aktivní při průběhu turnaje
+              </div>
             </div>
 
             {/* Tab body */}
