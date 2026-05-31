@@ -6,7 +6,7 @@ import type { Match } from '../hooks/useMatches'
 import type { Team } from '../hooks/useTeams'
 
 // Vrátí true pokud se skutečně změnil nějaký záznam
-export async function evaluateSpecialTip(tipType: string, correctTeamId: string): Promise<boolean> {
+export async function evaluateSpecialTip(tipType: string, correctTeamId: string, tournamentId: string): Promise<boolean> {
   const pointsMap: Record<string, number> = {
     tournament_winner: 10,
     group_winner: 5,
@@ -20,7 +20,8 @@ export async function evaluateSpecialTip(tipType: string, correctTeamId: string)
   const pts = pointsMap[key] ?? 0
 
   const { data: allTips } = await supabase
-    .from('special_tips').select('id, predicted_team_id, evaluated, points_earned').eq('tip_type', tipType)
+    .from('special_tips').select('id, predicted_team_id, evaluated, points_earned')
+    .eq('tip_type', tipType).eq('tournament_id', tournamentId)
   if (!allTips?.length) return false
 
   // Batch update: 2 dotazy místo N sekvenčních
@@ -42,18 +43,19 @@ export async function evaluateSpecialTip(tipType: string, correctTeamId: string)
   return true
 }
 
-export async function recalcTipsterPoints(): Promise<void> {
+export async function recalcTipsterPoints(tournamentId: string): Promise<void> {
   // Pokus o RPC funkci (1 dotaz místo 4N) — funguje po spuštění 06_indexes.sql
   const { error: rpcErr } = await supabase.rpc('recalc_all_tipster_points')
   if (!rpcErr) return
 
   // Fallback: 3 SELECT (vše najednou) + N paralelních UPDATE
-  const { data: tipsters } = await supabase.from('tipsters').select('id')
+  const { data: tipsters } = await supabase.from('tipsters').select('id').eq('tournament_id', tournamentId)
   if (!tipsters?.length) return
+  const tipsterIds = tipsters.map(t => t.id)
   const [{ data: allTips }, { data: allBt }, { data: allSt }] = await Promise.all([
-    supabase.from('tips').select('tipster_id, points_earned'),
-    supabase.from('bracket_tips').select('tipster_id, points_earned'),
-    supabase.from('special_tips').select('tipster_id, points_earned'),
+    supabase.from('tips').select('tipster_id, points_earned').in('tipster_id', tipsterIds),
+    supabase.from('bracket_tips').select('tipster_id, points_earned').in('tipster_id', tipsterIds),
+    supabase.from('special_tips').select('tipster_id, points_earned').in('tipster_id', tipsterIds),
   ])
   type Row = { tipster_id: string; points_earned: number }
   const sumFor = (rows: Row[] | null, id: string) =>
@@ -67,7 +69,7 @@ export async function recalcTipsterPoints(): Promise<void> {
 
 // Zkontroluje zda je skupina dokončena a vyhodnotí group_winner + group_last special tipy.
 // Fetches fresh matches from DB to avoid stale data after save.
-export async function checkGroupSpecialTips(groupId: string, group: Group): Promise<boolean> {
+export async function checkGroupSpecialTips(groupId: string, group: Group, tournamentId: string): Promise<boolean> {
   const { data: groupMatches } = await supabase
     .from('matches').select('*').eq('group_id', groupId)
 
@@ -79,16 +81,16 @@ export async function checkGroupSpecialTips(groupId: string, group: Group): Prom
   const winnerId = rows[0].id
   const lastId = rows[rows.length - 1].id
   const [changedW, changedL] = await Promise.all([
-    evaluateSpecialTip(`group_winner:${groupId}`, winnerId),
-    evaluateSpecialTip(`group_last:${groupId}`, lastId),
+    evaluateSpecialTip(`group_winner:${groupId}`, winnerId, tournamentId),
+    evaluateSpecialTip(`group_last:${groupId}`, lastId, tournamentId),
   ])
 
-  if (changedW || changedL) await recalcTipsterPoints()
+  if (changedW || changedL) await recalcTipsterPoints(tournamentId)
   return changedW || changedL
 }
 
 // Liga bez playoff: zkontroluje zda jsou odehrány všechny liga zápasy a vyhodnotí tournament_winner dle tabulky.
-export async function checkLeagueTournamentWinner(ligaGroup: Group): Promise<boolean> {
+export async function checkLeagueTournamentWinner(ligaGroup: Group, tournamentId: string): Promise<boolean> {
   const { data: allMatches } = await supabase
     .from('matches').select('*').eq('group_id', ligaGroup.id)
   if (!allMatches?.length || !(allMatches as Match[]).every(m => m.played)) return false
@@ -96,16 +98,17 @@ export async function checkLeagueTournamentWinner(ligaGroup: Group): Promise<boo
   const rows = calcGroupStandings(ligaGroup, allMatches as Match[])
   if (!rows.length) return false
 
-  const changed = await evaluateSpecialTip('tournament_winner', rows[0].id)
-  if (changed) await recalcTipsterPoints()
+  const changed = await evaluateSpecialTip('tournament_winner', rows[0].id, tournamentId)
+  if (changed) await recalcTipsterPoints(tournamentId)
   return changed
 }
 
 // Evaluates player-based special tips (predicted_player_id).
 // Handles ties: if multiple players share top scorer, all correct IDs are winners.
-export async function evaluateSpecialTipPlayer(tipType: string, correctPlayerIds: string[], pts: number): Promise<boolean> {
+export async function evaluateSpecialTipPlayer(tipType: string, correctPlayerIds: string[], pts: number, tournamentId: string): Promise<boolean> {
   const { data: allTips } = await supabase
-    .from('special_tips').select('id, predicted_player_id, evaluated, points_earned').eq('tip_type', tipType)
+    .from('special_tips').select('id, predicted_player_id, evaluated, points_earned')
+    .eq('tip_type', tipType).eq('tournament_id', tournamentId)
   if (!allTips?.length) return false
 
   const correctSet = new Set(correctPlayerIds)
@@ -128,10 +131,10 @@ export async function evaluateSpecialTipPlayer(tipType: string, correctPlayerIds
 }
 
 // Vyhodnotí top_scorer: nejlepší střelec turnaje (skupiny + playoff).
-export async function checkTopScorer(): Promise<boolean> {
+export async function checkTopScorer(tournamentId: string): Promise<boolean> {
   const [{ data: goals }, { data: bracketGoals }] = await Promise.all([
-    supabase.from('goals').select('player_id, count'),
-    supabase.from('bracket_goals').select('player_id, count'),
+    supabase.from('goals').select('player_id, count').eq('tournament_id', tournamentId),
+    supabase.from('bracket_goals').select('player_id, count').eq('tournament_id', tournamentId),
   ])
   const agg: Record<string, number> = {}
   for (const g of [...(goals ?? []), ...(bracketGoals ?? [])]) {
@@ -141,17 +144,18 @@ export async function checkTopScorer(): Promise<boolean> {
   if (maxGoals === 0) return false
   const topIds = Object.entries(agg).filter(([, v]) => v === maxGoals).map(([id]) => id)
 
-  const changed = await evaluateSpecialTipPlayer('top_scorer', topIds, 10)
-  if (changed) await recalcTipsterPoints()
+  const changed = await evaluateSpecialTipPlayer('top_scorer', topIds, 10, tournamentId)
+  if (changed) await recalcTipsterPoints(tournamentId)
   return changed
 }
 
 // Vyhodnotí most_goals_team: tým s nejvíce góly z celého turnaje.
-export async function checkMostGoalsTeam(teams: Team[]): Promise<boolean> {
+// Batch implementace — 1 SELECT na special_tips místo N sekvenčních volání evaluateSpecialTip.
+export async function checkMostGoalsTeam(teams: Team[], tournamentId: string): Promise<boolean> {
   const [{ data: goals }, { data: bracketGoals }, { data: players }] = await Promise.all([
-    supabase.from('goals').select('player_id, count'),
-    supabase.from('bracket_goals').select('player_id, count'),
-    supabase.from('players').select('id, team_id'),
+    supabase.from('goals').select('player_id, count').eq('tournament_id', tournamentId),
+    supabase.from('bracket_goals').select('player_id, count').eq('tournament_id', tournamentId),
+    supabase.from('players').select('id, team_id').eq('tournament_id', tournamentId),
   ])
   const playerTeam: Record<string, string> = {}
   for (const p of (players ?? [])) playerTeam[p.id] = p.team_id
@@ -167,21 +171,40 @@ export async function checkMostGoalsTeam(teams: Team[]): Promise<boolean> {
   const topTeamIds = Object.entries(agg).filter(([, v]) => v === maxGoals).map(([id]) => id)
   if (topTeamIds.length === 0) return false
 
-  let changed = false
-  for (const id of topTeamIds) {
-    const c = await evaluateSpecialTip('most_goals_team', id)
-    if (c) changed = true
-  }
-  if (changed) await recalcTipsterPoints()
-  return changed
+  // Batch: 1 SELECT + max 2 UPDATE místo N×(SELECT + 2×UPDATE)
+  const { data: allTips } = await supabase
+    .from('special_tips').select('id, predicted_team_id, evaluated, points_earned')
+    .eq('tip_type', 'most_goals_team').eq('tournament_id', tournamentId)
+  if (!allTips?.length) return false
+
+  const topSet = new Set(topTeamIds)
+  const pts = 5
+  const correctIds = allTips
+    .filter(t => t.predicted_team_id && topSet.has(t.predicted_team_id) && (!t.evaluated || t.points_earned !== pts))
+    .map(t => t.id)
+  const wrongIds = allTips
+    .filter(t => (!t.predicted_team_id || !topSet.has(t.predicted_team_id)) && (!t.evaluated || t.points_earned !== 0))
+    .map(t => t.id)
+
+  if (!correctIds.length && !wrongIds.length) return false
+
+  const ops: Promise<unknown>[] = []
+  if (correctIds.length)
+    ops.push(supabase.from('special_tips').update({ evaluated: true, points_earned: pts }).in('id', correctIds))
+  if (wrongIds.length)
+    ops.push(supabase.from('special_tips').update({ evaluated: true, points_earned: 0 }).in('id', wrongIds))
+  await Promise.all(ops)
+  await recalcTipsterPoints(tournamentId)
+  return true
 }
 
 // Zkontroluje zda je odehráno finále a vyhodnotí tournament_winner special tipy.
 // Fetches fresh bracket_slots from DB to avoid stale data after save.
-export async function checkTournamentWinner(bracketRounds: BracketRound[]): Promise<boolean> {
+export async function checkTournamentWinner(bracketRounds: BracketRound[], tournamentId: string): Promise<boolean> {
   if (!bracketRounds.length) return false
 
-  const { data: bracketSlots } = await supabase.from('bracket_slots').select('*')
+  const { data: bracketSlots } = await supabase
+    .from('bracket_slots').select('*').eq('tournament_id', tournamentId)
   if (!bracketSlots?.length) return false
 
   const maxPos = Math.max(...bracketRounds.map(r => r.position))
@@ -198,7 +221,7 @@ export async function checkTournamentWinner(bracketRounds: BracketRound[]): Prom
     ? finalSlot.home_id
     : finalSlot.away_id
 
-  const changed = await evaluateSpecialTip('tournament_winner', winnerId)
-  if (changed) await recalcTipsterPoints()
+  const changed = await evaluateSpecialTip('tournament_winner', winnerId, tournamentId)
+  if (changed) await recalcTipsterPoints(tournamentId)
   return changed
 }

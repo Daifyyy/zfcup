@@ -205,13 +205,13 @@ function InlineMatchEditor({
     refetchMatches()
     refetchGoals()
     try {
-      if (autoPlayed && match.group_id && group)
-        await checkGroupSpecialTips(match.group_id, group)
+      if (autoPlayed && match.group_id && group && tournament?.id)
+        await checkGroupSpecialTips(match.group_id, group, tournament.id)
       const isLeagueNoPlayoff = tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true)
-      if (isLeagueNoPlayoff && autoPlayed) {
+      if (isLeagueNoPlayoff && autoPlayed && tournament?.id) {
         const ligaGroup = groups.find(g => g.name === 'Liga')
         if (ligaGroup) {
-          const evaluated = await checkLeagueTournamentWinner(ligaGroup)
+          const evaluated = await checkLeagueTournamentWinner(ligaGroup, tournament.id)
           if (evaluated) { showToast('Uloženo ✓ · 🏆 Vítěz ligy vyhodnocen'); return }
         }
       }

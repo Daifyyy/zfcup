@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable } from '../lib/realtimeManager'
 
 export interface Player {
   id: string
@@ -32,10 +33,13 @@ export function usePlayers(tournamentId: string, teamId?: string) {
     const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
     const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
 
+    const unsub = subscribeTable('players', () => fetchRef.current())
+
     startPoll()
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      unsub()
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }

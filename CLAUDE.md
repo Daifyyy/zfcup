@@ -140,10 +140,10 @@ ALTER TABLE bracket_rounds ADD CONSTRAINT bracket_rounds_position_tournament_uni
 - Veřejné zobrazení: Teams.tsx — kruhový avatar 22px před jménem; fallback = barevná tečka týmu
 
 ### Speciální tipy — nové typy
-- `top_scorer` (10 b.) — nejlepší střelec; ukládá `predicted_player_id`; zpracování: `evaluateSpecialTipPlayer(tipType, [playerIds], pts)` — podporuje více vítězů (sdílené první místo)
+- `top_scorer` (10 b.) — nejlepší střelec; ukládá `predicted_player_id`; zpracování: `evaluateSpecialTipPlayer(tipType, [playerIds], pts, tournamentId)` — podporuje více vítězů (sdílené první místo)
 - `most_goals_team` (5 b.) — tým s nejvíce góly; ukládá `predicted_team_id`; zamkne se s `tournament_winner`
-- Eval funkce: `checkTopScorer()`, `checkMostGoalsTeam(teams)` v `src/lib/tipsEval.ts`
-  - **`checkMostGoalsTeam` podporuje remízy** — používá `.filter()` místo `.find()`, evaluuje všechny týmy s maximálním počtem gólů
+- Eval funkce: `checkTopScorer(tournamentId)`, `checkMostGoalsTeam(teams, tournamentId)` v `src/lib/tipsEval.ts`
+  - **`checkMostGoalsTeam` podporuje remízy** — batch implementace: 1× SELECT + max 2× batch UPDATE (bez N+1 smyčky); evaluuje všechny týmy s maximálním počtem gólů
   - **`checkTopScorer` se volá automaticky** z `EvalRowPlayer` — detekuje remízy, ruční dropdown slouží jen jako fallback přepsání
 - Admin: `EvalRowPlayer` komponenta pro ruční vyhodnocení hráčských tipů v `TipsAdminTab`
 
@@ -160,6 +160,7 @@ ALTER TABLE bracket_rounds ADD CONSTRAINT bracket_rounds_position_tournament_uni
 - **Všechny hooky přijímají `tournamentId: string` jako první parametr** — bez něj se nefetchuje (`if (!tournamentId) return`). Výjimky: `useTournament(tournamentId?: string)`, `usePlayers(tournamentId, teamId?)`, `useTips(tipsterId, tournamentId)`, `useBracketTips(tipsterId, tournamentId)`, `useSpecialTips(tipsterId, tournamentId)`
 - App.tsx předává `tournamentId` (state z URL) všem hookům; Tips.tsx čte `tournament.id` z propu
 - Realtime subscriptions přes **`src/lib/realtimeManager.ts`** — singleton, který sloučí všechny postgres_changes do **jednoho sdíleného kanálu** `app-realtime`; hooky volají `subscribeTable(table, handler)` místo vlastního `supabase.channel()`
+- **Všechny hooky mají realtime subscription** (vč. useTeams, usePlayers, useGroups) — změna v admin panelu se projeví okamžitě u všech diváků bez čekání na polling
 - **Page Visibility API** — všechny hooky zastaví polling při `document.hidden = true` a restartují při návratu (+ okamžitý refetch)
 - **Polling intervaly** (záchrana pro případ výpadku WebSocketu; realtime je primární):
   - matches, goals, bracket, bracketGoals, tipsters, announcements: **120s**
@@ -345,7 +346,7 @@ interface TournamentFormatDef {
 
 - **Krok 1** — `generateStructure`: smaže stávající kola/sloty, zavolá `formatDef.fns.generate()`
 - **Krok 2** — `seedTeams`: zavolá `formatDef.fns.seed({groups, matches, bracketRounds, bracketSlots, advancingPerGroup})`
-- **saveSlot**: po uložení výsledku zavolá `formatDef.fns.autoAdvance(...)` → posune vítěze/poraženého; při finále (`position === maxPos`) zavolá `checkTournamentWinner()`
+- **saveSlot**: po uložení výsledku zavolá `formatDef.fns.autoAdvance(...)` → posune vítěze/poraženého; při finále (`position === maxPos`) zavolá `checkTournamentWinner(bracketRounds, tournament.id)`
 - `formatDef = getFormatDef(tournament.format_id) ?? getLegacyFormatDef(tournament, groups)`
 - **SlotEditor**: stacked layout, ±stepery skóre, inline góly, pole Čas, jediné "💾 Uložit vše"
 
@@ -438,7 +439,7 @@ $$ LANGUAGE plpgsql;
   - `GroupTipsSection`: dirty tracking (nečistit po save); upsert; časový zámek (setInterval 60s); liga mód seskupuje dle `scheduled_time`
   - `BracketTipsSection`: stejné vzory jako GroupTipsSection
 - `src/components/admin/tabs/TipsAdminTab.tsx`: auto-vyhodnocení skupin; EvalRow s DB check na mount; `recalcAllTips(showToast)` — try/catch, error check na každém UPDATE
-- `src/lib/tipsEval.ts`: sdílené funkce `evaluateSpecialTip`, `recalcTipsterPoints`, `checkGroupSpecialTips`, `checkTournamentWinner`, `checkLeagueTournamentWinner`
+- `src/lib/tipsEval.ts`: sdílené funkce — **všechny přijímají `tournamentId: string`** jako poslední parametr (multi-tenant bezpečnost): `evaluateSpecialTip(tipType, teamId, tournamentId)`, `evaluateSpecialTipPlayer(tipType, playerIds, pts, tournamentId)`, `recalcTipsterPoints(tournamentId)`, `checkGroupSpecialTips(groupId, group, tournamentId)`, `checkTournamentWinner(rounds, tournamentId)`, `checkLeagueTournamentWinner(group, tournamentId)`, `checkTopScorer(tournamentId)`, `checkMostGoalsTeam(teams, tournamentId)`
 
 ### Tipy — datový zámek
 - `isMatchTimePassed(scheduledTime, lockFromDate?)` — pokud `today < lockFromDate`, vrací `false` (tipy se nezamykají dříve než v den turnaje)

@@ -29,11 +29,11 @@ function getPoints(tipType: string): number {
   return 0
 }
 
-async function recalcAllTips(showToast: (m: string) => void) {
+async function recalcAllTips(showToast: (m: string) => void, tournamentId: string) {
   try {
     // Skupinové zápasy: 3/1/0 b. — batch UPDATE dle bodů (N tipů → 3 volání)
     const { data: playedMatches, error: mErr } = await supabase
-      .from('matches').select('id, home_score, away_score').eq('played', true)
+      .from('matches').select('id, home_score, away_score').eq('played', true).eq('tournament_id', tournamentId)
     if (mErr) throw mErr
     if (playedMatches?.length) {
       const { data: allTips, error: tErr } = await supabase
@@ -59,7 +59,7 @@ async function recalcAllTips(showToast: (m: string) => void) {
 
     // Playoff zápasy: 5/2/0 b. — batch UPDATE dle bodů
     const { data: playedSlots, error: sErr } = await supabase
-      .from('bracket_slots').select('id, home_score, away_score').eq('played', true)
+      .from('bracket_slots').select('id, home_score, away_score').eq('played', true).eq('tournament_id', tournamentId)
     if (sErr) throw sErr
     if (playedSlots?.length) {
       const { data: allBTips, error: btErr } = await supabase
@@ -83,7 +83,7 @@ async function recalcAllTips(showToast: (m: string) => void) {
       if (btErr2) throw btErr2
     }
 
-    await recalcTipsterPoints()
+    await recalcTipsterPoints(tournamentId)
     showToast('Body přepočítány ✓')
   } catch (e: unknown) {
     showToast('Chyba přepočtu: ' + (e instanceof Error ? e.message : String(e)))
@@ -91,12 +91,13 @@ async function recalcAllTips(showToast: (m: string) => void) {
 }
 
 // ── EvalRow: ruční override (nebo informační řádek po auto-vyhodnocení) ─────────
-function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId }: {
+function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId, tournamentId }: {
   tipType: string
   label: string
   teamPool: Team[]
   showToast: (m: string) => void
   autoWinnerId?: string | null
+  tournamentId: string
 }) {
   const [selected, setSelected] = useState('')
   const [evaluating, setEvaluating] = useState(false)
@@ -107,9 +108,9 @@ function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId }: {
   // Load current evaluated state from DB on mount
   useEffect(() => {
     supabase.from('special_tips')
-      .select('id').eq('tip_type', tipType).eq('evaluated', true).limit(1)
+      .select('id').eq('tip_type', tipType).eq('tournament_id', tournamentId).eq('evaluated', true).limit(1)
       .then(({ data }) => { if (data && data.length > 0) setDone(true) })
-  }, [tipType])
+  }, [tipType, tournamentId])
 
   // Sync done state when auto-winner is detected
   useEffect(() => {
@@ -120,8 +121,8 @@ function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId }: {
     if (!selected) { showToast('Vyber tým'); return }
     setEvaluating(true)
     try {
-      await evaluateSpecialTip(tipType, selected)
-      await recalcTipsterPoints()
+      await evaluateSpecialTip(tipType, selected, tournamentId)
+      await recalcTipsterPoints(tournamentId)
       setDone(true)
       showToast(`${label} vyhodnoceno ✓`)
     } catch (e: unknown) {
@@ -137,8 +138,8 @@ function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId }: {
     try {
       await supabase.from('special_tips')
         .update({ evaluated: false, points_earned: 0 })
-        .eq('tip_type', tipType)
-      await recalcTipsterPoints()
+        .eq('tip_type', tipType).eq('tournament_id', tournamentId)
+      await recalcTipsterPoints(tournamentId)
       setDone(false)
       showToast('Vyhodnocení zrušeno ✓')
     } catch (e: unknown) {
@@ -200,9 +201,10 @@ function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId }: {
 }
 
 // ── EvalRowPlayer: ruční vyhodnocení hráčského tipu (top_scorer) ─────────────
-function EvalRowPlayer({ tipType, label, playerPool, showToast }: {
+function EvalRowPlayer({ tipType, label, playerPool, showToast, tournamentId }: {
   tipType: string; label: string; playerPool: Player[]
   showToast: (m: string) => void
+  tournamentId: string
 }) {
   const [selected, setSelected] = useState('')
   const [evaluating, setEvaluating] = useState(false)
@@ -212,25 +214,25 @@ function EvalRowPlayer({ tipType, label, playerPool, showToast }: {
 
   useEffect(() => {
     supabase.from('special_tips')
-      .select('id').eq('tip_type', tipType).eq('evaluated', true).limit(1)
+      .select('id').eq('tip_type', tipType).eq('tournament_id', tournamentId).eq('evaluated', true).limit(1)
       .then(({ data }) => { if (data && data.length > 0) setDone(true) })
-  }, [tipType])
+  }, [tipType, tournamentId])
 
   const evaluate = async () => {
     setEvaluating(true)
     try {
       if (tipType === 'top_scorer') {
         // Auto-detect: najde všechny hráče s max góly (ošetří ties)
-        const changed = await checkTopScorer()
+        const changed = await checkTopScorer(tournamentId)
         if (!changed && selected) {
           // Fallback: manuální override pokud auto nenašlo žádné tipy
-          await evaluateSpecialTipPlayer(tipType, [selected], pts)
-          await recalcTipsterPoints()
+          await evaluateSpecialTipPlayer(tipType, [selected], pts, tournamentId)
+          await recalcTipsterPoints(tournamentId)
         }
       } else {
         if (!selected) { showToast('Vyber hráče'); setEvaluating(false); return }
-        await evaluateSpecialTipPlayer(tipType, [selected], pts)
-        await recalcTipsterPoints()
+        await evaluateSpecialTipPlayer(tipType, [selected], pts, tournamentId)
+        await recalcTipsterPoints(tournamentId)
       }
       setDone(true)
       showToast(`${label} vyhodnoceno ✓`)
@@ -243,8 +245,8 @@ function EvalRowPlayer({ tipType, label, playerPool, showToast }: {
     if (!confirm(`Zrušit vyhodnocení "${label}"?`)) return
     setResetting(true)
     try {
-      await supabase.from('special_tips').update({ evaluated: false, points_earned: 0 }).eq('tip_type', tipType)
-      await recalcTipsterPoints()
+      await supabase.from('special_tips').update({ evaluated: false, points_earned: 0 }).eq('tip_type', tipType).eq('tournament_id', tournamentId)
+      await recalcTipsterPoints(tournamentId)
       setDone(false)
       showToast('Vyhodnocení zrušeno ✓')
     } catch (e: unknown) {
@@ -330,15 +332,15 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
         setGroupStatus(s => ({ ...s, [group.id]: 'running' }))
         setGroupWinners(w => ({ ...w, [group.id]: { winner: winnerName, last: lastName } }))
 
-        const changedW = await evaluateSpecialTip(`group_winner:${group.id}`, winnerId)
-        const changedL = await evaluateSpecialTip(`group_last:${group.id}`, lastId)
+        const changedW = await evaluateSpecialTip(`group_winner:${group.id}`, winnerId, tournament.id)
+        const changedL = await evaluateSpecialTip(`group_last:${group.id}`, lastId, tournament.id)
 
         setGroupStatus(s => ({ ...s, [group.id]: 'done' }))
         if (changedW || changedL) anyEvaluated = true
       }
 
       if (anyEvaluated) {
-        await recalcTipsterPoints()
+        await recalcTipsterPoints(tournament.id)
         showToast('Skupinové tipy auto-vyhodnoceny ✓')
       }
     }
@@ -366,9 +368,9 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
     setAutoTournamentWinnerId(winnerId)
 
     const run = async () => {
-      const changed = await evaluateSpecialTip('tournament_winner', winnerId)
+      const changed = await evaluateSpecialTip('tournament_winner', winnerId, tournament.id)
       if (changed) {
-        await recalcTipsterPoints()
+        await recalcTipsterPoints(tournament.id)
         showToast('Vítěz turnaje auto-vyhodnocen ✓')
       }
     }
@@ -377,7 +379,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
 
   const handleRecalcAll = async () => {
     setRecalcing(true)
-    await recalcAllTips(showToast)
+    await recalcAllTips(showToast, tournament.id)
     setRecalcing(false)
   }
 
@@ -461,18 +463,21 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
           teamPool={teams}
           showToast={showToast}
           autoWinnerId={autoTournamentWinnerId}
+          tournamentId={tournament.id}
         />
         <EvalRow
           tipType="most_goals_team"
           label="⚽ Tým s nejvíce góly"
           teamPool={teams}
           showToast={showToast}
+          tournamentId={tournament.id}
         />
         <EvalRowPlayer
           tipType="top_scorer"
           label="🏅 Nejlepší střelec"
           playerPool={players}
           showToast={showToast}
+          tournamentId={tournament.id}
         />
 
         {/* Skupiny — automaticky */}

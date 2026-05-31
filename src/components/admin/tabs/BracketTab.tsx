@@ -572,7 +572,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     // Final match — check tournament winner
     if (currentRound.position === maxPos) {
       await refetchBracket()
-      const evaluated = await checkTournamentWinner(bracketRounds)
+      const evaluated = await checkTournamentWinner(bracketRounds, tournament?.id ?? '')
       showToast(evaluated ? 'Uloženo ✓ · 🏆 Vítěz turnaje vyhodnocen' : 'Uloženo ✓')
       return
     }
