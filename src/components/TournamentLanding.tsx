@@ -207,7 +207,7 @@ export default function TournamentLanding({ onSelect }: Props) {
           color: '#2563eb',
           margin: '0 0 .3rem',
         }}>
-          ⚽ ZF Cup
+          ⚽ Turnajník
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", color: '#6b7280', fontSize: '.95rem', margin: 0 }}>
           Vyberte turnaj nebo vytvořte nový
@@ -411,7 +411,7 @@ export default function TournamentLanding({ onSelect }: Props) {
                 </label>
                 <input
                   type="text"
-                  placeholder="např. ZF Cup 2027"
+                  placeholder="např. Turnajník 2027"
                   value={newName}
                   onChange={e => handleNameChange(e.target.value)}
                   style={inputStyle}

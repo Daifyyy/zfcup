@@ -68,8 +68,10 @@ import { formatLeagueSFDef } from './bracket-formats/formatLeagueSF'
 import { formatFullPlacementDef } from './bracket-formats/formatFullPlacement'
 import { formatKnockout8Def } from './bracket-formats/formatKnockout8'
 import { formatRO16Def } from './bracket-formats/formatRO16'
+import { formatMini4Def } from './bracket-formats/formatMini4'
 
 export const TOURNAMENT_FORMATS: TournamentFormatDef[] = [
+  formatMini4Def,
   formatLeagueDef,
   formatLeaguePlayoffDef,
   formatLeagueSFDef,
@@ -110,6 +112,7 @@ export function getAdvancingCutoffs(formatId: string, tournament?: Tournament | 
     return { sfCutoff: 2, qfCutoff: 6 }
   }
   switch (formatId) {
+    case 'mini_4teams': return { advancing: 4 }
     case 'league': return {}
     case 'league_playoff': return { sfCutoff: 2, qfCutoff: 6 }
     case 'groups_sf': return { advancing: 2 }

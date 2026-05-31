@@ -12,7 +12,7 @@ import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Tournament } from '../../hooks/useTournament'
 import { TeamLogo } from '../ui/TeamLogo'
 
-const STORAGE_KEY = 'zfcup_tipster_id'
+const STORAGE_KEY = 'turnajnik_tipster_id'
 
 interface Props {
   matches: Match[]

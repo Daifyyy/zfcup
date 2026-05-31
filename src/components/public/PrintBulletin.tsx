@@ -172,7 +172,7 @@ export default function PrintBulletin({ tournament, teams, groups, matches, brac
       )}
 
       <div style={{ fontSize: 10, color: '#999', textAlign: 'center', marginTop: 20 }}>
-        Generováno aplikací ZF Cup
+        Generováno aplikací Turnajník
       </div>
     </div>
   )

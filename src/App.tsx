@@ -150,6 +150,11 @@ export default function App() {
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, ruleItems, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
 
+  const goHome = useCallback(() => {
+    setTournamentId('')
+    window.history.pushState({}, '', '/')
+  }, [])
+
   // ── Landing page: no tournamentId in URL ─────────────
   if (!tournamentId) {
     return (
@@ -212,6 +217,7 @@ export default function App() {
         onKiosk={() => setKiosk(true)}
         onScoreboard={() => setScoreboard(true)}
         onPrint={() => setPrintOpen(true)}
+        onHome={goHome}
         isAdmin={!!session}
         tipsEnabled={tournament?.tips_enabled ?? false}
         showBracket={showBracket}

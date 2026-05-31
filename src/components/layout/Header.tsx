@@ -9,6 +9,7 @@ interface Props {
   onKiosk: () => void
   onScoreboard: () => void
   onPrint?: () => void
+  onHome?: () => void
   isAdmin: boolean
   tipsEnabled?: boolean
   showBracket?: boolean
@@ -25,7 +26,7 @@ const BASE_TABS: [Tab, string][] = [
   ['rules',     'Pravidla'],
 ]
 
-export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, isAdmin, tipsEnabled, showBracket = true, cardsEnabled }: Props) {
+export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin, tipsEnabled, showBracket = true, cardsEnabled }: Props) {
   const baseTabs: [Tab, string][] = showBracket ? BASE_TABS : BASE_TABS.filter(([key]) => key !== 'bracket')
   let TABS: [Tab, string][] = [...baseTabs]
   if (cardsEnabled) TABS = [...TABS, ['discipline', 'Disciplína']]
@@ -64,6 +65,42 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
           ⚽
         </button>
 
+        {/* Back to tournament list */}
+        {onHome && (
+          <button
+            type="button"
+            onClick={onHome}
+            title="Zpět na přehled turnajů"
+            style={{
+              height: 38, borderRadius: 10,
+              background: '#f1f5f9',
+              border: '1.5px solid var(--border)',
+              display: 'flex', alignItems: 'center', gap: '.3rem',
+              padding: '0 .65rem',
+              fontSize: '.7rem', fontWeight: 700,
+              color: 'var(--muted)',
+              textTransform: 'uppercase', letterSpacing: '.07em',
+              cursor: 'pointer', flexShrink: 0,
+              transition: 'all .15s',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.background = '#e2e8f0'
+              el.style.color = 'var(--accent)'
+              el.style.borderColor = 'var(--accent)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement
+              el.style.background = '#f1f5f9'
+              el.style.color = 'var(--muted)'
+              el.style.borderColor = 'var(--border)'
+            }}
+          >
+            <span style={{ fontSize: '.85rem' }}>←</span>
+            <span className="hide-mobile">Turnaje</span>
+          </button>
+        )}
+
         {/* Tournament name */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{
@@ -73,7 +110,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
             overflow: 'hidden', textOverflow: 'ellipsis',
             color: 'var(--text)',
           }}>
-            {tournament?.name || 'ZF CUP 2026'}
+            {tournament?.name || 'Turnajník'}
           </h1>
           {meta && (
             <div style={{ fontSize: '.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.12em', marginTop: 1 }}>

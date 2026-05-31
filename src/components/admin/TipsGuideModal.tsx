@@ -54,7 +54,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
     return () => { document.body.style.overflow = prev }
   }, [])
 
-  const tname = tournament?.name || 'ZF CUP 2026'
+  const tname = tournament?.name || 'Turnajník'
   const tmeta = [tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
   const isLeague = tournament?.format === 'league'
   const nonLigaGroups = groups.filter(g => g.name !== 'Liga')

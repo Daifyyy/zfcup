@@ -694,7 +694,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
             textShadow: '0 1px 4px rgba(0,0,0,.2)',
             lineHeight: 1.1,
           }}>
-            ZF CUP 2026
+            {tournament?.name?.toUpperCase() || 'TURNAJNÍK'}
           </span>
           <span style={{
             fontSize: S.label,
