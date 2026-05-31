@@ -9,13 +9,14 @@ export interface Assist {
   count: number
 }
 
-export function useAssists() {
+export function useAssists(tournamentId: string) {
   const [assists, setAssists] = useState<Assist[]>([])
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('assists').select('*')
+      if (!tournamentId) return
+      const { data } = await supabase.from('assists').select('*').eq('tournament_id', tournamentId)
       setAssists(data ?? [])
     }
     fetchRef.current = fetch
@@ -36,7 +37,7 @@ export function useAssists() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { assists, refetch: () => fetchRef.current() }
 }

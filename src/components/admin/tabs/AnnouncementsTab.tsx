@@ -23,11 +23,12 @@ function extractYoutubeId(url: string): string | null {
 
 interface Props {
   announcements: Announcement[]
+  tournament: { id: string } | null
   refetchAnnouncements: () => void
   showToast: (msg: string) => void
 }
 
-export default function AnnouncementsTab({ announcements, refetchAnnouncements, showToast }: Props) {
+export default function AnnouncementsTab({ announcements, tournament, refetchAnnouncements, showToast }: Props) {
   const [form, setForm] = useState({ icon: '📌', title: '', body: '', type: 'text' as 'text' | 'image' | 'video', media_url: '' })
   const [editId, setEditId] = useState<string | null>(null)
   const [items, setItems] = useState(announcements)
@@ -50,7 +51,7 @@ export default function AnnouncementsTab({ announcements, refetchAnnouncements, 
       const { error } = await supabase.from('announcements').update(data).eq('id', editId)
       if (error) { showToast('Chyba: ' + error.message); return }
     } else {
-      const { error } = await supabase.from('announcements').insert({ ...data, position: items.length })
+      const { error } = await supabase.from('announcements').insert({ ...data, position: items.length, tournament_id: tournament?.id })
       if (error) { showToast('Chyba: ' + error.message); return }
     }
     setForm({ icon: '📌', title: '', body: '', type: 'text', media_url: '' })

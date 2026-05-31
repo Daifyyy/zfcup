@@ -165,7 +165,7 @@ function InlineMatchEditor({
     const goalResults = await Promise.all(
       Object.entries(counts).map(([player_id, count]) =>
         count > 0
-          ? supabase.from('goals').upsert({ player_id, match_id: match.id, count }, { onConflict: 'player_id,match_id' })
+          ? supabase.from('goals').upsert({ player_id, match_id: match.id, count, tournament_id: tournament?.id }, { onConflict: 'player_id,match_id' })
           : supabase.from('goals').delete().match({ player_id, match_id: match.id })
       )
     )
@@ -177,7 +177,7 @@ function InlineMatchEditor({
       const assistResults = await Promise.all(
         Object.entries(assistCounts).map(([player_id, count]) =>
           count > 0
-            ? supabase.from('assists').upsert({ player_id, match_id: match.id, count }, { onConflict: 'player_id,match_id' })
+            ? supabase.from('assists').upsert({ player_id, match_id: match.id, count, tournament_id: tournament?.id }, { onConflict: 'player_id,match_id' })
             : supabase.from('assists').delete().match({ player_id, match_id: match.id })
         )
       )
@@ -190,9 +190,9 @@ function InlineMatchEditor({
     if (tournament?.cards_enabled) {
       await supabase.from('cards').delete().eq('match_id', match.id)
       const newCards = Object.entries(cardData).flatMap(([player_id, { yellow, red }]) => {
-        if (yellow === 2) return [{ player_id, match_id: match.id, type: 'yellow_red' as const }]
-        if (red === 1) return [{ player_id, match_id: match.id, type: 'red' as const }]
-        if (yellow === 1) return [{ player_id, match_id: match.id, type: 'yellow' as const }]
+        if (yellow === 2) return [{ player_id, match_id: match.id, type: 'yellow_red' as const, tournament_id: tournament?.id }]
+        if (red === 1) return [{ player_id, match_id: match.id, type: 'red' as const, tournament_id: tournament?.id }]
+        if (yellow === 1) return [{ player_id, match_id: match.id, type: 'yellow' as const, tournament_id: tournament?.id }]
         return []
       })
       if (newCards.length > 0) {
@@ -483,6 +483,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
       away_score: awayScore,
       played,
       scheduled_time: form.scheduled_time || '',
+      tournament_id: tournament?.id,
     })
     if (error) { showToast('Chyba: ' + error.message); return }
     refetchMatches()

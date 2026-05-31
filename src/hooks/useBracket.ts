@@ -23,7 +23,7 @@ export interface BracketSlot {
   referee_id?: string | null
 }
 
-export function useBracket() {
+export function useBracket(tournamentId: string) {
   const [rounds, setRounds] = useState<BracketRound[]>([])
   const [slots, setSlots] = useState<BracketSlot[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,9 +31,10 @@ export function useBracket() {
 
   useEffect(() => {
     async function fetch() {
+      if (!tournamentId) { setLoading(false); return }
       const [{ data: r, error: rErr }, { data: s, error: sErr }] = await Promise.all([
-        supabase.from('bracket_rounds').select('*').order('position'),
-        supabase.from('bracket_slots').select('*').order('position'),
+        supabase.from('bracket_rounds').select('*').eq('tournament_id', tournamentId).order('position'),
+        supabase.from('bracket_slots').select('*').eq('tournament_id', tournamentId).order('position'),
       ])
       if (!rErr) setRounds(r ?? [])
       if (!sErr) setSlots(s ?? [])
@@ -59,7 +60,7 @@ export function useBracket() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { rounds, slots, loading, refetch: () => fetchRef.current() }
 }

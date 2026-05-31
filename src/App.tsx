@@ -15,6 +15,7 @@ import { useBracketGoals } from './hooks/useBracketGoals'
 import { useAnnouncements } from './hooks/useAnnouncements'
 import { useRuleItems } from './hooks/useRuleItems'
 import { useReferees } from './hooks/useReferees'
+import { TournamentProvider } from './lib/TournamentContext'
 import Header from './components/layout/Header'
 import BottomNav from './components/layout/BottomNav'
 import Overview from './components/public/Overview'
@@ -32,12 +33,22 @@ import AdminPanel from './components/admin/AdminPanel'
 import KioskMode from './components/kiosk/KioskMode'
 import Scoreboard from './components/public/Scoreboard'
 import Toast from './components/ui/Toast'
+import TournamentLanding from './components/TournamentLanding'
+import PasswordResetOverlay from './components/PasswordResetOverlay'
 import type { Session } from '@supabase/supabase-js'
+
+// Detect tournamentId from URL path: first non-empty segment is treated as tournament id.
+// E.g. /abc123 → 'abc123'; / → ''
+function detectTournamentIdFromUrl(): string {
+  const segments = window.location.pathname.split('/').filter(Boolean)
+  return segments[0] ?? ''
+}
 
 export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket' | 'info' | 'rules' | 'tips' | 'discipline'
 const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket', 'info', 'rules', 'tips', 'discipline']
 
 export default function App() {
+  const [tournamentId, setTournamentId] = useState<string>(() => detectTournamentIdFromUrl())
   const [tab, setTab] = useState<Tab>('overview')
   const [adminOpen, setAdminOpen] = useState(false)
   const [kiosk, setKiosk] = useState(() => new URLSearchParams(window.location.search).get('kiosk') === '1')
@@ -46,29 +57,44 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [toast, setToast] = useState('')
   const [toastShow, setToastShow] = useState(false)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
   const toastTimer = useRef<ReturnType<typeof setTimeout>>()
 
-  const { tournament, refetch: refetchTournament } = useTournament()
-  const { teams, refetch: refetchTeams } = useTeams()
-  const { players, refetch: refetchPlayers } = usePlayers()
-  const { groups, refetch: refetchGroups } = useGroups()
-  const { matches, refetch: refetchMatches } = useMatches()
-  const { goals, refetch: refetchGoals } = useGoals()
-  const { assists, refetch: refetchAssists } = useAssists()
-  const { bracketAssists, refetch: refetchBracketAssists } = useBracketAssists()
-  const { cards, refetch: refetchCards } = useCards()
-  const { bracketCards, refetch: refetchBracketCards } = useBracketCards()
-  const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket()
-  const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals()
-  const { announcements, refetch: refetchAnnouncements } = useAnnouncements()
-  const { ruleItems, refetch: refetchRuleItems } = useRuleItems()
-  const { referees, refetch: refetchReferees } = useReferees()
+  // When no tournamentId, pass empty string so hooks skip fetching
+  const { tournament, refetch: refetchTournament } = useTournament(tournamentId)
+  const { teams, refetch: refetchTeams } = useTeams(tournamentId)
+  const { players, refetch: refetchPlayers } = usePlayers(tournamentId)
+  const { groups, refetch: refetchGroups } = useGroups(tournamentId)
+  const { matches, refetch: refetchMatches } = useMatches(tournamentId)
+  const { goals, refetch: refetchGoals } = useGoals(tournamentId)
+  const { assists, refetch: refetchAssists } = useAssists(tournamentId)
+  const { bracketAssists, refetch: refetchBracketAssists } = useBracketAssists(tournamentId)
+  const { cards, refetch: refetchCards } = useCards(tournamentId)
+  const { bracketCards, refetch: refetchBracketCards } = useBracketCards(tournamentId)
+  const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket(tournamentId)
+  const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals(tournamentId)
+  const { announcements, refetch: refetchAnnouncements } = useAnnouncements(tournamentId)
+  const { ruleItems, refetch: refetchRuleItems } = useRuleItems(tournamentId)
+  const { referees, refetch: refetchReferees } = useReferees(tournamentId)
 
   // ── Auth ──────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
+      setSession(s)
+    })
     return () => subscription.unsubscribe()
+  }, [])
+
+  // ── Popstate: handle browser back from tournament → landing ───
+  useEffect(() => {
+    const handlePopstate = () => {
+      const id = detectTournamentIdFromUrl()
+      setTournamentId(id)
+    }
+    window.addEventListener('popstate', handlePopstate)
+    return () => window.removeEventListener('popstate', handlePopstate)
   }, [])
 
   // ── Keyboard shortcuts ────────────────────────────────
@@ -124,6 +150,17 @@ export default function App() {
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, ruleItems, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
 
+  // ── Landing page: no tournamentId in URL ─────────────
+  if (!tournamentId) {
+    return (
+      <TournamentProvider tournamentId="">
+        <TournamentLanding onSelect={id => setTournamentId(id)} />
+        {passwordRecovery && <PasswordResetOverlay onDone={() => setPasswordRecovery(false)} />}
+      </TournamentProvider>
+    )
+  }
+
+  // ── Loading spinner while fetching tournament ─────────
   if (!tournament) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -137,7 +174,7 @@ export default function App() {
 
   if (kiosk) {
     return (
-      <>
+      <TournamentProvider tournamentId={tournamentId}>
         <KioskMode
           {...shared}
           bracketGoals={bracketGoals}
@@ -160,11 +197,12 @@ export default function App() {
             onExit={() => setScoreboard(false)}
           />
         )}
-      </>
+      </TournamentProvider>
     )
   }
 
   return (
+    <TournamentProvider tournamentId={tournamentId}>
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Header
         tournament={tournament}
@@ -209,6 +247,7 @@ export default function App() {
         <AdminPanel
           {...shared}
           session={session}
+          tournamentId={tournamentId}
           tournament={tournament}
           bracketGoals={bracketGoals}
           bracketAssists={bracketAssists}
@@ -236,6 +275,7 @@ export default function App() {
       )}
       <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} />
       <Toast message={toast} show={toastShow} />
+      {passwordRecovery && <PasswordResetOverlay onDone={() => setPasswordRecovery(false)} />}
       {printOpen && (
         <PrintBulletin
           tournament={tournament}
@@ -248,5 +288,6 @@ export default function App() {
         />
       )}
     </div>
+    </TournamentProvider>
   )
 }

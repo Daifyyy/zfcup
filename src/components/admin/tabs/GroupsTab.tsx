@@ -118,6 +118,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
         start_time: leagueStart,
         match_duration: parseInt(leagueDur) || 20,
         break_between: parseInt(leagueBreak) || 5,
+        tournament_id: tournament?.id,
       }).select().single()
       if (grpErr) throw grpErr
 
@@ -139,6 +140,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
         away_score: 0,
         played: false,
         scheduled_time: m.scheduled_time,
+        tournament_id: tournament?.id,
       }))
 
       const { error: mErr } = await supabase.from('matches').insert(matchRows)
@@ -188,6 +190,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
       start_time: form.start_time,
       match_duration: parseInt(form.match_duration) || 20,
       break_between: parseInt(form.break_between) || 5,
+      tournament_id: tournament?.id,
     }).select().single()
 
     if (grpErr) { showToast('Chyba: ' + grpErr.message); return }
@@ -207,6 +210,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
       away_score: 0,
       played: false,
       scheduled_time: form.start_time ? addMinutes(form.start_time, Math.floor(i / pitchesPerGroup) * (dur + brk)) : '',
+      tournament_id: tournament?.id,
     }))
 
     const { error: mErr } = await supabase.from('matches').insert(matchRows)

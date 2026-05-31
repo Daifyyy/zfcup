@@ -293,7 +293,7 @@ function EvalRowPlayer({ tipType, label, playerPool, showToast }: {
 type GroupEvalStatus = 'pending' | 'running' | 'done' | 'incomplete'
 
 export default function TipsAdminTab({ showToast, tournament, teams, players, groups, matches, bracketSlots, bracketRounds }: Props) {
-  const { tipsters } = useTipsters()
+  const { tipsters } = useTipsters(tournament.id)
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const [recalcing, setRecalcing] = useState(false)
   const [showGuide, setShowGuide] = useState(false)

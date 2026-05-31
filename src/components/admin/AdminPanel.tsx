@@ -49,6 +49,7 @@ const ACTION_TABS: ATab[] = ['matches', 'bracket', 'tips']
 
 interface Props {
   session: Session | null
+  tournamentId: string
   tournament: Tournament | null
   teams: Team[]
   players: Player[]
@@ -91,6 +92,10 @@ export default function AdminPanel(props: Props) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
+  const [resetMode, setResetMode] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetSent, setResetSent] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
 
   const login = async () => {
     if (!email || !password) { setErr('Vyplňte email a heslo.'); return }
@@ -104,6 +109,17 @@ export default function AdminPanel(props: Props) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const sendReset = async () => {
+    if (!resetEmail) { setErr('Zadej e-mail.'); return }
+    setResetLoading(true); setErr('')
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: window.location.origin,
+    })
+    setResetLoading(false)
+    if (error) { setErr(error.message); return }
+    setResetSent(true)
   }
 
   const logout = async () => {
@@ -197,6 +213,43 @@ export default function AdminPanel(props: Props) {
               {loading ? 'Přihlašuji…' : 'Přihlásit'}
             </button>
             {err && <p style={{ color: 'var(--danger)', fontSize: '.78rem' }}>{err}</p>}
+            {!resetMode ? (
+              <button type="button" onClick={() => { setResetMode(true); setErr('') }} style={{
+                background: 'none', border: 'none', color: 'var(--accent)',
+                fontFamily: "'DM Sans', sans-serif", fontSize: '.82rem',
+                cursor: 'pointer', padding: 0, textDecoration: 'underline', alignSelf: 'flex-start',
+              }}>
+                Zapomenuté heslo?
+              </button>
+            ) : resetSent ? (
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '.75rem', fontSize: '.82rem', fontFamily: "'DM Sans', sans-serif", color: '#166534' }}>
+                ✅ E-mail s odkazem pro reset hesla byl odeslán. Zkontroluj schránku (včetně spamu).
+                <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setResetEmail('') }} style={{ display: 'block', marginTop: '.5rem', background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '.82rem', padding: 0, textDecoration: 'underline' }}>
+                  ← Zpět na přihlášení
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', background: '#f8fafc', borderRadius: 8, padding: '.85rem', border: '1px solid var(--border)' }}>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.82rem', margin: 0, color: '#374151' }}>
+                  Zadej svůj e-mail a pošleme ti odkaz pro reset hesla.
+                </p>
+                <input
+                  className="field-input"
+                  type="email"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  placeholder="admin@firma.cz"
+                />
+                <div style={{ display: 'flex', gap: '.5rem' }}>
+                  <button type="button" className="btn btn-p" onClick={sendReset} style={{ flex: 1, opacity: resetLoading ? 0.6 : 1 }}>
+                    {resetLoading ? 'Odesílám…' : 'Odeslat reset'}
+                  </button>
+                  <button type="button" className="btn btn-d" onClick={() => { setResetMode(false); setErr(''); setResetEmail('') }}>
+                    Zrušit
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -243,9 +296,9 @@ export default function AdminPanel(props: Props) {
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.15rem 1.2rem' }}>
               {aTab === 'info'          && <InfoTab {...tabProps} />}
               {aTab === 'announcements' && <AnnouncementsTab {...tabProps} />}
-              {aTab === 'rules'         && <RuleItemsTab ruleItems={props.ruleItems} refetchRuleItems={props.refetchRuleItems} showToast={showToast} />}
+              {aTab === 'rules'         && <RuleItemsTab ruleItems={props.ruleItems} tournament={props.tournament} refetchRuleItems={props.refetchRuleItems} showToast={showToast} />}
               {aTab === 'teams'         && <TeamsTab {...tabProps} />}
-              {aTab === 'referees'      && <RefereesTab referees={props.referees} refetchReferees={props.refetchReferees} showToast={showToast} />}
+              {aTab === 'referees'      && <RefereesTab referees={props.referees} tournament={props.tournament} refetchReferees={props.refetchReferees} showToast={showToast} />}
               {aTab === 'groups'        && <GroupsTab {...tabProps} />}
               {aTab === 'matches'       && <MatchesTab {...tabProps} />}
               {aTab === 'scorers'       && <ScorersTab {...tabProps} />}

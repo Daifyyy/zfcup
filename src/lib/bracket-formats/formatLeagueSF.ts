@@ -3,10 +3,10 @@ import { calcGroupStandings } from '../standings'
 import { createRound, slotsOf, fill } from './bracketHelpers'
 import type { TournamentFormatDef, SeedParams, AutoAdvanceParams, AutoAdvanceResult } from '../formats'
 
-async function generate(): Promise<void> {
-  await createRound('Semifinále', 2, 0)
-  await createRound('O 3. místo', 1, 1)
-  await createRound('Finále',     1, 2)
+async function generate(tournamentId: string): Promise<void> {
+  await createRound('Semifinále', 2, 0, tournamentId)
+  await createRound('O 3. místo', 1, 1, tournamentId)
+  await createRound('Finále',     1, 2, tournamentId)
 }
 
 async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams): Promise<void> {

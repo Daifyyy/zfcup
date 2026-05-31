@@ -5,11 +5,11 @@ import type { TournamentFormatDef, SeedParams, AutoAdvanceParams, AutoAdvanceRes
 // Pure 8-team knockout bracket — no group stage.
 // Teams are assigned manually via SlotEditor (all slots start as TBD).
 
-async function generate(): Promise<void> {
-  await createRound('Čtvrtfinále', 4, 0)
-  await createRound('Semifinále',  2, 1)
-  await createRound('O 3. místo',  1, 2)
-  await createRound('Finále',      1, 3)
+async function generate(tournamentId: string): Promise<void> {
+  await createRound('Čtvrtfinále', 4, 0, tournamentId)
+  await createRound('Semifinále',  2, 1, tournamentId)
+  await createRound('O 3. místo',  1, 2, tournamentId)
+  await createRound('Finále',      1, 3, tournamentId)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

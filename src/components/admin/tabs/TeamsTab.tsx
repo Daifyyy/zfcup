@@ -8,6 +8,7 @@ import ImportTeamsModal from '../ImportTeamsModal'
 interface Props {
   teams: Team[]
   players: Player[]
+  tournament: { id: string } | null
   refetchTeams: () => void
   refetchPlayers: () => void
   showToast: (msg: string) => void
@@ -93,7 +94,7 @@ function LogoSection({ team, showToast, refetchTeams }: { team: Team; showToast:
   )
 }
 
-function RosterSection({ team, players, showToast, refetchPlayers }: { team: Team; players: Player[]; showToast: (m: string) => void; refetchPlayers: () => void }) {
+function RosterSection({ team, players, tournament, showToast, refetchPlayers }: { team: Team; players: Player[]; tournament: { id: string } | null; showToast: (m: string) => void; refetchPlayers: () => void }) {
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -109,6 +110,7 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
       name: name.trim(),
       number: null,
       role: role || null,
+      tournament_id: tournament?.id,
     })
     if (error) { showToast('Chyba: ' + error.message); return }
     setName(''); setRole('')
@@ -256,7 +258,7 @@ function RosterSection({ team, players, showToast, refetchPlayers }: { team: Tea
   )
 }
 
-export default function TeamsTab({ teams, players, refetchTeams, refetchPlayers, showToast }: Props) {
+export default function TeamsTab({ teams, players, tournament, refetchTeams, refetchPlayers, showToast }: Props) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(TEAM_COLORS[0])
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -266,7 +268,7 @@ export default function TeamsTab({ teams, players, refetchTeams, refetchPlayers,
 
   const addTeam = async () => {
     if (!name.trim()) { showToast('Zadej název'); return }
-    const { error } = await supabase.from('teams').insert({ name: name.trim(), color })
+    const { error } = await supabase.from('teams').insert({ name: name.trim(), color, tournament_id: tournament?.id })
     if (error) { showToast('Chyba: ' + error.message); return }
     setName('')
     showToast('Tým přidán ✓')
@@ -321,6 +323,7 @@ export default function TeamsTab({ teams, players, refetchTeams, refetchPlayers,
       <ImportTeamsModal
         open={showImport}
         existingTeams={teams}
+        tournamentId={tournament?.id ?? ''}
         onClose={() => setShowImport(false)}
         onImported={() => { refetchTeams(); refetchPlayers() }}
         showToast={showToast}
@@ -374,7 +377,7 @@ export default function TeamsTab({ teams, players, refetchTeams, refetchPlayers,
                 {expanded && !isEditing && (
                   <div style={{ padding: '0 .9rem .75rem' }}>
                     <LogoSection team={t} showToast={showToast} refetchTeams={refetchTeams} />
-                    <RosterSection team={t} players={players} showToast={showToast} refetchPlayers={refetchPlayers} />
+                    <RosterSection team={t} players={players} tournament={tournament} showToast={showToast} refetchPlayers={refetchPlayers} />
                   </div>
                 )}
               </div>

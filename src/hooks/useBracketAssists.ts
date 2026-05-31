@@ -9,13 +9,14 @@ export interface BracketAssist {
   count: number
 }
 
-export function useBracketAssists() {
+export function useBracketAssists(tournamentId: string) {
   const [bracketAssists, setBracketAssists] = useState<BracketAssist[]>([])
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('bracket_assists').select('*')
+      if (!tournamentId) return
+      const { data } = await supabase.from('bracket_assists').select('*').eq('tournament_id', tournamentId)
       setBracketAssists(data ?? [])
     }
     fetchRef.current = fetch
@@ -36,7 +37,7 @@ export function useBracketAssists() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { bracketAssists, refetch: () => fetchRef.current() }
 }

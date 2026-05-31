@@ -19,6 +19,35 @@ Referenční implementace je v `turnaj_final.html` — zachovej veškerou existu
 - anon key = veřejné čtení (RLS SELECT pro všechny)
 - Admin přihlášení = Supabase Auth (email + heslo) → JWT → RLS povolí mutace
 - RLS musí být nastaveno v Supabase SQL Editoru (viz sekce RLS níže)
+- **Auth → "Allow new users to sign up" = VYPNUTO** — nové admin účty se přidávají pouze přes Supabase dashboard → Authentication → Users → "Invite user"
+- **Auth → URL Configuration**: Site URL + Redirect URL = Vercel URL (nutné pro reset hesla)
+
+## Multi-tenant architektura
+
+Aplikace podporuje více turnajů v jedné Supabase instanci. Každá datová tabulka má `tournament_id UUID NOT NULL FK → tournament(id)`.
+
+### 3 typy uživatelů
+| Typ | Přístup | Auth |
+|-----|---------|------|
+| Divák / fanoušek | Čtení turnaje přes URL `/{tournamentId}` | Žádný |
+| Tipér | Záložka Tipy — jméno + PIN → tabulka `tipsters` | Vlastní systém (ne Supabase Auth) |
+| Admin | Email + heslo → Supabase Auth JWT → RLS write | Supabase Auth |
+
+### Routing
+- **`/`** → `TournamentLanding` — seznam turnajů + přihlášení admina + vytvoření nového turnaje
+- **`/{tournamentId}`** → konkrétní turnaj (UUID v URL, detekovaný z `window.location.pathname`)
+- `src/App.tsx` čte `tournamentId` ze stavu (inicializovaného z URL), předává všem hookům
+- `src/components/TournamentLanding.tsx` — veřejný seznam + admin login + create form
+- `src/lib/TournamentContext.tsx` — `TournamentProvider` + `useTournamentId()` hook
+
+### Reset hesla (admin)
+- Landing page → "Přihlásit se" → "Zapomenuté heslo?" NEBO Admin panel → login form → "Zapomenuté heslo?"
+- Supabase pošle e-mail s odkazem → po kliknutí app zobrazí `PasswordResetOverlay` (`src/components/PasswordResetOverlay.tsx`)
+- Detekce: `onAuthStateChange` event `PASSWORD_RECOVERY` v `src/App.tsx`
+
+### Nový turnaj (admin)
+- Landing page → přihlásit se → "＋ Nový turnaj" → modal (název + slug)
+- INSERT do `tournament` s `owner_id = auth.uid()`; po vytvoření redirect na `/{newId}`
 
 ## RLS politiky (povinné pro fungování admin zápisů)
 ```sql
@@ -39,7 +68,7 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
   - Samostatná tabulka od `goals` — `goals` má FK na `matches`, playoff sloty nejsou v `matches`
 - `announcements`: id, icon (TEXT), title (TEXT), body (TEXT, HTML z RichTextEditor), position (INT), **type TEXT DEFAULT 'text'** (`'text'|'image'|'video'`), **media_url TEXT** — migrační SQL: `ALTER TABLE announcements ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'text'; ALTER TABLE announcements ADD COLUMN IF NOT EXISTS media_url TEXT;`
 - `rule_items`: id, title (TEXT DEFAULT ''), body (TEXT DEFAULT '', HTML z RichTextEditor), position (INT) — sekce pravidel soutěže; spravované přes admin záložku Pravidla
-- `tipsters`: id, name (TEXT UNIQUE), pin (CHAR(4)), total_points (INTEGER DEFAULT 0)
+- `tipsters`: id, tournament_id (FK), name (TEXT), pin (CHAR(4)), total_points (INTEGER DEFAULT 0) — UNIQUE(tournament_id, name)
 - `tips`: id, tipster_id (FK → tipsters), match_id (FK → matches), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, match_id)
 - `bracket_tips`: id, tipster_id (FK → tipsters), slot_id (FK → bracket_slots), predicted_home, predicted_away (INTEGER), points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, slot_id)
 - `special_tips`: id, tipster_id (FK → tipsters), tip_type (TEXT), predicted_team_id (UUID FK → teams **nullable** — spustit `ALTER TABLE special_tips ALTER COLUMN predicted_team_id DROP NOT NULL;`), **predicted_player_id (UUID FK → players nullable)** — pro `top_scorer` tip INSERT musí obsahovat `predicted_team_id: null`; points_earned (INTEGER DEFAULT 0), evaluated (BOOL DEFAULT false) — UNIQUE(tipster_id, tip_type)
@@ -47,7 +76,10 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
 - `bracket_assists`: id, player_id (FK → players), slot_id (FK → bracket_slots), count, UNIQUE(player_id, slot_id) — asistence playoff
 - `cards`: id, player_id (FK → players), match_id (FK → matches), type (TEXT: `'yellow'|'red'|'yellow_red'`) — kartičky skupinová fáze (více řádků na hráče/zápas)
 - `bracket_cards`: id, player_id (FK → players), slot_id (FK → bracket_slots), type — kartičky playoff
-- `tournament`: obsahuje všechny globální parametry turnaje:
+- `tournament`: kořenová entita — **nemá** `tournament_id`, ale má:
+  - `slug TEXT UNIQUE NOT NULL` — URL identifikátor (`zf-cup-2026`)
+  - `owner_id UUID FK → auth.users` — vlastník turnaje (pro budoucí RLS per-owner)
+  - `tournament`: obsahuje všechny globální parametry turnaje:
   - `tips_enabled BOOLEAN` — řídí viditelnost záložky Tipy
   - `assists_enabled BOOLEAN DEFAULT false` — volitelný modul asistencí; zobrazí ±stepper v InlineMatchEditor/SlotEditor + sloupec A v Střelcích
   - `cards_enabled BOOLEAN DEFAULT false` — volitelný modul kartiček; zobrazí sekci karet v editoru + záložku Disciplína v navigaci
@@ -61,55 +93,19 @@ CREATE POLICY "admin_write" ON <tabulka> FOR ALL TO authenticated USING (true) W
   - `logo_url TEXT` — URL loga turnaje (Storage bucket `team-logos`, path `tournament-logo.png`); zobrazuje se v Overview vpravo vedle popisu
   - `format_id TEXT DEFAULT ''` — ID zvoleného formátu z registru (`'groups_qf'`, `'league_sf'`, …); prázdný string = zpětná kompatibilita (formát se odvodí z legacy polí)
 
-### SQL migrace (spustit jednou v Supabase SQL Editor)
-Kompletní migrace jsou v `db-backup/05_migrations.sql`. Nové migrace (2026-05-30) — spustit pro nové moduly:
+### Multi-tenant migrace DB (již aplikováno)
+Všechny datové tabulky mají `tournament_id UUID NOT NULL FK → tournament(id) ON DELETE CASCADE`.
+Kompletní SQL pro novou instalaci je v `db-backup/05_migrations.sql`.
+
+**UNIQUE constrainty změněné pro multi-tenant:**
 ```sql
-ALTER TABLE tournament
-  ADD COLUMN IF NOT EXISTS format TEXT DEFAULT 'groups',
-  ADD COLUMN IF NOT EXISTS match_duration INT DEFAULT 20,
-  ADD COLUMN IF NOT EXISTS halves SMALLINT DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS playoff_kickoff TEXT DEFAULT '',
-  ADD COLUMN IF NOT EXISTS round_break INT DEFAULT 5,
-  ADD COLUMN IF NOT EXISTS tips_lock_from TEXT DEFAULT '',
-  ADD COLUMN IF NOT EXISTS num_teams INT DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS num_groups INT DEFAULT 2,
-  ADD COLUMN IF NOT EXISTS advancing_per_group INT DEFAULT 2,
-  ADD COLUMN IF NOT EXISTS num_pitches INT DEFAULT 2;
-
-ALTER TABLE bracket_slots ADD COLUMN IF NOT EXISTS scheduled_time TEXT;
-ALTER TABLE bracket_rounds
-  ADD COLUMN IF NOT EXISTS scheduled_start TEXT DEFAULT '',
-  ADD COLUMN IF NOT EXISTS break_after INT DEFAULT 5;
-ALTER TABLE teams ADD COLUMN IF NOT EXISTS logo_url TEXT;
-ALTER TABLE announcements
-  ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'text',
-  ADD COLUMN IF NOT EXISTS media_url TEXT;
-ALTER TABLE tournament ADD COLUMN IF NOT EXISTS rules_content TEXT DEFAULT '';
-ALTER TABLE tournament ADD COLUMN IF NOT EXISTS league_has_playoff BOOLEAN DEFAULT true;
-ALTER TABLE tournament ADD COLUMN IF NOT EXISTS logo_url TEXT;
-ALTER TABLE tournament ADD COLUMN IF NOT EXISTS format_id TEXT DEFAULT '';
-
-CREATE TABLE IF NOT EXISTS rule_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL DEFAULT '',
-  body TEXT NOT NULL DEFAULT '',
-  position INTEGER NOT NULL DEFAULT 0
-);
-ALTER TABLE rule_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read" ON rule_items FOR SELECT USING (true);
-CREATE POLICY "admin_write" ON rule_items FOR ALL TO authenticated USING (true) WITH CHECK (true);
-```
-
-Migrace pro nové moduly (viz `db-backup/05_migrations.sql`):
-```sql
-ALTER TABLE tournament
-  ADD COLUMN IF NOT EXISTS assists_enabled BOOLEAN DEFAULT false,
-  ADD COLUMN IF NOT EXISTS cards_enabled   BOOLEAN DEFAULT false;
-ALTER TABLE players ADD COLUMN IF NOT EXISTS avatar_url TEXT;
-ALTER TABLE special_tips ADD COLUMN IF NOT EXISTS predicted_player_id UUID REFERENCES players(id) ON DELETE SET NULL;
--- Uvolnit NOT NULL constraint na predicted_team_id (nutné pro top_scorer tipy):
-ALTER TABLE special_tips ALTER COLUMN predicted_team_id DROP NOT NULL;
--- + CREATE TABLE assists, bracket_assists, cards, bracket_cards s RLS (viz 05_migrations.sql)
+-- Spustit pokud nebylo provedeno:
+ALTER TABLE teams DROP CONSTRAINT IF EXISTS teams_name_key;
+ALTER TABLE teams ADD CONSTRAINT teams_name_tournament_unique UNIQUE (tournament_id, name);
+ALTER TABLE tipsters DROP CONSTRAINT IF EXISTS tipsters_name_key;
+ALTER TABLE tipsters ADD CONSTRAINT tipsters_name_tournament_unique UNIQUE (tournament_id, name);
+ALTER TABLE bracket_rounds DROP CONSTRAINT IF EXISTS bracket_rounds_position_key;
+ALTER TABLE bracket_rounds ADD CONSTRAINT bracket_rounds_position_tournament_unique UNIQUE (tournament_id, position);
 ```
 
 ## Volitelné moduly
@@ -161,6 +157,8 @@ ALTER TABLE special_tips ALTER COLUMN predicted_team_id DROP NOT NULL;
 ## Pravidla kódování
 - Komponenty do `src/components/`, stránky (záložky) jsou inline v App.tsx
 - Každá entita má vlastní hook v `src/hooks/` (useMatches, useGroups, usePlayers, atd.)
+- **Všechny hooky přijímají `tournamentId: string` jako první parametr** — bez něj se nefetchuje (`if (!tournamentId) return`). Výjimky: `useTournament(tournamentId?: string)`, `usePlayers(tournamentId, teamId?)`, `useTips(tipsterId, tournamentId)`, `useBracketTips(tipsterId, tournamentId)`, `useSpecialTips(tipsterId, tournamentId)`
+- App.tsx předává `tournamentId` (state z URL) všem hookům; Tips.tsx čte `tournament.id` z propu
 - Realtime subscriptions přes **`src/lib/realtimeManager.ts`** — singleton, který sloučí všechny postgres_changes do **jednoho sdíleného kanálu** `app-realtime`; hooky volají `subscribeTable(table, handler)` místo vlastního `supabase.channel()`
 - **Page Visibility API** — všechny hooky zastaví polling při `document.hidden = true` a restartují při návratu (+ okamžitý refetch)
 - **Polling intervaly** (záchrana pro případ výpadku WebSocketu; realtime je primární):

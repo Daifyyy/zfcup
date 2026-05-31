@@ -10,14 +10,15 @@ export interface Player {
   avatar_url: string | null
 }
 
-export function usePlayers(teamId?: string) {
+export function usePlayers(tournamentId: string, teamId?: string) {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      let q = supabase.from('players').select('*').order('number')
+      if (!tournamentId) { setLoading(false); return }
+      let q = supabase.from('players').select('*').eq('tournament_id', tournamentId).order('number')
       if (teamId) q = q.eq('team_id', teamId)
       const { data } = await q
       setPlayers(data ?? [])
@@ -38,7 +39,7 @@ export function usePlayers(teamId?: string) {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [teamId])
+  }, [tournamentId, teamId])
 
   return { players, loading, refetch: () => fetchRef.current() }
 }

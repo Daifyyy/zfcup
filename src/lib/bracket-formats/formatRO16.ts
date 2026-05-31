@@ -10,12 +10,12 @@ import type { TournamentFormatDef, SeedParams, AutoAdvanceParams, AutoAdvanceRes
 // pos 3: O 3. místo (1 slot) ← SF losers
 // pos 4: Finále (1 slot) ← SF winners
 
-async function generate(): Promise<void> {
-  await createRound('Osmifinále',  8, 0)
-  await createRound('Čtvrtfinále', 4, 1)
-  await createRound('Semifinále',  2, 2)
-  await createRound('O 3. místo',  1, 3)
-  await createRound('Finále',      1, 4)
+async function generate(tournamentId: string): Promise<void> {
+  await createRound('Osmifinále',  8, 0, tournamentId)
+  await createRound('Čtvrtfinále', 4, 1, tournamentId)
+  await createRound('Semifinále',  2, 2, tournamentId)
+  await createRound('O 3. místo',  1, 3, tournamentId)
+  await createRound('Finále',      1, 4, tournamentId)
 }
 
 async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams): Promise<void> {

@@ -12,13 +12,13 @@ export interface BracketTip {
   evaluated: boolean
 }
 
-export function useBracketTips(tipsterId: string | null) {
+export function useBracketTips(tipsterId: string | null, tournamentId: string) {
   const [bracketTips, setBracketTips] = useState<BracketTip[]>([])
   const [loading, setLoading] = useState(false)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
-    if (!tipsterId) { setBracketTips([]); setLoading(false); return }
+    if (!tipsterId || !tournamentId) { setBracketTips([]); setLoading(false); return }
 
     setLoading(true)
     async function fetch() {
@@ -26,6 +26,7 @@ export function useBracketTips(tipsterId: string | null) {
         .from('bracket_tips')
         .select('*')
         .eq('tipster_id', tipsterId)
+        .eq('tournament_id', tournamentId)
       setBracketTips(data ?? [])
       setLoading(false)
     }
@@ -47,7 +48,7 @@ export function useBracketTips(tipsterId: string | null) {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [tipsterId])
+  }, [tipsterId, tournamentId])
 
   return { bracketTips, loading }
 }

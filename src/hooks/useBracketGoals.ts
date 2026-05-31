@@ -9,13 +9,14 @@ export interface BracketGoal {
   count: number
 }
 
-export function useBracketGoals() {
+export function useBracketGoals(tournamentId: string) {
   const [bracketGoals, setBracketGoals] = useState<BracketGoal[]>([])
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('bracket_goals').select('*')
+      if (!tournamentId) return
+      const { data } = await supabase.from('bracket_goals').select('*').eq('tournament_id', tournamentId)
       setBracketGoals(data ?? [])
     }
     fetchRef.current = fetch
@@ -36,7 +37,7 @@ export function useBracketGoals() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { bracketGoals, refetch: () => fetchRef.current() }
 }

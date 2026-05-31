@@ -5,11 +5,12 @@ import RichTextEditor from '../../ui/RichTextEditor'
 
 interface Props {
   ruleItems: RuleItem[]
+  tournament: { id: string } | null
   refetchRuleItems: () => void
   showToast: (msg: string) => void
 }
 
-export default function RuleItemsTab({ ruleItems, refetchRuleItems, showToast }: Props) {
+export default function RuleItemsTab({ ruleItems, tournament, refetchRuleItems, showToast }: Props) {
   const [form, setForm] = useState({ title: '', body: '' })
   const [editId, setEditId] = useState<string | null>(null)
   const [items, setItems] = useState(ruleItems)
@@ -22,7 +23,7 @@ export default function RuleItemsTab({ ruleItems, refetchRuleItems, showToast }:
       const { error } = await supabase.from('rule_items').update(data).eq('id', editId)
       if (error) { showToast('Chyba: ' + error.message); return }
     } else {
-      const { error } = await supabase.from('rule_items').insert({ ...data, position: items.length })
+      const { error } = await supabase.from('rule_items').insert({ ...data, position: items.length, tournament_id: tournament?.id })
       if (error) { showToast('Chyba: ' + error.message); return }
     }
     setForm({ title: '', body: '' })

@@ -11,13 +11,14 @@ export interface BracketCard {
   type: CardType
 }
 
-export function useBracketCards() {
+export function useBracketCards(tournamentId: string) {
   const [bracketCards, setBracketCards] = useState<BracketCard[]>([])
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('bracket_cards').select('*')
+      if (!tournamentId) return
+      const { data } = await supabase.from('bracket_cards').select('*').eq('tournament_id', tournamentId)
       setBracketCards(data ?? [])
     }
     fetchRef.current = fetch
@@ -38,7 +39,7 @@ export function useBracketCards() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { bracketCards, refetch: () => fetchRef.current() }
 }

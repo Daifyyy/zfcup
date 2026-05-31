@@ -8,15 +8,17 @@ export interface Tipster {
   total_points: number
 }
 
-export function useTipsters() {
+export function useTipsters(tournamentId: string) {
   const [tipsters, setTipsters] = useState<Tipster[]>([])
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
+      if (!tournamentId) return
       const { data } = await supabase
         .from('tipsters')
         .select('id, name, total_points')
+        .eq('tournament_id', tournamentId)
         .order('total_points', { ascending: false })
       setTipsters(data ?? [])
     }
@@ -38,7 +40,7 @@ export function useTipsters() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { tipsters }
 }

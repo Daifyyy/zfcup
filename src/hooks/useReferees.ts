@@ -6,13 +6,14 @@ export interface Referee {
   name: string
 }
 
-export function useReferees() {
+export function useReferees(tournamentId: string) {
   const [referees, setReferees] = useState<Referee[]>([])
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('referees').select('*').order('name')
+      if (!tournamentId) return
+      const { data } = await supabase.from('referees').select('*').eq('tournament_id', tournamentId).order('name')
       setReferees(data ?? [])
     }
     fetchRef.current = fetch
@@ -30,7 +31,7 @@ export function useReferees() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { referees, refetch: () => fetchRef.current() }
 }

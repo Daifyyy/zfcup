@@ -890,10 +890,10 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
 export default function Tips({ matches, teams, players, groups, bracketRounds, bracketSlots, tournament, showToast }: Props) {
   const [tipsterId, setTipsterId] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY))
   const [view, setView] = useState<'tips' | 'leaderboard'>('tips')
-  const { tipsters } = useTipsters()
-  const { tips, loading: tipsLoading } = useTips(tipsterId)
-  const { bracketTips, loading: bracketTipsLoading } = useBracketTips(tipsterId)
-  const { specialTips } = useSpecialTips(tipsterId)
+  const { tipsters } = useTipsters(tournament.id)
+  const { tips, loading: tipsLoading } = useTips(tipsterId, tournament.id)
+  const { bracketTips, loading: bracketTipsLoading } = useBracketTips(tipsterId, tournament.id)
+  const { specialTips } = useSpecialTips(tipsterId, tournament.id)
 
   const currentTipster = tipsters.find(t => t.id === tipsterId)
   const isLeague = tournament?.format === 'league'

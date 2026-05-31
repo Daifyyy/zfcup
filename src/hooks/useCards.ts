@@ -11,13 +11,14 @@ export interface Card {
   type: CardType
 }
 
-export function useCards() {
+export function useCards(tournamentId: string) {
   const [cards, setCards] = useState<Card[]>([])
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('cards').select('*')
+      if (!tournamentId) return
+      const { data } = await supabase.from('cards').select('*').eq('tournament_id', tournamentId)
       setCards(data ?? [])
     }
     fetchRef.current = fetch
@@ -38,7 +39,7 @@ export function useCards() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { cards, refetch: () => fetchRef.current() }
 }

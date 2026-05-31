@@ -12,14 +12,15 @@ export interface Announcement {
   media_url?: string
 }
 
-export function useAnnouncements() {
+export function useAnnouncements(tournamentId: string) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('announcements').select('*').order('position')
+      if (!tournamentId) { setLoading(false); return }
+      const { data } = await supabase.from('announcements').select('*').eq('tournament_id', tournamentId).order('position')
       setAnnouncements(data ?? [])
       setLoading(false)
     }
@@ -41,7 +42,7 @@ export function useAnnouncements() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { announcements, loading, refetch: () => fetchRef.current() }
 }

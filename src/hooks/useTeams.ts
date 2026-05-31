@@ -8,14 +8,15 @@ export interface Team {
   logo_url: string | null
 }
 
-export function useTeams() {
+export function useTeams(tournamentId: string) {
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('teams').select('*').order('name')
+      if (!tournamentId) { setLoading(false); return }
+      const { data } = await supabase.from('teams').select('*').eq('tournament_id', tournamentId).order('name')
       setTeams(data ?? [])
       setLoading(false)
     }
@@ -34,7 +35,7 @@ export function useTeams() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { teams, loading, refetch: () => fetchRef.current() }
 }

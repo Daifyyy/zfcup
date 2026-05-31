@@ -26,7 +26,7 @@ export interface AutoAdvanceResult {
 }
 
 export interface BracketFormatFns {
-  generate(): Promise<void>
+  generate(tournamentId: string): Promise<void>
   seed(params: SeedParams): Promise<void>
   autoAdvance(params: AutoAdvanceParams): Promise<AutoAdvanceResult>
 }

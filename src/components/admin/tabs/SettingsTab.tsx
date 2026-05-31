@@ -124,32 +124,34 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
   }
 
   const resetTournamentData = async () => {
+    if (!tournament) return
     if (!confirm('Smazat zápasy, skupiny, góly a tipy? Týmy a hráči zůstanou.')) return
     if (!confirm('Opravdu? Tato akce je nevratná.')) return
 
-    const NULL_ID = '00000000-0000-0000-0000-000000000000'
+    const tid = tournament.id
     // Soft tables: ignore errors (may not exist or have missing RLS)
     const softTables = ['bracket_goals', 'bracket_slots', 'bracket_rounds', 'bracket_tips', 'special_tips']
     // Hard tables: must succeed
     const hardTables = ['goals', 'tips', 'matches', 'groups']
     for (const table of softTables) {
-      const { error } = await supabase.from(table).delete().neq('id', NULL_ID)
+      const { error } = await supabase.from(table).delete().eq('tournament_id', tid)
       if (error) console.warn(`Soft delete ${table}:`, error.message)
     }
     for (const table of hardTables) {
-      const { error } = await supabase.from(table).delete().neq('id', NULL_ID)
+      const { error } = await supabase.from(table).delete().eq('tournament_id', tid)
       if (error) { showToast('Chyba (' + table + '): ' + error.message); return }
     }
-    await supabase.from('tipsters').update({ total_points: 0 }).neq('id', NULL_ID)
+    await supabase.from('tipsters').update({ total_points: 0 }).eq('tournament_id', tid)
     refetchGroups(); refetchMatches(); refetchGoals(); refetchBracket(); refetchBracketGoals()
     showToast('Zápasy, skupiny, góly a tipy smazány ✓')
   }
 
   const resetData = async () => {
+    if (!tournament) return
     if (!confirm('Opravdu smazat VŠECHNA data? Tuto akci nelze vrátit!')) return
     if (!confirm('Opravdu? Poslední potvrzení — smazat vše?')) return
 
-    const NULL_ID = '00000000-0000-0000-0000-000000000000'
+    const tid = tournament.id
     const tables = [
       'bracket_goals', 'goals',
       'tips', 'bracket_tips', 'special_tips',
@@ -159,14 +161,12 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       'announcements',
     ]
     for (const table of tables) {
-      const { error } = await supabase.from(table).delete().neq('id', NULL_ID)
+      const { error } = await supabase.from(table).delete().eq('tournament_id', tid)
       if (error) { showToast('Chyba (' + table + '): ' + error.message); return }
     }
-    await supabase.from('tipsters').update({ total_points: 0 }).neq('id', NULL_ID)
-    if (tournament?.id) {
-      await supabase.from('tournament').update({ name: '', subtitle: '', date: '', venue: '', description: '' })
-        .eq('id', tournament.id)
-    }
+    await supabase.from('tipsters').update({ total_points: 0 }).eq('tournament_id', tid)
+    await supabase.from('tournament').update({ name: '', subtitle: '', date: '', venue: '', description: '' })
+      .eq('id', tid)
     refetchGroups(); refetchMatches(); refetchGoals(); refetchBracket(); refetchBracketGoals(); refetchTournament()
     showToast('Vše smazáno')
   }

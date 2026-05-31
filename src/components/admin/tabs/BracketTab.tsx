@@ -37,7 +37,7 @@ interface Props {
 function SlotEditor({
   slot, teams, players, bracketGoals, bracketAssists, bracketCards,
   referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards,
-  assistsEnabled, cardsEnabled, showToast, onSave,
+  assistsEnabled, cardsEnabled, tournamentId, showToast, onSave,
 }: {
   slot: BracketSlot
   teams: Team[]
@@ -51,6 +51,7 @@ function SlotEditor({
   refetchBracketCards: () => void
   assistsEnabled: boolean
   cardsEnabled: boolean
+  tournamentId: string
   showToast: (m: string) => void
   onSave: (data: Partial<BracketSlot>) => Promise<void>
 }) {
@@ -140,7 +141,7 @@ function SlotEditor({
       const goalResults = await Promise.all(allPlayers.map(p => {
         const count = counts[p.id] ?? 0
         return count > 0
-          ? supabase.from('bracket_goals').upsert({ player_id: p.id, slot_id: slot.id, count }, { onConflict: 'player_id,slot_id' })
+          ? supabase.from('bracket_goals').upsert({ player_id: p.id, slot_id: slot.id, count, tournament_id: tournamentId }, { onConflict: 'player_id,slot_id' })
           : supabase.from('bracket_goals').delete().match({ player_id: p.id, slot_id: slot.id })
       }))
       const goalErr = goalResults.find(r => r.error)?.error
@@ -152,7 +153,7 @@ function SlotEditor({
         const assistResults = await Promise.all(allPlayers.map(p => {
           const count = assistCounts[p.id] ?? 0
           return count > 0
-            ? supabase.from('bracket_assists').upsert({ player_id: p.id, slot_id: slot.id, count }, { onConflict: 'player_id,slot_id' })
+            ? supabase.from('bracket_assists').upsert({ player_id: p.id, slot_id: slot.id, count, tournament_id: tournamentId }, { onConflict: 'player_id,slot_id' })
             : supabase.from('bracket_assists').delete().match({ player_id: p.id, slot_id: slot.id })
         }))
         const assistErr = assistResults.find(r => r.error)?.error
@@ -163,12 +164,12 @@ function SlotEditor({
       // 3) Save cards
       if (cardsEnabled) {
         await supabase.from('bracket_cards').delete().eq('slot_id', slot.id)
-        const cardRows: { player_id: string; slot_id: string; type: string }[] = []
+        const cardRows: { player_id: string; slot_id: string; type: string; tournament_id: string }[] = []
         for (const p of allPlayers) {
           const d = cardData[p.id]
           if (!d) continue
-          for (let i = 0; i < (d.yellow ?? 0); i++) cardRows.push({ player_id: p.id, slot_id: slot.id, type: 'yellow' })
-          if (d.red) cardRows.push({ player_id: p.id, slot_id: slot.id, type: 'red' })
+          for (let i = 0; i < (d.yellow ?? 0); i++) cardRows.push({ player_id: p.id, slot_id: slot.id, type: 'yellow', tournament_id: tournamentId })
+          if (d.red) cardRows.push({ player_id: p.id, slot_id: slot.id, type: 'red', tournament_id: tournamentId })
         }
         if (cardRows.length > 0) {
           const { error: cErr } = await supabase.from('bracket_cards').insert(cardRows)
@@ -333,7 +334,7 @@ function SlotEditor({
 function RoundCard({
   round, rSlots, teams, players, bracketGoals, bracketAssists, bracketCards,
   referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards,
-  assistsEnabled, cardsEnabled, showToast, matchDuration, onSave, onRemove, onApplyTimes,
+  assistsEnabled, cardsEnabled, tournamentId, showToast, matchDuration, onSave, onRemove, onApplyTimes,
 }: {
   round: BracketRound
   rSlots: BracketSlot[]
@@ -348,6 +349,7 @@ function RoundCard({
   refetchBracketCards: () => void
   assistsEnabled: boolean
   cardsEnabled: boolean
+  tournamentId: string
   showToast: (m: string) => void
   matchDuration: number
   onSave: (slotId: string, data: Partial<BracketSlot>) => Promise<void>
@@ -435,6 +437,7 @@ function RoundCard({
                   refetchBracketAssists={refetchBracketAssists}
                   refetchBracketCards={refetchBracketCards}
                   assistsEnabled={assistsEnabled} cardsEnabled={cardsEnabled}
+                  tournamentId={tournamentId}
                   showToast={showToast}
                   onSave={data => onSave(slot.id, data) as Promise<void>}
                 />
@@ -483,7 +486,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         await supabase.from('bracket_slots').delete().in('round_id', bracketRounds.map(r => r.id))
         await supabase.from('bracket_rounds').delete().in('id', bracketRounds.map(r => r.id))
       }
-      await formatDef.fns.generate()
+      await formatDef.fns.generate(tournament?.id ?? '')
       await refetchBracket()
       showToast('Struktura playoff vytvořena ✓')
     } catch (e: unknown) {
@@ -527,13 +530,14 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     const pos = bracketRounds.length
 
     const { data: round, error: rErr } = await supabase
-      .from('bracket_rounds').insert({ name: name.trim(), position: pos }).select().single()
+      .from('bracket_rounds').insert({ name: name.trim(), position: pos, tournament_id: tournament?.id }).select().single()
     if (rErr) { showToast('Chyba: ' + rErr.message); return }
 
     const slots = Array.from({ length: n }, (_, i) => ({
       round_id: round.id, position: i,
       home_id: null, away_id: null,
       home_score: 0, away_score: 0, played: false,
+      tournament_id: tournament?.id,
     }))
     const { error: sErr } = await supabase.from('bracket_slots').insert(slots)
     if (sErr) { showToast('Chyba: ' + sErr.message); return }
@@ -722,6 +726,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
             refetchBracketCards={refetchBracketCards}
             assistsEnabled={tournament?.assists_enabled ?? false}
             cardsEnabled={tournament?.cards_enabled ?? false}
+            tournamentId={tournament?.id ?? ''}
             showToast={showToast}
             matchDuration={tournament?.match_duration ?? 20}
             onSave={saveSlot}

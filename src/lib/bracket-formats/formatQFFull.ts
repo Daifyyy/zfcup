@@ -14,14 +14,14 @@ import type { TournamentFormatDef, SeedParams, AutoAdvanceParams, AutoAdvanceRes
 // Note: maxPos=6, maxPos-1=5 → early return fires for pos>=5
 // SF is at pos 2 < 5, so autoAdvance must handle SF manually.
 
-async function generate(): Promise<void> {
-  await createRound('Čtvrtfinále',         4, 0)
-  await createRound('O 7-8. místo (SF)',   2, 1)
-  await createRound('Semifinále',          2, 2)
-  await createRound('O 7. místo',          1, 3)
-  await createRound('O 5-6. místo',        1, 4)
-  await createRound('O 3. místo',          1, 5)
-  await createRound('Finále',              1, 6)
+async function generate(tournamentId: string): Promise<void> {
+  await createRound('Čtvrtfinále',         4, 0, tournamentId)
+  await createRound('O 7-8. místo (SF)',   2, 1, tournamentId)
+  await createRound('Semifinále',          2, 2, tournamentId)
+  await createRound('O 7. místo',          1, 3, tournamentId)
+  await createRound('O 5-6. místo',        1, 4, tournamentId)
+  await createRound('O 3. místo',          1, 5, tournamentId)
+  await createRound('Finále',              1, 6, tournamentId)
 }
 
 async function seed({ groups, matches, bracketRounds, bracketSlots, advancingPerGroup }: SeedParams): Promise<void> {

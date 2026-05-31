@@ -18,6 +18,7 @@ interface ImportedTeam {
 interface Props {
   open: boolean
   existingTeams: Team[]
+  tournamentId: string
   onClose: () => void
   onImported: () => void
   showToast: (msg: string) => void
@@ -100,7 +101,7 @@ function parseSheets(wb: XLSX.WorkBook, fileName: string): ImportedTeam[] {
   return teams
 }
 
-export default function ImportTeamsModal({ open, existingTeams, onClose, onImported, showToast }: Props) {
+export default function ImportTeamsModal({ open, existingTeams, tournamentId, onClose, onImported, showToast }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<ImportedTeam[] | null>(null)
   const [importing, setImporting] = useState(false)
@@ -145,7 +146,7 @@ export default function ImportTeamsModal({ open, existingTeams, onClose, onImpor
           const color = availableColors[colorIdx % availableColors.length] ?? TEAM_COLORS[colorIdx % TEAM_COLORS.length]
           colorIdx++
           const { data, error } = await supabase.from('teams')
-            .insert({ name: importedTeam.name, color })
+            .insert({ name: importedTeam.name, color, tournament_id: tournamentId })
             .select('id')
             .single()
           if (error) { showToast('Chyba vytváření týmu: ' + error.message); setImporting(false); return }
@@ -155,7 +156,7 @@ export default function ImportTeamsModal({ open, existingTeams, onClose, onImpor
 
         if (importedTeam.players.length > 0) {
           const { error } = await supabase.from('players').insert(
-            importedTeam.players.map(p => ({ team_id: teamId, name: p.name, number: p.number, role: p.role }))
+            importedTeam.players.map(p => ({ team_id: teamId, name: p.name, number: p.number, role: p.role, tournament_id: tournamentId }))
           )
           if (error) { showToast('Chyba přidávání hráčů: ' + error.message); setImporting(false); return }
           playerCount += importedTeam.players.length

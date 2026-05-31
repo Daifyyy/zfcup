@@ -12,14 +12,15 @@ export interface Group {
   break_between: number
 }
 
-export function useGroups() {
+export function useGroups(tournamentId: string) {
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('groups').select('*').order('name')
+      if (!tournamentId) { setLoading(false); return }
+      const { data } = await supabase.from('groups').select('*').eq('tournament_id', tournamentId).order('name')
       setGroups(data ?? [])
       setLoading(false)
     }
@@ -38,7 +39,7 @@ export function useGroups() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { groups, loading, refetch: () => fetchRef.current() }
 }

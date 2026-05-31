@@ -29,14 +29,23 @@ export interface Tournament {
   cards_enabled: boolean
 }
 
-export function useTournament() {
+export function useTournament(tournamentId?: string) {
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    // Skip fetch when no tournamentId provided (e.g. on landing page)
+    if (tournamentId === '') {
+      setLoading(false)
+      return
+    }
+
     async function fetch() {
-      const { data, error } = await supabase.from('tournament').select('*').single()
+      const query = tournamentId
+        ? supabase.from('tournament').select('*').eq('id', tournamentId).single()
+        : supabase.from('tournament').select('*').single()
+      const { data, error } = await query
       if (!error) setTournament(data)
       setLoading(false)
     }
@@ -57,7 +66,7 @@ export function useTournament() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { tournament, loading, refetch: () => fetchRef.current() }
 }

@@ -17,14 +17,15 @@ export interface ScorerRow {
   goals: number
 }
 
-export function useGoals() {
+export function useGoals(tournamentId: string) {
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('goals').select('*')
+      if (!tournamentId) { setLoading(false); return }
+      const { data } = await supabase.from('goals').select('*').eq('tournament_id', tournamentId)
       setGoals(data ?? [])
       setLoading(false)
     }
@@ -46,7 +47,7 @@ export function useGoals() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { goals, loading, refetch: () => fetchRef.current() }
 }

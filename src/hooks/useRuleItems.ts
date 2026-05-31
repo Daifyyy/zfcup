@@ -9,14 +9,15 @@ export interface RuleItem {
   position: number
 }
 
-export function useRuleItems() {
+export function useRuleItems(tournamentId: string) {
   const [ruleItems, setRuleItems] = useState<RuleItem[]>([])
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
-      const { data } = await supabase.from('rule_items').select('*').order('position')
+      if (!tournamentId) { setLoading(false); return }
+      const { data } = await supabase.from('rule_items').select('*').eq('tournament_id', tournamentId).order('position')
       setRuleItems(data ?? [])
       setLoading(false)
     }
@@ -38,7 +39,7 @@ export function useRuleItems() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   const refetch = () => fetchRef.current()
   return { ruleItems, loading, refetch }

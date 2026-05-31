@@ -15,14 +15,16 @@ export interface Match {
   referee_id?: string | null
 }
 
-export function useMatches() {
+export function useMatches(tournamentId: string) {
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     async function fetch() {
+      if (!tournamentId) { setLoading(false); return }
       const { data, error } = await supabase.from('matches').select('*')
+        .eq('tournament_id', tournamentId)
         .order('scheduled_time', { nullsFirst: false })
         .order('id')
       if (!error) setMatches(data ?? [])
@@ -46,7 +48,7 @@ export function useMatches() {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [])
+  }, [tournamentId])
 
   return { matches, loading, refetch: () => fetchRef.current() }
 }

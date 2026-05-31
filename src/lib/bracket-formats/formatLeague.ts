@@ -1,6 +1,6 @@
 import type { TournamentFormatDef, SeedParams, AutoAdvanceParams, AutoAdvanceResult } from '../formats'
 
-async function generate(): Promise<void> {
+async function generate(_tournamentId: string): Promise<void> {
   // Liga bez playoff — žádná kola
 }
 

@@ -12,13 +12,13 @@ export interface Tip {
   evaluated: boolean
 }
 
-export function useTips(tipsterId: string | null) {
+export function useTips(tipsterId: string | null, tournamentId: string) {
   const [tips, setTips] = useState<Tip[]>([])
   const [loading, setLoading] = useState(false)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
-    if (!tipsterId) { setTips([]); setLoading(false); return }
+    if (!tipsterId || !tournamentId) { setTips([]); setLoading(false); return }
 
     setLoading(true)
     async function fetch() {
@@ -26,6 +26,7 @@ export function useTips(tipsterId: string | null) {
         .from('tips')
         .select('*')
         .eq('tipster_id', tipsterId)
+        .eq('tournament_id', tournamentId)
       setTips(data ?? [])
       setLoading(false)
     }
@@ -47,7 +48,7 @@ export function useTips(tipsterId: string | null) {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [tipsterId])
+  }, [tipsterId, tournamentId])
 
   return { tips, loading }
 }

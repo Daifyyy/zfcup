@@ -17,17 +17,17 @@ import type { TournamentFormatDef, SeedParams, AutoAdvanceParams, AutoAdvanceRes
 // Note: maxPos=9, maxPos-1=8 → early return fires for pos>=8
 // SF is at pos 5 < 8, so autoAdvance case 5 must handle the SF advance.
 
-async function generate(): Promise<void> {
-  await createRound('Útěšné QF',         2, 0)
-  await createRound('Čtvrtfinále',       4, 1)
-  await createRound('O 11. místo',       1, 2)
-  await createRound('O 9. místo',        1, 3)
-  await createRound('O 7-8. místo (SF)', 2, 4)
-  await createRound('Semifinále',        2, 5)
-  await createRound('O 7. místo',        1, 6)
-  await createRound('O 5-6. místo',      1, 7)
-  await createRound('O 3. místo',        1, 8)
-  await createRound('Finále',            1, 9)
+async function generate(tournamentId: string): Promise<void> {
+  await createRound('Útěšné QF',         2, 0, tournamentId)
+  await createRound('Čtvrtfinále',       4, 1, tournamentId)
+  await createRound('O 11. místo',       1, 2, tournamentId)
+  await createRound('O 9. místo',        1, 3, tournamentId)
+  await createRound('O 7-8. místo (SF)', 2, 4, tournamentId)
+  await createRound('Semifinále',        2, 5, tournamentId)
+  await createRound('O 7. místo',        1, 6, tournamentId)
+  await createRound('O 5-6. místo',      1, 7, tournamentId)
+  await createRound('O 3. místo',        1, 8, tournamentId)
+  await createRound('Finále',            1, 9, tournamentId)
 }
 
 async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams): Promise<void> {

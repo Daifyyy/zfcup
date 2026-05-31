@@ -12,18 +12,19 @@ export interface SpecialTip {
   evaluated: boolean
 }
 
-export function useSpecialTips(tipsterId: string | null) {
+export function useSpecialTips(tipsterId: string | null, tournamentId: string) {
   const [specialTips, setSpecialTips] = useState<SpecialTip[]>([])
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
-    if (!tipsterId) { setSpecialTips([]); return }
+    if (!tipsterId || !tournamentId) { setSpecialTips([]); return }
 
     async function fetch() {
       const { data } = await supabase
         .from('special_tips')
         .select('*')
         .eq('tipster_id', tipsterId)
+        .eq('tournament_id', tournamentId)
       setSpecialTips(data ?? [])
     }
     fetchRef.current = fetch
@@ -44,7 +45,7 @@ export function useSpecialTips(tipsterId: string | null) {
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [tipsterId])
+  }, [tipsterId, tournamentId])
 
   return { specialTips }
 }

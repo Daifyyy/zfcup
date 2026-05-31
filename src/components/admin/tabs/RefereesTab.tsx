@@ -4,11 +4,12 @@ import type { Referee } from '../../../hooks/useReferees'
 
 interface Props {
   referees: Referee[]
+  tournament: { id: string } | null
   refetchReferees: () => void
   showToast: (msg: string) => void
 }
 
-export default function RefereesTab({ referees, refetchReferees, showToast }: Props) {
+export default function RefereesTab({ referees, tournament, refetchReferees, showToast }: Props) {
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -16,7 +17,7 @@ export default function RefereesTab({ referees, refetchReferees, showToast }: Pr
     const trimmed = name.trim()
     if (!trimmed) { showToast('Zadejte jméno rozhodčího'); return }
     setSaving(true)
-    const { error } = await supabase.from('referees').insert({ name: trimmed })
+    const { error } = await supabase.from('referees').insert({ name: trimmed, tournament_id: tournament?.id })
     setSaving(false)
     if (error) { showToast('Chyba: ' + error.message); return }
     setName('')
