@@ -726,6 +726,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
         </div>
 
         <button
+          type="button"
           onClick={onExit}
           style={{
             background: 'rgba(255,255,255,.15)',

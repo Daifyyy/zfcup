@@ -135,14 +135,17 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
           </select>
         </div>
 
-        {slots.map(([time, ms]) => (
+        {slots.map(([time, ms]) => {
+          const pitchLabels = 'ABCD'
+          const multiPitch = ms.length >= 2
+          const pitchNames = ms.map((_, i) => 'Hřiště ' + (pitchLabels[i] ?? String(i + 1)))
+          return (
           <div key={time}>
-            {/* Záhlaví slotu s hřišti */}
             <div style={SECTION_HEADER}>
               🕐 {time}
-              {ms.length >= 2 && (
+              {multiPitch && (
                 <span style={{ fontSize: '.65rem', fontWeight: 400, letterSpacing: '.06em', marginLeft: '.6rem', color: 'var(--muted)', fontFamily: "'DM Sans', sans-serif" }}>
-                  Hřiště A &amp; Hřiště B
+                  {pitchNames.join(' & ')}
                 </span>
               )}
             </div>
@@ -150,23 +153,23 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
               {ms.map((m, i) => (
                 <div key={m.id} style={{ position: 'relative' }}>
                   <MatchRow m={m} teams={teams} refereeName={refName(m)} />
-                  {/* Badge hřiště */}
-                  {ms.length >= 2 && (
+                  {multiPitch && (
                     <span style={{
                       position: 'absolute', top: '50%', right: '2.8rem', transform: 'translateY(-50%)',
                       fontSize: '.58rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
-                      background: i === 0 ? 'rgba(37,99,235,.12)' : 'rgba(16,185,129,.12)',
-                      color: i === 0 ? 'var(--accent)' : '#065f46',
+                      background: i === 0 ? 'rgba(37,99,235,.12)' : i === 1 ? 'rgba(16,185,129,.12)' : i === 2 ? 'rgba(245,158,11,.12)' : 'rgba(139,92,246,.12)',
+                      color: i === 0 ? 'var(--accent)' : i === 1 ? '#065f46' : i === 2 ? '#92400e' : '#5b21b6',
                       letterSpacing: '.06em', whiteSpace: 'nowrap',
                     }}>
-                      H{i === 0 ? 'A' : 'B'}
+                      H{pitchLabels[i] ?? String(i + 1)}
                     </span>
                   )}
                 </div>
               ))}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     )
   }

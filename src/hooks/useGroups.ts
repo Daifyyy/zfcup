@@ -20,8 +20,8 @@ export function useGroups(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) { setLoading(false); return }
-      const { data } = await supabase.from('groups').select('*').eq('tournament_id', tournamentId).order('name')
-      setGroups(data ?? [])
+      const { data, error } = await supabase.from('groups').select('*').eq('tournament_id', tournamentId).order('name')
+      if (!error) setGroups(data ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch

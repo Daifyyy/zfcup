@@ -16,8 +16,8 @@ export function useAssists(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) return
-      const { data } = await supabase.from('assists').select('*').eq('tournament_id', tournamentId)
-      setAssists(data ?? [])
+      const { data, error } = await supabase.from('assists').select('*').eq('tournament_id', tournamentId)
+      if (!error) setAssists(data ?? [])
     }
     fetchRef.current = fetch
     fetch()

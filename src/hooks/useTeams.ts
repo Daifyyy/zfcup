@@ -16,8 +16,8 @@ export function useTeams(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) { setLoading(false); return }
-      const { data } = await supabase.from('teams').select('*').eq('tournament_id', tournamentId).order('name')
-      setTeams(data ?? [])
+      const { data, error } = await supabase.from('teams').select('*').eq('tournament_id', tournamentId).order('name')
+      if (!error) setTeams(data ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch

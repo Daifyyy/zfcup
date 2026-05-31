@@ -17,12 +17,15 @@ export default function RefereesTab({ referees, tournament, refetchReferees, sho
     const trimmed = name.trim()
     if (!trimmed) { showToast('Zadejte jméno rozhodčího'); return }
     setSaving(true)
-    const { error } = await supabase.from('referees').insert({ name: trimmed, tournament_id: tournament?.id })
-    setSaving(false)
-    if (error) { showToast('Chyba: ' + error.message); return }
-    setName('')
-    refetchReferees()
-    showToast('Rozhodčí přidán ✓')
+    try {
+      const { error } = await supabase.from('referees').insert({ name: trimmed, tournament_id: tournament?.id })
+      if (error) { showToast('Chyba: ' + error.message); return }
+      setName('')
+      refetchReferees()
+      showToast('Rozhodčí přidán ✓')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const removeReferee = async (id: string) => {

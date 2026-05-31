@@ -20,8 +20,8 @@ export function useAnnouncements(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) { setLoading(false); return }
-      const { data } = await supabase.from('announcements').select('*').eq('tournament_id', tournamentId).order('position')
-      setAnnouncements(data ?? [])
+      const { data, error } = await supabase.from('announcements').select('*').eq('tournament_id', tournamentId).order('position')
+      if (!error) setAnnouncements(data ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch

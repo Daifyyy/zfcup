@@ -17,8 +17,8 @@ export function useRuleItems(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) { setLoading(false); return }
-      const { data } = await supabase.from('rule_items').select('*').eq('tournament_id', tournamentId).order('position')
-      setRuleItems(data ?? [])
+      const { data, error } = await supabase.from('rule_items').select('*').eq('tournament_id', tournamentId).order('position')
+      if (!error) setRuleItems(data ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch

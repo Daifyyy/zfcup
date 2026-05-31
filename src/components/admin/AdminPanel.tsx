@@ -267,6 +267,7 @@ export default function AdminPanel(props: Props) {
                 return (
                   <button
                     key={key}
+                    type="button"
                     onClick={() => setATab(key)}
                     style={{
                       border: 'none',

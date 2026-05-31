@@ -16,8 +16,8 @@ export function useBracketGoals(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) return
-      const { data } = await supabase.from('bracket_goals').select('*').eq('tournament_id', tournamentId)
-      setBracketGoals(data ?? [])
+      const { data, error } = await supabase.from('bracket_goals').select('*').eq('tournament_id', tournamentId)
+      if (!error) setBracketGoals(data ?? [])
     }
     fetchRef.current = fetch
     fetch()

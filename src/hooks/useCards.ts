@@ -18,8 +18,8 @@ export function useCards(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) return
-      const { data } = await supabase.from('cards').select('*').eq('tournament_id', tournamentId)
-      setCards(data ?? [])
+      const { data, error } = await supabase.from('cards').select('*').eq('tournament_id', tournamentId)
+      if (!error) setCards(data ?? [])
     }
     fetchRef.current = fetch
     fetch()

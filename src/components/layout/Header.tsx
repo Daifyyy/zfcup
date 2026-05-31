@@ -84,6 +84,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
 
         {/* Scoreboard button — desktop only */}
         <button
+          type="button"
           className="desktop-only"
           onClick={onScoreboard}
           title="Výsledková tabule — fullscreen přehled skupin, zápasů a pavouka"
@@ -116,6 +117,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
         {/* Print bulletin button — desktop only */}
         {onPrint && (
           <button
+            type="button"
             className="desktop-only"
             onClick={onPrint}
             title="Tisknutelný bulletin — program turnaje pro tisk"
@@ -148,6 +150,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
 
         {/* Kiosk button — desktop only */}
         <button
+          type="button"
           className="desktop-only"
           onClick={onKiosk}
           title="Kiosk / TV mode — fullscreen, auto-rotace záložek"
@@ -182,6 +185,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
           {TABS.map(([key, label]) => (
             <button
               key={key}
+              type="button"
               onClick={() => onTab(key)}
               style={{
                 background: 'none', border: 'none',

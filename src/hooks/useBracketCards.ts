@@ -18,8 +18,8 @@ export function useBracketCards(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) return
-      const { data } = await supabase.from('bracket_cards').select('*').eq('tournament_id', tournamentId)
-      setBracketCards(data ?? [])
+      const { data, error } = await supabase.from('bracket_cards').select('*').eq('tournament_id', tournamentId)
+      if (!error) setBracketCards(data ?? [])
     }
     fetchRef.current = fetch
     fetch()

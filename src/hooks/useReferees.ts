@@ -13,8 +13,8 @@ export function useReferees(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) return
-      const { data } = await supabase.from('referees').select('*').eq('tournament_id', tournamentId).order('name')
-      setReferees(data ?? [])
+      const { data, error } = await supabase.from('referees').select('*').eq('tournament_id', tournamentId).order('name')
+      if (!error) setReferees(data ?? [])
     }
     fetchRef.current = fetch
     fetch()

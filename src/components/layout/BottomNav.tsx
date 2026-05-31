@@ -46,6 +46,7 @@ export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true,
         return (
           <button
             key={t.key}
+            type="button"
             onClick={() => onTab(t.key)}
             style={{
               flex: 1, minWidth: 0,

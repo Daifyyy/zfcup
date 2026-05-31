@@ -20,8 +20,8 @@ export function usePlayers(tournamentId: string, teamId?: string) {
       if (!tournamentId) { setLoading(false); return }
       let q = supabase.from('players').select('*').eq('tournament_id', tournamentId).order('number')
       if (teamId) q = q.eq('team_id', teamId)
-      const { data } = await q
-      setPlayers(data ?? [])
+      const { data, error } = await q
+      if (!error) setPlayers(data ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch

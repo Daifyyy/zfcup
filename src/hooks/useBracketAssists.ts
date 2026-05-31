@@ -16,8 +16,8 @@ export function useBracketAssists(tournamentId: string) {
   useEffect(() => {
     async function fetch() {
       if (!tournamentId) return
-      const { data } = await supabase.from('bracket_assists').select('*').eq('tournament_id', tournamentId)
-      setBracketAssists(data ?? [])
+      const { data, error } = await supabase.from('bracket_assists').select('*').eq('tournament_id', tournamentId)
+      if (!error) setBracketAssists(data ?? [])
     }
     fetchRef.current = fetch
     fetch()

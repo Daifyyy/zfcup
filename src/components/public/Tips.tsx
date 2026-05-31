@@ -46,7 +46,7 @@ const groupHeader = {
 
 // ── Login / Register ───────────────────────────────────────────────────────────
 
-function TipsLogin({ onSuccess, showToast }: { onSuccess: (id: string) => void; showToast: (m: string) => void }) {
+function TipsLogin({ tournamentId, onSuccess, showToast }: { tournamentId: string; onSuccess: (id: string) => void; showToast: (m: string) => void }) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -64,7 +64,7 @@ function TipsLogin({ onSuccess, showToast }: { onSuccess: (id: string) => void; 
     setLoading(true)
     const normalized = buildName()
     const { data, error } = await supabase
-      .from('tipsters').insert({ name: normalized, pin, total_points: 0 })
+      .from('tipsters').insert({ name: normalized, pin, total_points: 0, tournament_id: tournamentId })
       .select('id').single()
     setLoading(false)
     if (error) {
@@ -80,7 +80,7 @@ function TipsLogin({ onSuccess, showToast }: { onSuccess: (id: string) => void; 
     setLoading(true)
     const normalized = buildName()
     const { data } = await supabase.from('tipsters').select('id')
-      .eq('name', normalized).eq('pin', pin).maybeSingle()
+      .eq('tournament_id', tournamentId).eq('name', normalized).eq('pin', pin).maybeSingle()
     setLoading(false)
     if (!data) { showToast('Špatné jméno, příjmení nebo PIN'); return }
     onSuccess(data.id)
@@ -910,7 +910,7 @@ export default function Tips({ matches, teams, players, groups, bracketRounds, b
     setTipsterId(null)
   }
 
-  if (!tipsterId) return <TipsLogin onSuccess={handleLogin} showToast={showToast} />
+  if (!tipsterId) return <TipsLogin tournamentId={tournament.id} onSuccess={handleLogin} showToast={showToast} />
 
   return (
     <div>
