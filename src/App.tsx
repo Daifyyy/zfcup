@@ -22,11 +22,10 @@ import Overview from './components/public/Overview'
 import Teams from './components/public/Teams'
 import Results from './components/public/Results'
 import Standings from './components/public/Standings'
-import Scorers from './components/public/Scorers'
+import Statistics from './components/public/Statistics'
 import Bracket from './components/public/Bracket'
 import Info from './components/public/Info'
 import Rules from './components/public/Rules'
-import Discipline from './components/public/Discipline'
 import Tips from './components/public/Tips'
 import PrintBulletin from './components/public/PrintBulletin'
 import AdminPanel from './components/admin/AdminPanel'
@@ -44,8 +43,8 @@ function detectTournamentIdFromUrl(): string {
   return segments[0] ?? ''
 }
 
-export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'scorers' | 'bracket' | 'info' | 'rules' | 'tips' | 'discipline'
-const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'scorers', 'bracket', 'info', 'rules', 'tips', 'discipline']
+export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'statistics' | 'bracket' | 'info' | 'rules' | 'tips'
+const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'statistics', 'bracket', 'info', 'rules', 'tips']
 
 export default function App() {
   const [tournamentId, setTournamentId] = useState<string>(() => detectTournamentIdFromUrl())
@@ -225,12 +224,11 @@ export default function App() {
       />
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
-        {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} />}
+        {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} tournament={tournament} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
-        {tab === 'scorers'   && <Scorers goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} players={players} teams={teams} tournament={tournament} />}
+        {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} players={players} teams={teams} tournament={tournament} />}
         {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
-        {tab === 'discipline' && tournament?.cards_enabled && <Discipline cards={cards} bracketCards={bracketCards} players={players} teams={teams} matches={matches} bracketSlots={bracketSlots} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
         {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
         {tab === 'tips'      && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}

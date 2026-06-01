@@ -17,19 +17,18 @@ interface Props {
 }
 
 const BASE_TABS: [Tab, string][] = [
-  ['overview',  'Přehled'],
-  ['teams',     'Týmy'],
-  ['results',   'Zápasy'],
-  ['standings', 'Tabulka'],
-  ['scorers',   'Střelci'],
-  ['bracket',   'Pavouk'],
-  ['rules',     'Pravidla'],
+  ['overview',    'Přehled'],
+  ['teams',       'Týmy'],
+  ['results',     'Zápasy'],
+  ['standings',   'Tabulka'],
+  ['statistics',  'Statistiky'],
+  ['bracket',     'Pavouk'],
+  ['rules',       'Pravidla'],
 ]
 
 export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin, tipsEnabled, showBracket = true, cardsEnabled }: Props) {
   const baseTabs: [Tab, string][] = showBracket ? BASE_TABS : BASE_TABS.filter(([key]) => key !== 'bracket')
   let TABS: [Tab, string][] = [...baseTabs]
-  if (cardsEnabled) TABS = [...TABS, ['discipline', 'Disciplína']]
   if (tipsEnabled) TABS = [...TABS, ['tips', 'Tipy']]
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
 

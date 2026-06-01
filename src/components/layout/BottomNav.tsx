@@ -1,13 +1,13 @@
 import type { Tab } from '../../App'
 
 const BASE_TABS: { key: Tab; icon: string; label: string }[] = [
-  { key: 'overview',  icon: '🏠', label: 'Přehled'  },
-  { key: 'teams',     icon: '👥', label: 'Týmy'      },
-  { key: 'results',   icon: '📋', label: 'Zápasy'    },
-  { key: 'standings', icon: '📊', label: 'Tabulka'   },
-  { key: 'scorers',   icon: '⚽', label: 'Střelci'   },
-  { key: 'bracket',   icon: '🏆', label: 'Pavouk'    },
-  { key: 'rules',     icon: '📋', label: 'Pravidla'  },
+  { key: 'overview',    icon: '🏠', label: 'Přehled'    },
+  { key: 'teams',       icon: '👥', label: 'Týmy'        },
+  { key: 'results',     icon: '📋', label: 'Zápasy'      },
+  { key: 'standings',   icon: '📊', label: 'Tabulka'     },
+  { key: 'statistics',  icon: '📈', label: 'Statistiky'  },
+  { key: 'bracket',     icon: '🏆', label: 'Pavouk'      },
+  { key: 'rules',       icon: '📋', label: 'Pravidla'    },
 ]
 
 interface Props {
@@ -18,10 +18,9 @@ interface Props {
   cardsEnabled?: boolean
 }
 
-export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true, cardsEnabled }: Props) {
+export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true, cardsEnabled: _cardsEnabled }: Props) {
   const baseTabs = showBracket ? BASE_TABS : BASE_TABS.filter(t => t.key !== 'bracket')
   let TABS = [...baseTabs]
-  if (cardsEnabled) TABS = [...TABS, { key: 'discipline' as Tab, icon: '🟡', label: 'Disciplína' }]
   if (tipsEnabled) TABS = [...TABS, { key: 'tips' as Tab, icon: '🎯', label: 'Tipy' }]
 
   return (

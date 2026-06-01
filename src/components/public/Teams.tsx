@@ -1,12 +1,24 @@
 import type { Team } from '../../hooks/useTeams'
 import type { Player } from '../../hooks/usePlayers'
 import type { Goal } from '../../hooks/useGoals'
+import type { BracketGoal } from '../../hooks/useBracketGoals'
+import type { Assist } from '../../hooks/useAssists'
+import type { BracketAssist } from '../../hooks/useBracketAssists'
+import type { Card } from '../../hooks/useCards'
+import type { BracketCard } from '../../hooks/useBracketCards'
+import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
 
 interface Props {
   teams: Team[]
   players: Player[]
   goals: Goal[]
+  bracketGoals?: BracketGoal[]
+  assists?: Assist[]
+  bracketAssists?: BracketAssist[]
+  cards?: Card[]
+  bracketCards?: BracketCard[]
+  tournament?: Tournament | null
 }
 
 function Badge({ label, color, bg, border }: { label: string; color: string; bg: string; border: string }) {
@@ -26,13 +38,35 @@ function RoleBadge({ role }: { role: string | null }) {
   return null
 }
 
-export default function Teams({ teams, players, goals }: Props) {
+export default function Teams({ teams, players, goals, bracketGoals = [], assists = [], bracketAssists = [], cards = [], bracketCards = [], tournament }: Props) {
   if (!teams.length) return <Empty icon="👥" text="Žádné týmy." />
 
-  // Aggregate goals per player
+  const showAssists = tournament?.assists_enabled ?? false
+  const showCards = tournament?.cards_enabled ?? false
+
+  // Aggregate goals per player (skupiny + playoff)
   const playerGoals: Record<string, number> = {}
-  for (const g of goals) {
+  for (const g of [...goals, ...bracketGoals]) {
     playerGoals[g.player_id] = (playerGoals[g.player_id] ?? 0) + g.count
+  }
+
+  // Aggregate assists per player
+  const playerAssists: Record<string, number> = {}
+  if (showAssists) {
+    for (const a of [...assists, ...bracketAssists]) {
+      playerAssists[a.player_id] = (playerAssists[a.player_id] ?? 0) + a.count
+    }
+  }
+
+  // Aggregate cards per player
+  const playerCards: Record<string, { yellow: number; red: number; yellowRed: number }> = {}
+  if (showCards) {
+    for (const c of [...cards, ...bracketCards]) {
+      if (!playerCards[c.player_id]) playerCards[c.player_id] = { yellow: 0, red: 0, yellowRed: 0 }
+      if (c.type === 'yellow') playerCards[c.player_id].yellow++
+      if (c.type === 'red') playerCards[c.player_id].red++
+      if (c.type === 'yellow_red') playerCards[c.player_id].yellowRed++
+    }
   }
 
   return (
@@ -79,6 +113,8 @@ export default function Teams({ teams, players, goals }: Props) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '.18rem' }}>
                   {roster.map(p => {
                     const g = playerGoals[p.id] ?? 0
+                    const a = playerAssists[p.id] ?? 0
+                    const c = playerCards[p.id]
                     return (
                       <div key={p.id} style={{
                         display: 'flex', alignItems: 'center', gap: '.45rem',
@@ -96,14 +132,25 @@ export default function Teams({ teams, players, goals }: Props) {
                           </span>
                           <RoleBadge role={p.role} />
                         </span>
-                        {g > 0 && (
-                          <span style={{
-                            fontSize: '.72rem', fontWeight: 700,
-                            color: 'var(--accent)', flexShrink: 0,
-                          }}>
-                            ⚽{g}
-                          </span>
-                        )}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '.25rem', flexShrink: 0 }}>
+                          {g > 0 && (
+                            <span style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--accent)' }}>
+                              ⚽{g}
+                            </span>
+                          )}
+                          {showAssists && a > 0 && (
+                            <span style={{ fontSize: '.72rem', fontWeight: 700, color: '#16a34a' }}>
+                              🅰{a}
+                            </span>
+                          )}
+                          {showCards && c && (
+                            <>
+                              {c.yellow > 0 && <span style={{ fontSize: '.65rem', fontWeight: 700 }}>🟡{c.yellow > 1 ? `×${c.yellow}` : ''}</span>}
+                              {c.yellowRed > 0 && <span style={{ fontSize: '.65rem', fontWeight: 700 }}>🟡🔴</span>}
+                              {c.red > 0 && <span style={{ fontSize: '.65rem', fontWeight: 700 }}>🔴</span>}
+                            </>
+                          )}
+                        </span>
                       </div>
                     )
                   })}

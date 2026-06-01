@@ -98,7 +98,7 @@ export default function Overview({ tournament, announcements }: Props) {
         )}
         {/* Right: QR */}
         <div style={{ flexShrink: 0, textAlign: 'center', marginLeft: 'auto' }}>
-          <QRCode size={80} />
+          <QRCode size={80} url={tournament?.id ? `${window.location.origin}/${tournament.id}` : undefined} />
           <div style={{ fontSize: '.58rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em', marginTop: '.3rem' }}>
             Sdílet
           </div>

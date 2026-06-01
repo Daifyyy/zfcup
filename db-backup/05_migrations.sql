@@ -193,3 +193,44 @@ CREATE POLICY "admin_write" ON bracket_cards FOR ALL TO authenticated USING (tru
 -- Nutné pro top_scorer tip (ukládá predicted_player_id, ne team)
 -- -------------------------------------------------------
 ALTER TABLE special_tips ALTER COLUMN predicted_team_id DROP NOT NULL;
+
+-- -------------------------------------------------------
+-- MULTI-TENANT: přidat tournament_id do tipovačkových
+-- a volitelných modulů tabulek (2026-06-01)
+-- -------------------------------------------------------
+
+-- TIPSTERS
+ALTER TABLE tipsters ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournament(id) ON DELETE CASCADE;
+ALTER TABLE tipsters DROP CONSTRAINT IF EXISTS tipsters_name_key;
+ALTER TABLE tipsters DROP CONSTRAINT IF EXISTS tipsters_name_tournament_key;
+ALTER TABLE tipsters ADD CONSTRAINT tipsters_name_tournament_key UNIQUE(name, tournament_id);
+
+-- TIPS
+ALTER TABLE tips ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournament(id);
+UPDATE tips t SET tournament_id = m.tournament_id FROM matches m WHERE t.match_id = m.id AND t.tournament_id IS NULL;
+
+-- BRACKET_TIPS
+ALTER TABLE bracket_tips ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournament(id);
+UPDATE bracket_tips bt SET tournament_id = br.tournament_id
+  FROM bracket_slots bs JOIN bracket_rounds br ON bs.round_id = br.id
+  WHERE bt.slot_id = bs.id AND bt.tournament_id IS NULL;
+
+-- ASSISTS
+ALTER TABLE assists ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournament(id);
+UPDATE assists a SET tournament_id = m.tournament_id FROM matches m WHERE a.match_id = m.id AND a.tournament_id IS NULL;
+
+-- BRACKET_ASSISTS
+ALTER TABLE bracket_assists ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournament(id);
+UPDATE bracket_assists ba SET tournament_id = br.tournament_id
+  FROM bracket_slots bs JOIN bracket_rounds br ON bs.round_id = br.id
+  WHERE ba.slot_id = bs.id AND ba.tournament_id IS NULL;
+
+-- CARDS
+ALTER TABLE cards ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournament(id);
+UPDATE cards c SET tournament_id = m.tournament_id FROM matches m WHERE c.match_id = m.id AND c.tournament_id IS NULL;
+
+-- BRACKET_CARDS
+ALTER TABLE bracket_cards ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournament(id);
+UPDATE bracket_cards bc SET tournament_id = br.tournament_id
+  FROM bracket_slots bs JOIN bracket_rounds br ON bs.round_id = br.id
+  WHERE bc.slot_id = bs.id AND bc.tournament_id IS NULL;
