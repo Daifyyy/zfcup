@@ -14,6 +14,7 @@ interface Props {
   tipsEnabled?: boolean
   showBracket?: boolean
   cardsEnabled?: boolean
+  sponsorsEnabled?: boolean
 }
 
 const BASE_TABS: [Tab, string][] = [
@@ -26,10 +27,11 @@ const BASE_TABS: [Tab, string][] = [
   ['rules',       'Pravidla'],
 ]
 
-export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin, tipsEnabled, showBracket = true, cardsEnabled }: Props) {
+export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin, tipsEnabled, showBracket = true, cardsEnabled, sponsorsEnabled }: Props) {
   const baseTabs: [Tab, string][] = showBracket ? BASE_TABS : BASE_TABS.filter(([key]) => key !== 'bracket')
   let TABS: [Tab, string][] = [...baseTabs]
   if (tipsEnabled) TABS = [...TABS, ['tips', 'Tipy']]
+  if (sponsorsEnabled) TABS = [...TABS, ['sponsors', 'Sponzoři']]
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
 
   return (
@@ -43,7 +45,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
       <div style={{
         maxWidth: 1400, margin: '0 auto',
         display: 'flex', alignItems: 'center',
-        gap: '.9rem', height: 64, padding: '0 2rem',
+        gap: '.9rem', minHeight: 64, padding: '.5rem 2rem',
       }}>
         {/* Admin button */}
         <button
@@ -104,15 +106,16 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{
             fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: '1.5rem', letterSpacing: '.05em',
-            lineHeight: 1.05, whiteSpace: 'nowrap',
-            overflow: 'hidden', textOverflow: 'ellipsis',
+            fontSize: 'clamp(1.1rem, 2.8vw, 1.5rem)', letterSpacing: '.05em',
+            lineHeight: 1.1,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            overflow: 'hidden', wordBreak: 'break-word',
             color: 'var(--text)',
           }}>
             {tournament?.name || 'Turnajník'}
           </h1>
           {meta && (
-            <div style={{ fontSize: '.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.12em', marginTop: 1 }}>
+            <div style={{ fontSize: '.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.12em', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {meta}
             </div>
           )}

@@ -262,6 +262,12 @@ body {
   .mobile-only { display: none !important; }
 }
 
+/* ── Sponsor sidebar (wide desktop only) ────────────────────── */
+.sponsor-sidebar { display: none !important; }
+@media (min-width: 1500px) {
+  .sponsor-sidebar { display: flex !important; }
+}
+
 /* ── Match card responsive grid (čas doleva) ────────────────── */
 .match-grid {
   padding: .6rem 1.1rem;

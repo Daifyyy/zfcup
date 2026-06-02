@@ -27,6 +27,7 @@ export interface Tournament {
   format_id?: string
   assists_enabled: boolean
   cards_enabled: boolean
+  sponsors_enabled: boolean
 }
 
 export function useTournament(tournamentId?: string) {

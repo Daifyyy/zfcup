@@ -11,6 +11,7 @@ import type { Group } from '../../hooks/useGroups'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Tournament } from '../../hooks/useTournament'
 import { TeamLogo } from '../ui/TeamLogo'
+import { recalcTipsterPoints } from '../../lib/tipsEval'
 
 const STORAGE_KEY = 'turnajnik_tipster_id'
 
@@ -174,11 +175,12 @@ function Leaderboard({ tipsters, myId }: { tipsters: ReturnType<typeof useTipste
 
 // ── Special tips ───────────────────────────────────────────────────────────────
 
-function SpecialTipsSection({ groups, teams, players, tipsterId, specialTips, anyMatchPlayed, anyPlayoffPlayed, showToast, isLeague }: {
+function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, specialTips, anyMatchPlayed, anyPlayoffPlayed, showToast, isLeague }: {
   groups: Group[]
   teams: Team[]
   players: Player[]
   tipsterId: string
+  tournamentId: string
   specialTips: ReturnType<typeof useSpecialTips>['specialTips']
   anyMatchPlayed: boolean
   anyPlayoffPlayed: boolean
@@ -216,62 +218,57 @@ function SpecialTipsSection({ groups, teams, players, tipsterId, specialTips, an
     ))
   }, [specialTips])
 
-  const recalcPoints = async () => {
-    const [{ data: t1 }, { data: t2 }, { data: t3 }] = await Promise.all([
-      supabase.from('tips').select('points_earned').eq('tipster_id', tipsterId!),
-      supabase.from('bracket_tips').select('points_earned').eq('tipster_id', tipsterId!),
-      supabase.from('special_tips').select('points_earned').eq('tipster_id', tipsterId!),
-    ])
-    const total = [...(t1 ?? []), ...(t2 ?? []), ...(t3 ?? [])].reduce((s, r) => s + (r.points_earned ?? 0), 0)
-    await supabase.from('tipsters').update({ total_points: total }).eq('id', tipsterId!)
+  const saveSpecialTipGeneric = async (
+    tipType: string,
+    updatePayload: Record<string, unknown>,
+    insertExtra: Record<string, unknown>,
+    onSaved: (tipType: string) => void,
+  ) => {
+    setSaving(prev => ({ ...prev, [tipType]: true }))
+    try {
+      const existing = specialTips.find(t => t.tip_type === tipType)
+      let saveError: { message: string } | null = null
+      if (existing) {
+        const { error } = await supabase.from('special_tips').update({
+          ...updatePayload, evaluated: false, points_earned: 0,
+        }).eq('id', existing.id)
+        saveError = error
+      } else {
+        const { error } = await supabase.from('special_tips').insert({
+          tipster_id: tipsterId, tournament_id: tournamentId, tip_type: tipType,
+          points_earned: 0, evaluated: false, ...insertExtra,
+        })
+        saveError = error
+      }
+      if (saveError) { showToast('Chyba uložení: ' + saveError.message); return }
+      await recalcTipsterPoints(tournamentId)
+      onSaved(tipType)
+      showToast('Tip uložen ✓')
+    } finally {
+      setSaving(prev => ({ ...prev, [tipType]: false }))
+    }
   }
 
-  const saveSpecialTip = async (tipType: string) => {
+  const saveSpecialTip = (tipType: string) => {
     const teamId = selected[tipType]
     if (!teamId) return
-    setSaving(prev => ({ ...prev, [tipType]: true }))
-    const existing = specialTips.find(t => t.tip_type === tipType)
-    let saveError: { message: string } | null = null
-    if (existing) {
-      const { error } = await supabase.from('special_tips').update({
-        predicted_team_id: teamId, evaluated: false, points_earned: 0,
-      }).eq('id', existing.id)
-      saveError = error
-    } else {
-      const { error } = await supabase.from('special_tips').insert({
-        tipster_id: tipsterId, tip_type: tipType, predicted_team_id: teamId, points_earned: 0, evaluated: false,
-      })
-      saveError = error
-    }
-    if (saveError) { showToast('Chyba uložení: ' + saveError.message); setSaving(prev => ({ ...prev, [tipType]: false })); return }
-    await recalcPoints()
-    setSavedSelections(prev => ({ ...prev, [tipType]: teamId }))
-    setSaving(prev => ({ ...prev, [tipType]: false }))
-    showToast('Tip uložen ✓')
+    saveSpecialTipGeneric(
+      tipType,
+      { predicted_team_id: teamId },
+      { predicted_team_id: teamId },
+      (t) => setSavedSelections(prev => ({ ...prev, [t]: teamId })),
+    )
   }
 
-  const saveSpecialTipPlayer = async (tipType: string) => {
+  const saveSpecialTipPlayer = (tipType: string) => {
     const playerId = selectedPlayer[tipType]
     if (!playerId) return
-    setSaving(prev => ({ ...prev, [tipType]: true }))
-    const existing = specialTips.find(t => t.tip_type === tipType)
-    let saveError: { message: string } | null = null
-    if (existing) {
-      const { error } = await supabase.from('special_tips').update({
-        predicted_player_id: playerId, evaluated: false, points_earned: 0,
-      }).eq('id', existing.id)
-      saveError = error
-    } else {
-      const { error } = await supabase.from('special_tips').insert({
-        tipster_id: tipsterId, tip_type: tipType, predicted_player_id: playerId, predicted_team_id: null, points_earned: 0, evaluated: false,
-      })
-      saveError = error
-    }
-    if (saveError) { showToast('Chyba uložení: ' + saveError.message); setSaving(prev => ({ ...prev, [tipType]: false })); return }
-    await recalcPoints()
-    setSavedPlayerSelections(prev => ({ ...prev, [tipType]: playerId }))
-    setSaving(prev => ({ ...prev, [tipType]: false }))
-    showToast('Tip uložen ✓')
+    saveSpecialTipGeneric(
+      tipType,
+      { predicted_player_id: playerId },
+      { predicted_player_id: playerId, predicted_team_id: null },
+      (t) => setSavedPlayerSelections(prev => ({ ...prev, [t]: playerId })),
+    )
   }
 
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -953,7 +950,7 @@ export default function Tips({ matches, teams, players, groups, bracketRounds, b
       {view === 'tips' && (
         <>
           <SpecialTipsSection
-            groups={groups} teams={teams} players={players} tipsterId={tipsterId}
+            groups={groups} teams={teams} players={players} tipsterId={tipsterId} tournamentId={tournament.id}
             specialTips={specialTips} showToast={showToast}
             anyMatchPlayed={groupMatches.some(m => m.played)}
             anyPlayoffPlayed={

@@ -15,6 +15,7 @@ import { useBracketGoals } from './hooks/useBracketGoals'
 import { useAnnouncements } from './hooks/useAnnouncements'
 import { useRuleItems } from './hooks/useRuleItems'
 import { useReferees } from './hooks/useReferees'
+import { useSponsors } from './hooks/useSponsors'
 import { TournamentProvider } from './lib/TournamentContext'
 import Header from './components/layout/Header'
 import BottomNav from './components/layout/BottomNav'
@@ -27,6 +28,7 @@ import Bracket from './components/public/Bracket'
 import Info from './components/public/Info'
 import Rules from './components/public/Rules'
 import Tips from './components/public/Tips'
+import Sponsors from './components/public/Sponsors'
 import PrintBulletin from './components/public/PrintBulletin'
 import AdminPanel from './components/admin/AdminPanel'
 import KioskMode from './components/kiosk/KioskMode'
@@ -36,6 +38,22 @@ import TournamentLanding from './components/TournamentLanding'
 import PasswordResetOverlay from './components/PasswordResetOverlay'
 import type { Session } from '@supabase/supabase-js'
 
+import type { Sponsor } from './hooks/useSponsors'
+
+function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
+  const img = sponsor.logo_url ? (
+    <img src={sponsor.logo_url} alt={sponsor.name} title={sponsor.name} style={{ width: 110, height: 60, objectFit: 'contain' }} />
+  ) : (
+    <div style={{ width: 110, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 6, textAlign: 'center', padding: '.25rem', fontFamily: 'DM Sans, sans-serif' }}>
+      {sponsor.name}
+    </div>
+  )
+  if (sponsor.website_url) {
+    return <a href={sponsor.website_url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>{img}</a>
+  }
+  return img
+}
+
 // Detect tournamentId from URL path: first non-empty segment is treated as tournament id.
 // E.g. /abc123 → 'abc123'; / → ''
 function detectTournamentIdFromUrl(): string {
@@ -43,8 +61,8 @@ function detectTournamentIdFromUrl(): string {
   return segments[0] ?? ''
 }
 
-export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'statistics' | 'bracket' | 'info' | 'rules' | 'tips'
-const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'statistics', 'bracket', 'info', 'rules', 'tips']
+export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'statistics' | 'bracket' | 'info' | 'rules' | 'tips' | 'sponsors'
+const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'statistics', 'bracket', 'info', 'rules', 'tips', 'sponsors']
 
 export default function App() {
   const [tournamentId, setTournamentId] = useState<string>(() => detectTournamentIdFromUrl())
@@ -75,6 +93,7 @@ export default function App() {
   const { announcements, refetch: refetchAnnouncements } = useAnnouncements(tournamentId)
   const { ruleItems, refetch: refetchRuleItems } = useRuleItems(tournamentId)
   const { referees, refetch: refetchReferees } = useReferees(tournamentId)
+  const { sponsors, refetch: refetchSponsors } = useSponsors(tournamentId)
 
   // ── Auth ──────────────────────────────────────────────
   useEffect(() => {
@@ -148,6 +167,9 @@ export default function App() {
 
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, ruleItems, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
+  const sponsorsEnabled = tournament?.sponsors_enabled ?? false
+  const leftSponsors = sponsors.filter((_, i) => i % 2 === 0)
+  const rightSponsors = sponsors.filter((_, i) => i % 2 !== 0)
 
   const goHome = useCallback(() => {
     setTournamentId('')
@@ -221,18 +243,36 @@ export default function App() {
         tipsEnabled={tournament?.tips_enabled ?? false}
         showBracket={showBracket}
         cardsEnabled={tournament?.cards_enabled ?? false}
+        sponsorsEnabled={sponsorsEnabled}
       />
-      <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-        {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
-        {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} tournament={tournament} />}
-        {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
-        {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
-        {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} players={players} teams={teams} tournament={tournament} />}
-        {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
-        {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
-        {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
-        {tab === 'tips'      && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
-      </main>
+      <div style={{ display: 'grid', gridTemplateColumns: sponsorsEnabled && sponsors.length > 0 ? '130px 1fr 130px' : '1fr', maxWidth: sponsorsEnabled && sponsors.length > 0 ? 1460 : undefined, margin: '0 auto' }}>
+        {sponsorsEnabled && sponsors.length > 0 && (
+          <aside className="sponsor-sidebar" style={{ flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem 2rem', position: 'sticky', top: 70, alignSelf: 'start' }}>
+            {leftSponsors.map(s => (
+              <SponsorSidebarLogo key={s.id} sponsor={s} />
+            ))}
+          </aside>
+        )}
+        <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+          {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
+          {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} tournament={tournament} />}
+          {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
+          {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
+          {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} players={players} teams={teams} tournament={tournament} />}
+          {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
+          {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
+          {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
+          {tab === 'tips'      && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
+          {tab === 'sponsors'  && <Sponsors sponsors={sponsors} />}
+        </main>
+        {sponsorsEnabled && sponsors.length > 0 && (
+          <aside className="sponsor-sidebar" style={{ flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem 2rem', position: 'sticky', top: 70, alignSelf: 'start' }}>
+            {rightSponsors.map(s => (
+              <SponsorSidebarLogo key={s.id} sponsor={s} />
+            ))}
+          </aside>
+        )}
+      </div>
       {scoreboard && (
         <Scoreboard
           tournament={tournament}
@@ -274,10 +314,12 @@ export default function App() {
           refetchReferees={refetchReferees}
           refetchAnnouncements={refetchAnnouncements}
           refetchRuleItems={refetchRuleItems}
+          sponsors={sponsors}
+          refetchSponsors={refetchSponsors}
           onClose={() => setAdminOpen(false)}
         />
       )}
-      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} />
+      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} sponsorsEnabled={sponsorsEnabled} />
       <Toast message={toast} show={toastShow} />
       {passwordRecovery && <PasswordResetOverlay onDone={() => setPasswordRecovery(false)} />}
       {printOpen && (

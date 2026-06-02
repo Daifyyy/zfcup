@@ -234,3 +234,34 @@ ALTER TABLE bracket_cards ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES
 UPDATE bracket_cards bc SET tournament_id = br.tournament_id
   FROM bracket_slots bs JOIN bracket_rounds br ON bs.round_id = br.id
   WHERE bc.slot_id = bs.id AND bc.tournament_id IS NULL;
+
+-- -------------------------------------------------------
+-- SPECIAL_TIPS — tournament_id (2026-06-02)
+-- Tabulka chyběla v multi-tenant migraci; UNIQUE přidává tournament_id
+-- -------------------------------------------------------
+ALTER TABLE special_tips ADD COLUMN IF NOT EXISTS tournament_id UUID REFERENCES tournament(id) ON DELETE CASCADE;
+UPDATE special_tips st SET tournament_id = t.tournament_id
+  FROM tipsters t WHERE st.tipster_id = t.id AND st.tournament_id IS NULL;
+ALTER TABLE special_tips DROP CONSTRAINT IF EXISTS special_tips_tipster_id_tip_type_key;
+ALTER TABLE special_tips ADD CONSTRAINT IF NOT EXISTS special_tips_tipster_id_tip_type_tournament_id_key
+  UNIQUE(tipster_id, tip_type, tournament_id);
+
+-- -------------------------------------------------------
+-- SPONSORS modul (2026-06-02)
+-- -------------------------------------------------------
+ALTER TABLE tournament ADD COLUMN IF NOT EXISTS sponsors_enabled BOOLEAN DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS sponsors (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id UUID NOT NULL REFERENCES tournament(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL DEFAULT '',
+  logo_url      TEXT DEFAULT '',
+  website_url   TEXT DEFAULT '',
+  position      INTEGER DEFAULT 0,
+  created_at    TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+ALTER TABLE sponsors ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON sponsors;
+DROP POLICY IF EXISTS "admin_write" ON sponsors;
+CREATE POLICY "public_read" ON sponsors FOR SELECT USING (true);
+CREATE POLICY "admin_write" ON sponsors FOR ALL TO authenticated USING (true) WITH CHECK (true);

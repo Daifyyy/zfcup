@@ -27,8 +27,10 @@ import BracketTab from './tabs/BracketTab'
 import SettingsTab from './tabs/SettingsTab'
 import TipsAdminTab from './tabs/TipsAdminTab'
 import RefereesTab from './tabs/RefereesTab'
+import SponsorsTab from './tabs/SponsorsTab'
+import type { Sponsor } from '../../hooks/useSponsors'
 
-type ATab = 'info' | 'announcements' | 'rules' | 'teams' | 'referees' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'settings'
+type ATab = 'info' | 'announcements' | 'rules' | 'teams' | 'referees' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'sponsors' | 'settings'
 
 const ADMIN_TABS: [ATab, string][] = [
   ['info',          'Info'],
@@ -41,6 +43,7 @@ const ADMIN_TABS: [ATab, string][] = [
   ['matches',       'Zápasy'],
   ['bracket',       'Play-off'],
   ['tips',          'Tipovačka'],
+  ['sponsors',      'Sponzoři'],
   ['settings',      'Nastavení'],
 ]
 
@@ -81,6 +84,8 @@ interface Props {
   refetchReferees: () => void
   refetchAnnouncements: () => void
   refetchRuleItems: () => void
+  sponsors: Sponsor[]
+  refetchSponsors: () => void
   showToast: (msg: string) => void
   onClose: () => void
 }
@@ -305,6 +310,7 @@ export default function AdminPanel(props: Props) {
               {aTab === 'scorers'       && <ScorersTab {...tabProps} />}
               {aTab === 'bracket'       && <BracketTab {...tabProps} />}
               {aTab === 'tips'          && <TipsAdminTab showToast={showToast} tournament={props.tournament} teams={props.teams} players={props.players} groups={props.groups} matches={props.matches} bracketSlots={props.bracketSlots} bracketRounds={props.bracketRounds} />}
+              {aTab === 'sponsors'      && <SponsorsTab sponsors={props.sponsors} tournament={props.tournament} refetchSponsors={props.refetchSponsors} showToast={showToast} />}
               {aTab === 'settings'      && <SettingsTab {...tabProps} />}
             </div>
           </>

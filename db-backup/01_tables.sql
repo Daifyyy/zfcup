@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS tournament (
   num_pitches          INTEGER DEFAULT 2,            -- počet souběžných hřišť
   rules_content        TEXT DEFAULT '',              -- text pravidel (pre-wrap)
   league_has_playoff   BOOLEAN DEFAULT true,
+  sponsors_enabled     BOOLEAN DEFAULT false,
   created_at           TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at           TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -220,14 +221,29 @@ CREATE TABLE IF NOT EXISTS bracket_tips (
 -- 15. SPECIAL_TIPS — FK → tipsters (CASCADE), teams (CASCADE)
 -- -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS special_tips (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tipster_id        UUID NOT NULL REFERENCES tipsters(id) ON DELETE CASCADE,
-  tip_type          TEXT NOT NULL,
-  -- 'tournament_winner' | 'group_winner:{groupId}' | 'group_last:{groupId}'
-  predicted_team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
-  points_earned     INTEGER DEFAULT 0,
-  evaluated         BOOLEAN DEFAULT false,
-  created_at        TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  updated_at        TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  UNIQUE(tipster_id, tip_type)
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tipster_id          UUID NOT NULL REFERENCES tipsters(id) ON DELETE CASCADE,
+  tournament_id       UUID NOT NULL REFERENCES tournament(id) ON DELETE CASCADE,
+  tip_type            TEXT NOT NULL,
+  -- 'tournament_winner' | 'group_winner:{groupId}' | 'group_last:{groupId}' | 'top_scorer'
+  predicted_team_id   UUID REFERENCES teams(id) ON DELETE CASCADE,
+  predicted_player_id UUID REFERENCES players(id) ON DELETE SET NULL,
+  points_earned       INTEGER DEFAULT 0,
+  evaluated           BOOLEAN DEFAULT false,
+  created_at          TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at          TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  UNIQUE(tipster_id, tip_type, tournament_id)
+);
+
+-- -------------------------------------------------------
+-- 16. SPONSORS — FK → tournament (CASCADE)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sponsors (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tournament_id UUID NOT NULL REFERENCES tournament(id) ON DELETE CASCADE,
+  name          TEXT NOT NULL DEFAULT '',
+  logo_url      TEXT DEFAULT '',
+  website_url   TEXT DEFAULT '',
+  position      INTEGER DEFAULT 0,
+  created_at    TIMESTAMP WITH TIME ZONE DEFAULT now()
 );

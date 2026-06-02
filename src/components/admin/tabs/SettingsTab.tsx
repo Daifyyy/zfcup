@@ -361,6 +361,12 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           title: 'Kartičky & disciplína',
           desc: (on: boolean) => on ? 'Záložka Disciplína viditelná; kartičky se zadávají u každého zápasu' : 'Kartičky jsou vypnuté',
         },
+        {
+          key: 'sponsors_enabled' as const,
+          enabled: tournament?.sponsors_enabled ?? false,
+          title: 'Sponzoři',
+          desc: (on: boolean) => on ? 'Záložka Sponzoři viditelná; loga sponzorů se zobrazí po stranách stránky' : 'Sponzoři jsou skrytí',
+        },
       ].map(({ key, enabled, title, desc }) => (
         <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.7rem .9rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, marginBottom: '.55rem' }}>
           <div>

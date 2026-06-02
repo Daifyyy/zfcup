@@ -420,6 +420,8 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
 }
 
 // ── League matches — all slots grouped by time, N side by side ────────────────
+const MAX_SLOTS_PER_PAGE = 12
+
 function LeagueMatchesCol({ matches, teams, numPitches = 2 }: { matches: Match[]; teams: Team[]; numPitches?: number }) {
   // Group by scheduled_time
   const slotsMap = new Map<string, Match[]>()
@@ -429,6 +431,18 @@ function LeagueMatchesCol({ matches, teams, numPitches = 2 }: { matches: Match[]
     slotsMap.get(key)!.push(m)
   }
   const sortedSlots = [...slotsMap.entries()]
+  const totalPages = Math.ceil(sortedSlots.length / MAX_SLOTS_PER_PAGE)
+  const [page, setPage] = useState(0)
+
+  useEffect(() => {
+    if (totalPages <= 1) return
+    const id = setInterval(() => setPage(p => (p + 1) % totalPages), 5000)
+    return () => clearInterval(id)
+  }, [totalPages])
+
+  const visibleSlots = totalPages > 1
+    ? sortedSlots.slice(page * MAX_SLOTS_PER_PAGE, (page + 1) * MAX_SLOTS_PER_PAGE)
+    : sortedSlots
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', padding: '.3rem .55rem', gap: '.18rem', boxSizing: 'border-box' }}>
@@ -443,8 +457,13 @@ function LeagueMatchesCol({ matches, teams, numPitches = 2 }: { matches: Match[]
             </div>
           </div>
         ))}
+        {totalPages > 1 && (
+          <div style={{ flexShrink: 0, fontSize: S.label, color: C.muted, fontWeight: 600, marginLeft: '.5rem' }}>
+            {page + 1}/{totalPages}
+          </div>
+        )}
       </div>
-      {sortedSlots.map(([time, slotMatches], si) => {
+      {visibleSlots.map(([time, slotMatches], si) => {
         const allPlayed = slotMatches.every(m => m.played)
         return (
           <div key={time || si} style={{

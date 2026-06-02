@@ -157,3 +157,12 @@ CREATE POLICY "public_read" ON special_tips FOR SELECT USING (true);
 CREATE POLICY "anon_insert_special_tips" ON special_tips FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "anon_update_special_tips" ON special_tips FOR UPDATE TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "admin_write" ON special_tips FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- -------------------------------------------------------
+-- SPONSORS
+-- -------------------------------------------------------
+ALTER TABLE sponsors ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_read" ON sponsors;
+DROP POLICY IF EXISTS "admin_write" ON sponsors;
+CREATE POLICY "public_read" ON sponsors FOR SELECT USING (true);
+CREATE POLICY "admin_write" ON sponsors FOR ALL TO authenticated USING (true) WITH CHECK (true);

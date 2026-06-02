@@ -36,7 +36,9 @@ Stručný přehled RLS šablony: SELECT pro všechny (anon), ALL pro authenticat
 - `matches.scheduled_time TEXT NOT NULL`, `matches.round TEXT NOT NULL` — při UPDATE posílat `''`, **ne `null`** → jinak 400
 - `goals`: UNIQUE(player_id, match_id); `bracket_goals`: UNIQUE(slot_id, player_id) — **samostatná tabulka**, playoff sloty nejsou v `matches`
 - `special_tips.predicted_team_id` nullable — pro `top_scorer` INSERT nutno `predicted_team_id: null`
-- `tournament` klíčové sloupce: `format ('groups'|'league')`, `format_id TEXT`, `league_has_playoff BOOL`, `num_pitches INT DEFAULT 2`, `tips_enabled BOOL`, `tips_lock_from TEXT`, `assists_enabled BOOL`, `cards_enabled BOOL`, `logo_url TEXT`, `slug TEXT UNIQUE NOT NULL`
+- `tournament` klíčové sloupce: `format ('groups'|'league')`, `format_id TEXT`, `league_has_playoff BOOL`, `num_pitches INT DEFAULT 2`, `tips_enabled BOOL`, `tips_lock_from TEXT`, `assists_enabled BOOL`, `cards_enabled BOOL`, `sponsors_enabled BOOL`, `logo_url TEXT`, `slug TEXT UNIQUE NOT NULL`
+- `sponsors`: `id, tournament_id, name, logo_url, website_url, position` — UNIQUE none; Storage `team-logos/sponsors/{id}.png`
+- `special_tips`: UNIQUE(tipster_id, tip_type, **tournament_id**) — `tournament_id` NOT NULL (migrace v 05_migrations.sql)
 - `announcements`: `type TEXT DEFAULT 'text'` (`'text'|'image'|'video'`), `media_url TEXT`
 - `tips`/`bracket_tips`: UNIQUE(tipster_id, match_id) / UNIQUE(tipster_id, slot_id)
 
@@ -73,6 +75,9 @@ Stručný přehled RLS šablony: SELECT pro všechny (anon), ALL pro authenticat
 - **BracketTab SlotEditor.saveAll**: chyba gólů/asistencí/kartiček neblokuje `onSave()` — auto-advance proběhne i při částečném selhání
 - **Race conditions**: `generateLeague()` a `seedPlayoff()` mají `if (loading) return` guard — nelze použít `disabled`, guard musí být uvnitř funkce
 - **SettingsTab.resetData**: UPDATE musí cílit `.eq('id', tournament.id)` — nikdy `.neq()` (zasáhlo by všechny řádky)
+- **Scoreboard `LeagueMatchesCol`**: auto-stránkování pokud slotů > `MAX_SLOTS_PER_PAGE` (12); `setInterval(5000)` cykluje stránky; indikátor `{page+1}/{totalPages}` v záhlaví
+- **Header**: název turnaje — `webkit-line-clamp: 2` (ne ellipsis); meta text — `whiteSpace: nowrap` + ellipsis; `minHeight: 64` místo fixed height
+- **`special_tips`**: UNIQUE je `(tipster_id, tip_type, tournament_id)` — `tournament_id` NOT NULL; INSERT musí vždy posílat `tournament_id`; `SpecialTipsSection` dostává `tournamentId` jako prop; `recalcPoints` nahrazeno `recalcTipsterPoints(tournamentId)` z `tipsEval.ts`
 - **Scorers.tsx**: při `showAssists` zobrazovat `+0A` s `color: transparent` pro zarovnání sloupců
 - **InfoTab save**: volat `refetchTournament()` — jinak změny viditelné až po 120s pollingu
 - **Android zoom**: `@media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }`
@@ -141,17 +146,18 @@ Speciální: Vítěz turnaje 10 b., Nejlepší střelec 10 b., Vítěz skupiny 5
 - `anyPlayoffPlayed`: liga bez playoff → zamkne od 1. odehraného zápasu; ostatní → zamkne při nasazení do bracket
 
 ## Volitelné moduly
-Všechny togglované v Admin → Nastavení → Volitelné moduly; řídí `tournament.assists_enabled` / `tournament.cards_enabled`.
+Všechny togglované v Admin → Nastavení → Volitelné moduly; řídí `tournament.assists_enabled` / `tournament.cards_enabled` / `tournament.sponsors_enabled`.
 - **Asistence**: hooky `useAssists`/`useBracketAssists`; ±stepper v editoru; Scorers — sloupec `G+A`, `+0A` s `color: transparent` pro zarovnání
 - **Kartičky**: hooky `useCards`/`useBracketCards`; záznamy INSERT/DELETE (ne upsert); záložka Disciplína — viditelná jen pokud `cards_enabled`
+- **Sponzoři**: hook `useSponsors(tournamentId)`; záložka `src/components/public/Sponsors.tsx` (grid karet); admin `src/components/admin/tabs/SponsorsTab.tsx` (add/edit/delete/řazení ↑↓/upload loga); Storage `team-logos/sponsors/{id}.png`, max 500 KB; sidebar loga po obou stranách stránky jen při ≥1500px (CSS třída `.sponsor-sidebar`); loga rozdělena: sudý index → levý sidebar, lichý → pravý
 - **Import CSV/Excel**: `src/components/admin/ImportTeamsModal.tsx`; balíček `xlsx`; List "Sheet1" se importuje pokud `players.length > 0`
 - **Fotky hráčů**: `players.avatar_url`; Storage `team-logos/players/{id}.png|.jpg`; max 200 KB, pouze PNG/JPG
 - **Tisknutelný bulletin**: `src/components/public/PrintBulletin.tsx`; `window.print()` po 400ms
 
 ## Architektura záložek (přehled)
-**Veřejné**: overview, teams, results (label "Zápasy"), standings, scorers, bracket (skryta při `league && !league_has_playoff`), info, rules (`rule_items` karty), discipline (jen `cards_enabled`), tips (jen `tips_enabled`)
+**Veřejné**: overview, teams, results (label "Zápasy"), standings, scorers, bracket (skryta při `league && !league_has_playoff`), info, rules (`rule_items` karty), discipline (jen `cards_enabled`), tips (jen `tips_enabled`), sponsors (jen `sponsors_enabled`)
 
-**Admin pořadí**: Info → Oznámení → Pravidla → Týmy → Skupiny → Střelci → Zápasy → Play-off → Tipovačka → Nastavení
+**Admin pořadí**: Info → Oznámení → Pravidla → Týmy → Rozhodčí → Skupiny → Střelci → Zápasy → Play-off → Tipovačka → Sponzoři → Nastavení
 Aktivní záložky (Zápasy, Play-off, Tipovačka) = zelené pozadí (`ACTION_TABS` v AdminPanel.tsx)
 
 **Standings barevné kódování**:
@@ -161,6 +167,7 @@ Aktivní záložky (Zápasy, Play-off, Tipovačka) = zelené pozadí (`ACTION_TA
 ## Loga (Supabase Storage, bucket "team-logos")
 - Týmová loga: `{teamId}.png`, max 500 KB; cache-bust: `?v={timestamp}`; komponenta `TeamLogo`
 - Logo turnaje: `tournament-logo.png`, 140px v Overview; po uploadu volat `refetchTournament()`
+- Loga sponzorů: `sponsors/{sponsorId}.png`, max 500 KB; cesta v `sponsors.logo_url`
 
 ## Vercel deployment
 `VITE_SUPABASE_URL` a `VITE_SUPABASE_ANON_KEY` jsou baked při buildu — změna env vars v dashboardu vyžaduje redeploy.
