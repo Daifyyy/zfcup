@@ -76,13 +76,14 @@ Stručný přehled RLS šablony: SELECT pro všechny (anon), ALL pro authenticat
 - **Race conditions**: `generateLeague()` a `seedPlayoff()` mají `if (loading) return` guard — nelze použít `disabled`, guard musí být uvnitř funkce
 - **SettingsTab.resetData**: UPDATE musí cílit `.eq('id', tournament.id)` — nikdy `.neq()` (zasáhlo by všechny řádky)
 - **Scoreboard `LeagueMatchesCol`**: auto-stránkování pokud slotů > `MAX_SLOTS_PER_PAGE` (12); `setInterval(5000)` cykluje stránky; indikátor `{page+1}/{totalPages}` v záhlaví
-- **Header**: název turnaje — `webkit-line-clamp: 2` (ne ellipsis); meta text — `whiteSpace: nowrap` + ellipsis; `minHeight: 64` místo fixed height
+- **Header**: název turnaje — `webkit-line-clamp: 2` (ne ellipsis); meta text — `whiteSpace: nowrap` + ellipsis; `minHeight: 64` místo fixed height; title div má `minWidth: 130` (jinak ho nav vytlačí při mnoha záložkách); nav má `flex: '1 1 0', minWidth: 0, overflowX: auto` — scrolluje horizontálně pokud nestačí místo
 - **`special_tips`**: UNIQUE je `(tipster_id, tip_type, tournament_id)` — `tournament_id` NOT NULL; INSERT musí vždy posílat `tournament_id`; `SpecialTipsSection` dostává `tournamentId` jako prop; `recalcPoints` nahrazeno `recalcTipsterPoints(tournamentId)` z `tipsEval.ts`
 - **Scorers.tsx**: při `showAssists` zobrazovat `+0A` s `color: transparent` pro zarovnání sloupců
 - **InfoTab save**: volat `refetchTournament()` — jinak změny viditelné až po 120s pollingu
 - **Android zoom**: `@media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }`
 - **RichTextEditor** (`src/components/ui/RichTextEditor.tsx`): TipTap + StarterKit; výstup HTML string; renderovat přes `dangerouslySetInnerHTML` s třídou `rich-content`
 - **Čistý start (`resetTournamentData`)**: soft tables (bracket_*) — chyby ignorovány; hard tables (goals, tips, matches, groups) — chyba zastaví
+- **`tournament.rules_content`**: sloupec existuje v DB ale je **nepoužívaný** — `Rules.tsx` zobrazuje `rule_items` tabulku (karty z admin záložky Pravidla), ne `rules_content`; pole není v InfoTab formuláři
 
 ## Parametr `num_pitches` — vzorce
 **Skupiny**: `pitchesPerGroup = max(1, floor(numPitches / numGroups))`, čas = `floor(matchIndex / pitchesPerGroup) * (duration + break)`
@@ -149,9 +150,12 @@ Speciální: Vítěz turnaje 10 b., Nejlepší střelec 10 b., Vítěz skupiny 5
 Všechny togglované v Admin → Nastavení → Volitelné moduly; řídí `tournament.assists_enabled` / `tournament.cards_enabled` / `tournament.sponsors_enabled`.
 - **Asistence**: hooky `useAssists`/`useBracketAssists`; ±stepper v editoru; Scorers — sloupec `G+A`, `+0A` s `color: transparent` pro zarovnání
 - **Kartičky**: hooky `useCards`/`useBracketCards`; záznamy INSERT/DELETE (ne upsert); záložka Disciplína — viditelná jen pokud `cards_enabled`
-- **Sponzoři**: hook `useSponsors(tournamentId)`; záložka `src/components/public/Sponsors.tsx` (grid karet); admin `src/components/admin/tabs/SponsorsTab.tsx` (add/edit/delete/řazení ↑↓/upload loga); Storage `team-logos/sponsors/{id}.png`, max 500 KB; sidebar loga po obou stranách stránky jen při ≥1500px (CSS třída `.sponsor-sidebar`); loga rozdělena: sudý index → levý sidebar, lichý → pravý
+- **Sponzoři**: hook `useSponsors(tournamentId)`; záložka `src/components/public/Sponsors.tsx` (grid karet); admin `src/components/admin/tabs/SponsorsTab.tsx` (add/edit/delete/řazení ↑↓/upload loga); Storage `team-logos/sponsors/{id}.png`, max 500 KB
+  - Sidebar loga: `position: fixed` po stranách viewportu, **ne grid wrapper** — hlavní obsah se nesmí zúžit; loga 120×90px; sudý index → levý sidebar, lichý → pravý
+  - CSS `.sponsor-sidebar { display: none }` → `display: flex` jen při ≥1500px; sidebary mají `left/right: 0`, `top: 70`, `bottom: 0`, `overflowY: auto`
+  - Kapacita bez scrollování: ~6–9 log na stranu (závisí na výšce monitoru)
 - **Import CSV/Excel**: `src/components/admin/ImportTeamsModal.tsx`; balíček `xlsx`; List "Sheet1" se importuje pokud `players.length > 0`
-- **Fotky hráčů**: `players.avatar_url`; Storage `team-logos/players/{id}.png|.jpg`; max 200 KB, pouze PNG/JPG
+- **Fotky hráčů**: `players.avatar_url`; Storage `team-logos/players/{id}.png|.jpg`; max 200 KB, pouze PNG/JPG; zobrazují se v záložkách Týmy (32px kruh) i Statistiky (36px kruh vedle jména)
 - **Tisknutelný bulletin**: `src/components/public/PrintBulletin.tsx`; `window.print()` po 400ms
 
 ## Architektura záložek (přehled)
@@ -168,6 +172,23 @@ Aktivní záložky (Zápasy, Play-off, Tipovačka) = zelené pozadí (`ACTION_TA
 - Týmová loga: `{teamId}.png`, max 500 KB; cache-bust: `?v={timestamp}`; komponenta `TeamLogo`
 - Logo turnaje: `tournament-logo.png`, 140px v Overview; po uploadu volat `refetchTournament()`
 - Loga sponzorů: `sponsors/{sponsorId}.png`, max 500 KB; cesta v `sponsors.logo_url`
+- **Storage RLS**: politiky pro upload musí být aplikovány v Supabase SQL Editoru — viz `db-backup/04_storage.sql`; bez nich vrací upload "new row violates row level security"
+
+### TeamLogo sizes (referenční tabulka)
+| Kontext | Size |
+|---------|------|
+| Záložka Týmy — logo týmu (karta) | 52px |
+| Záložka Standings | 30px |
+| Záložka Scorers / Discipline | 34px |
+| Záložka Bracket (sloty) | 34px |
+| Záložka Tips (zápasové řádky) | 30px |
+| Záložka Results (match card) | 32px |
+| Záložka Statistics — PlayerInfo | 28px |
+| Scoreboard — standings | 30px |
+| Scoreboard — zápasy skupin/ligy | 28px |
+| Scoreboard — play-off sloty | 28px |
+| Scoreboard — flat bracket | 30px |
+| Scoreboard — střelci | 26px |
 
 ## Vercel deployment
 `VITE_SUPABASE_URL` a `VITE_SUPABASE_ANON_KEY` jsou baked při buildu — změna env vars v dashboardu vyžaduje redeploy.
