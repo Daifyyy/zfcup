@@ -42,9 +42,9 @@ import type { Sponsor } from './hooks/useSponsors'
 
 function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
   const img = sponsor.logo_url ? (
-    <img src={sponsor.logo_url} alt={sponsor.name} title={sponsor.name} style={{ width: 110, height: 60, objectFit: 'contain' }} />
+    <img src={sponsor.logo_url} alt={sponsor.name} title={sponsor.name} style={{ width: 120, height: 90, objectFit: 'contain' }} />
   ) : (
-    <div style={{ width: 110, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 6, textAlign: 'center', padding: '.25rem', fontFamily: 'DM Sans, sans-serif' }}>
+    <div style={{ width: 120, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 6, textAlign: 'center', padding: '.25rem', fontFamily: 'DM Sans, sans-serif' }}>
       {sponsor.name}
     </div>
   )

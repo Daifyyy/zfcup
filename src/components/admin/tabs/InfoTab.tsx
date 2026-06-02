@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function InfoTab({ tournament, refetchTournament, showToast }: Props) {
-  const [form, setForm] = useState({ name: '', subtitle: '', date: '', venue: '', description: '', rules_content: '' })
+  const [form, setForm] = useState({ name: '', subtitle: '', date: '', venue: '', description: '' })
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -21,7 +21,6 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
       date: tournament.date,
       venue: tournament.venue,
       description: tournament.description,
-      rules_content: tournament.rules_content ?? '',
     })
   }, [tournament])
 
@@ -85,16 +84,6 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
         <RichTextEditor
           content={form.description}
           onChange={html => setForm(p => ({ ...p, description: html }))}
-        />
-      </div>
-
-      <hr className="divider" />
-      <div className="sub-title">Pravidla soutěže</div>
-      <div className="field-group">
-        <label className="field-label">Text pravidel</label>
-        <RichTextEditor
-          content={form.rules_content}
-          onChange={html => setForm(p => ({ ...p, rules_content: html }))}
         />
       </div>
 

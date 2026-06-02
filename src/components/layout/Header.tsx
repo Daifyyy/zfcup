@@ -103,7 +103,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
         )}
 
         {/* Tournament name */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 130 }}>
           <h1 style={{
             fontFamily: "'Bebas Neue', sans-serif",
             fontSize: 'clamp(1.1rem, 2.8vw, 1.5rem)', letterSpacing: '.05em',
@@ -220,7 +220,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
         </button>
 
         {/* Nav — desktop only */}
-        <nav className="desktop-only" style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto' }}>
+        <nav className="desktop-only" style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', flex: '1 1 0', minWidth: 0 }}>
           {TABS.map(([key, label]) => (
             <button
               key={key}
