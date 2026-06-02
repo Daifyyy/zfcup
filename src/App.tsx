@@ -245,7 +245,7 @@ export default function App() {
         cardsEnabled={tournament?.cards_enabled ?? false}
         sponsorsEnabled={sponsorsEnabled}
       />
-      <div style={{ display: 'grid', gridTemplateColumns: sponsorsEnabled && sponsors.length > 0 ? '130px 1fr 130px' : '1fr', maxWidth: sponsorsEnabled && sponsors.length > 0 ? 1460 : undefined, margin: '0 auto' }}>
+      <div className={`app-layout${sponsorsEnabled && sponsors.length > 0 ? ' app-layout-sponsors' : ''}`}>
         {sponsorsEnabled && sponsors.length > 0 && (
           <aside className="sponsor-sidebar" style={{ flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem 2rem', position: 'sticky', top: 70, alignSelf: 'start' }}>
             {leftSponsors.map(s => (
