@@ -211,11 +211,14 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
                         ? <img src={p.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
                         : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', color: 'var(--muted)' }}>📷</div>
                       }
-                      <label style={{ cursor: 'pointer', fontSize: '.75rem', color: 'var(--accent)', fontWeight: 600, opacity: uploadingAvatar ? 0.5 : 1 }}>
-                        {uploadingAvatar ? 'Nahrávám…' : '📷 Nahrát foto'}
-                        <input type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style={{ display: 'none' }}
-                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(p.id, f) }} />
-                      </label>
+                      <div>
+                        <label style={{ cursor: 'pointer', fontSize: '.75rem', color: 'var(--accent)', fontWeight: 600, opacity: uploadingAvatar ? 0.5 : 1 }}>
+                          {uploadingAvatar ? 'Nahrávám…' : '📷 Nahrát foto'}
+                          <input type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style={{ display: 'none' }}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(p.id, f) }} />
+                        </label>
+                        <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 2 }}>PNG nebo JPG · max 200 KB</div>
+                      </div>
                       {p.avatar_url && (
                         <button type="button" style={{ fontSize: '.72rem', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                           onClick={() => removeAvatar(p.id)}>Smazat foto</button>
