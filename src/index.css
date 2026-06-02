@@ -268,12 +268,6 @@ body {
   .sponsor-sidebar { display: flex !important; }
 }
 
-/* ── App layout grid — 3 sloupce jen na wide desktop ─────────── */
-.app-layout { display: grid; grid-template-columns: 1fr; margin: 0 auto; }
-@media (min-width: 1500px) {
-  .app-layout-sponsors { grid-template-columns: 130px 1fr 130px; max-width: 1460px; }
-}
-
 /* ── Match card responsive grid (čas doleva) ────────────────── */
 .match-grid {
   padding: .6rem 1.1rem;

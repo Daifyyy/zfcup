@@ -245,34 +245,32 @@ export default function App() {
         cardsEnabled={tournament?.cards_enabled ?? false}
         sponsorsEnabled={sponsorsEnabled}
       />
-      <div className={`app-layout${sponsorsEnabled && sponsors.length > 0 ? ' app-layout-sponsors' : ''}`}>
-        {sponsorsEnabled && sponsors.length > 0 && (
-          <aside className="sponsor-sidebar" style={{ flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem 2rem', position: 'sticky', top: 70, alignSelf: 'start' }}>
-            {leftSponsors.map(s => (
-              <SponsorSidebarLogo key={s.id} sponsor={s} />
-            ))}
-          </aside>
-        )}
-        <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-          {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
-          {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} tournament={tournament} />}
-          {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
-          {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
-          {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} players={players} teams={teams} tournament={tournament} />}
-          {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
-          {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
-          {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
-          {tab === 'tips'      && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
-          {tab === 'sponsors'  && <Sponsors sponsors={sponsors} />}
-        </main>
-        {sponsorsEnabled && sponsors.length > 0 && (
-          <aside className="sponsor-sidebar" style={{ flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem 2rem', position: 'sticky', top: 70, alignSelf: 'start' }}>
-            {rightSponsors.map(s => (
-              <SponsorSidebarLogo key={s.id} sponsor={s} />
-            ))}
-          </aside>
-        )}
-      </div>
+      {sponsorsEnabled && sponsors.length > 0 && (
+        <aside className="sponsor-sidebar" style={{ position: 'fixed', left: 0, top: 70, bottom: 0, width: 130, flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem', overflowY: 'auto' }}>
+          {leftSponsors.map(s => (
+            <SponsorSidebarLogo key={s.id} sponsor={s} />
+          ))}
+        </aside>
+      )}
+      <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+        {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
+        {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} tournament={tournament} />}
+        {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
+        {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
+        {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} players={players} teams={teams} tournament={tournament} />}
+        {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
+        {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
+        {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
+        {tab === 'tips'      && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
+        {tab === 'sponsors'  && <Sponsors sponsors={sponsors} />}
+      </main>
+      {sponsorsEnabled && sponsors.length > 0 && (
+        <aside className="sponsor-sidebar" style={{ position: 'fixed', right: 0, top: 70, bottom: 0, width: 130, flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem', overflowY: 'auto' }}>
+          {rightSponsors.map(s => (
+            <SponsorSidebarLogo key={s.id} sponsor={s} />
+          ))}
+        </aside>
+      )}
       {scoreboard && (
         <Scoreboard
           tournament={tournament}
