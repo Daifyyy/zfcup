@@ -157,7 +157,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                           </td>
                           <td style={{ padding: '.12rem .22rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              {team && <TeamLogo team={team} size={22} />}
+                              {team && <TeamLogo team={team} size={30} />}
                               <span style={{ fontSize: S.body, fontWeight: bold ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {team?.name ?? row.id}
                               </span>
@@ -202,7 +202,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                 <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.label, color: i === 0 ? C.gold : C.muted, width: 14, textAlign: 'center', flexShrink: 0 }}>
                   {i + 1}
                 </span>
-                {s.team && <TeamLogo team={s.team} size={18} />}
+                {s.team && <TeamLogo team={s.team} size={26} />}
                 <span style={{ flex: 1, minWidth: 0, fontSize: S.small, fontWeight: i === 0 ? 700 : 500, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {s.name}
                   {s.team && <span style={{ color: C.muted, fontWeight: 400 }}> · {s.team.name}</span>}
@@ -263,7 +263,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
               <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tn(m.home_id)}
               </span>
-              <TeamLogo team={tt(m.home_id)} size={18} />
+              <TeamLogo team={tt(m.home_id)} size={28} />
             </div>
             {/* Skóre */}
             <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, 3.5vw, 5rem)' }}>
@@ -277,7 +277,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
             </div>
             {/* Away */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
-              <TeamLogo team={tt(m.away_id)} size={18} />
+              <TeamLogo team={tt(m.away_id)} size={28} />
               <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tn(m.away_id)}
               </span>
@@ -357,7 +357,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                       <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? accentColor : hT ? C.muted : C.muted, fontStyle: hT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {tn(s.home_id)}
                       </span>
-                      {hT && <TeamLogo team={hT} size={20} />}
+                      {hT && <TeamLogo team={hT} size={28} />}
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
                       {s.played ? (
@@ -369,7 +369,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
-                      {aT && <TeamLogo team={aT} size={20} />}
+                      {aT && <TeamLogo team={aT} size={28} />}
                       <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? accentColor : aT ? C.muted : C.muted, fontStyle: aT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {tn(s.away_id)}
                       </span>
@@ -398,7 +398,7 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
         <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {tn(match.home_id)}
         </span>
-        {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={18} />}
+        {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={28} />}
       </div>
       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
         {match.played ? (
@@ -410,7 +410,7 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
-        {tt(match.away_id) && <TeamLogo team={tt(match.away_id)!} size={18} />}
+        {tt(match.away_id) && <TeamLogo team={tt(match.away_id)!} size={28} />}
         <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {tn(match.away_id)}
         </span>
@@ -618,7 +618,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                       background: hw ? (isFinal ? 'rgba(217,119,6,.1)' : isThird ? 'rgba(146,64,14,.07)' : 'rgba(37,99,235,.08)') : 'transparent',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {hT && <TeamLogo team={hT} size={22} />}
+                        {hT && <TeamLogo team={hT} size={30} />}
                         <span style={{
                           fontSize: S.body,
                           fontWeight: hw ? 700 : 400,
@@ -642,7 +642,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                       background: aw ? (isFinal ? 'rgba(217,119,6,.1)' : isThird ? 'rgba(146,64,14,.07)' : 'rgba(37,99,235,.08)') : 'transparent',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {aT && <TeamLogo team={aT} size={22} />}
+                        {aT && <TeamLogo team={aT} size={30} />}
                         <span style={{
                           fontSize: S.body,
                           fontWeight: aw ? 700 : 400,
