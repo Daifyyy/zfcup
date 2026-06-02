@@ -35,14 +35,19 @@ function PlayerInfo({ playerId, players, teams }: { playerId: string; players: P
   if (!player) return null
   const team = teams.find(t => t.id === player.team_id)
   return (
-    <div>
-      <div style={{ fontWeight: 700, fontSize: 'var(--fs-body)' }}>{player.name}</div>
-      {team && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-          <TeamLogo team={team} size={28} />
-          <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{team.name}</span>
-        </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem' }}>
+      {player.avatar_url && (
+        <img src={player.avatar_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
       )}
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 'var(--fs-body)' }}>{player.name}</div>
+        {team && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+            <TeamLogo team={team} size={28} />
+            <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{team.name}</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

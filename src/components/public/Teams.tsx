@@ -90,12 +90,12 @@ export default function Teams({ teams, players, goals, bracketGoals = [], assist
               {/* header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '.65rem', marginBottom: '.75rem' }}>
                 {t.logo_url ? (
-                  <img src={t.logo_url} style={{ width: 38, height: 38, borderRadius: 9, objectFit: 'contain', flexShrink: 0, border: '1px solid var(--border)', background: '#fff' }} />
+                  <img src={t.logo_url} style={{ width: 52, height: 52, borderRadius: 11, objectFit: 'contain', flexShrink: 0, border: '1px solid var(--border)', background: '#fff' }} />
                 ) : (
                   <div style={{
-                    width: 38, height: 38, borderRadius: 9, flexShrink: 0,
+                    width: 52, height: 52, borderRadius: 11, flexShrink: 0,
                     background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', color: '#fff', fontWeight: 700,
+                    fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', color: '#fff', fontWeight: 700,
                   }}>
                     {t.name.substring(0, 2).toUpperCase()}
                   </div>
@@ -124,7 +124,7 @@ export default function Teams({ teams, players, goals, bracketGoals = [], assist
                       }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '.35rem', flex: 1, minWidth: 0 }}>
                           {p.avatar_url
-                            ? <img src={p.avatar_url} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                            ? <img src={p.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                             : <span className="team-dot" style={{ background: t.color, flexShrink: 0 }} />
                           }
                           <span style={{ color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
