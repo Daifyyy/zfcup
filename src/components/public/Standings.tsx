@@ -144,7 +144,7 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
                       </td>
                       <td style={{ padding: 'var(--pad-cell)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {team && <TeamLogo team={team} size={24} />}
+                          {team && <TeamLogo team={team} size={30} />}
                           <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
                           {/* Badge 🥇 u vítěze skupiny (skupinový formát) */}
                           {rs.badge && sfCutoff === undefined && i === 0 && (

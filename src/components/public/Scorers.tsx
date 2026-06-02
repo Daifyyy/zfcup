@@ -68,7 +68,7 @@ export default function Scorers({ goals, bracketGoals, assists, bracketAssists, 
                 <div style={{ fontWeight: 700, fontSize: 'var(--fs-body)' }}>{sc.name}</div>
                 {team && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                    <TeamLogo team={team} size={28} />
+                    <TeamLogo team={team} size={34} />
                     <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>{team.name}</span>
                   </div>
                 )}

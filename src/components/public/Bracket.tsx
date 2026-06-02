@@ -78,7 +78,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
                       borderBottom: `1px solid ${borderColor}`,
                       background: hw ? winnerBg : 'transparent',
                     }}>
-                      {hT && <TeamLogo team={hT} size={28} />}
+                      {hT && <TeamLogo team={hT} size={34} />}
                       <span style={{
                         flex: 1, minWidth: 0,
                         fontWeight: hw ? 700 : 500,
@@ -107,7 +107,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
                       padding: '.55rem 1rem',
                       background: aw ? winnerBg : 'transparent',
                     }}>
-                      {aT && <TeamLogo team={aT} size={28} />}
+                      {aT && <TeamLogo team={aT} size={34} />}
                       <span style={{
                         flex: 1, minWidth: 0,
                         fontWeight: aw ? 700 : 500,
