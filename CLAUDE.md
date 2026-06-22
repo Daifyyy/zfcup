@@ -193,6 +193,13 @@ Aktivní záložky (Zápasy, Play-off, Tipovačka) = zelené pozadí (`ACTION_TA
 ## Vercel deployment
 `VITE_SUPABASE_URL` a `VITE_SUPABASE_ANON_KEY` jsou baked při buildu — změna env vars v dashboardu vyžaduje redeploy.
 
+### Maintenance režim (Basic Auth)
+Soubor `middleware.ts` v kořeni projektu chrání aplikaci heslem.
+- **Aktivace**: Vercel env var `MAINTENANCE = true` + Redeploy
+- **Deaktivace**: `MAINTENANCE = false` nebo smazat proměnnou + Redeploy (bez commitu)
+- Přihlašovací údaje: `denis` / `zftest2026`
+- Proměnná `MAINTENANCE` je server-side (ne `VITE_` prefix) — čte ji edge middleware, ne frontend bundle
+
 **Checklist "No API key" / kód 21000:**
 - `package.json`: `"@supabase/supabase-js": "2.49.1"` (bez `^`)
 - `src/lib/supabase.ts`: `global: { headers: { apikey: supabaseAnonKey } }`
