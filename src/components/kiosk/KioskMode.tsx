@@ -11,6 +11,7 @@ import type { Goal } from '../../hooks/useGoals'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Announcement } from '../../hooks/useAnnouncements'
+import { getSportDef } from '../../lib/sports'
 
 /* ── Palette ───────────────────────────────────────────── */
 const C = {
@@ -39,11 +40,13 @@ const S = {
 
 /* ── Views config ──────────────────────────────────────── */
 type KioskView = 'matches' | 'table' | 'bracket'
-const ALL_VIEWS: { key: KioskView; label: string; icon: string }[] = [
-  { key: 'matches', label: 'Zápasy',  icon: '⚽' },
-  { key: 'table',   label: 'Tabulka', icon: '📊' },
-  { key: 'bracket', label: 'Pavouk',  icon: '🏆' },
-]
+function getViews(sportIcon: string): { key: KioskView; label: string; icon: string }[] {
+  return [
+    { key: 'matches', label: 'Zápasy',  icon: sportIcon },
+    { key: 'table',   label: 'Tabulka', icon: '📊' },
+    { key: 'bracket', label: 'Pavouk',  icon: '🏆' },
+  ]
+}
 const ROTATION_MS = 15_000
 
 /* ── Clock hook ────────────────────────────────────────── */
@@ -279,6 +282,8 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
 }) {
   const gt = (id: string) => teams.find(t => t.id === id)
   const isLeague = tournament?.format === 'league'
+  const sportDef = getSportDef(tournament?.sport)
+  const allowDraws = sportDef.standings.allowDraws
 
   const leagueRowStyle = (i: number) => {
     if (i < 2) return { bg: 'rgba(22,163,74,.10)',  borderLeft: '3px solid rgba(22,163,74,.6)',   numColor: '#15803d' }
@@ -307,7 +312,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
             <div style={{ color: C.muted, fontSize: S.body, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>Žádné skupiny</div>
           ) : (
             groups.map(group => {
-              const rows = calcGroupStandings(group, matches)
+              const rows = calcGroupStandings(group, matches, sportDef)
               return (
                 <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ marginBottom: '.25rem', paddingBottom: '.18rem', borderBottom: `1px solid ${C.border}` }}>
@@ -325,7 +330,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr>
-                          {['#', 'Tým', 'Z', 'V', 'R', 'P', 'Sk', 'B'].map((h, i) => (
+                          {(allowDraws ? ['#', 'Tým', 'Z', 'V', 'R', 'P', 'Sk', 'B'] : ['#', 'Tým', 'Z', 'V', 'P', 'Sk', 'B']).map((h, i) => (
                             <th key={h} style={{ fontSize: S.label, textTransform: 'uppercase', letterSpacing: '.08em', color: C.muted, textAlign: i <= 1 ? 'left' : 'center', padding: '.1rem .22rem', fontWeight: 600 }}>{h}</th>
                           ))}
                         </tr>
@@ -350,7 +355,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
                                   </span>
                                 </div>
                               </td>
-                              {[row.played, row.w, row.d, row.l].map((v, j) => (
+                              {(allowDraws ? [row.played, row.w, row.d, row.l] : [row.played, row.w, row.l]).map((v, j) => (
                                 <td key={j} style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{v}</td>
                               ))}
                               <td style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{row.gf}:{row.ga}</td>
@@ -375,7 +380,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
       {/* Right: Scorers */}
       <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '.6rem .8rem .4rem' }}>
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.1em', color: C.gold, marginBottom: '.3rem', flexShrink: 0 }}>
-          ⚽ Střelci
+          {sportDef.icon} {sportDef.terms.scorersLabel}
         </div>
         {scorers.length === 0 ? (
           <div style={{ color: C.muted, fontSize: S.body, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>Žádní střelci</div>
@@ -471,10 +476,12 @@ function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots:
 }
 
 /* ── Sub-header labels ───────────────────────────────────── */
-const VIEW_SUBHEADERS: Record<KioskView, { icon: string; label: string }> = {
-  matches: { icon: '⚽', label: 'Zápasy — výsledky' },
-  table:   { icon: '📊', label: 'Tabulka & střelci' },
-  bracket: { icon: '🏆', label: 'Play-off — pavouk' },
+function getSubheaders(sportIcon: string): Record<KioskView, { icon: string; label: string }> {
+  return {
+    matches: { icon: sportIcon, label: 'Zápasy — výsledky' },
+    table:   { icon: '📊', label: 'Tabulka & střelci' },
+    bracket: { icon: '🏆', label: 'Play-off — pavouk' },
+  }
 }
 
 /* ── Main KioskMode ─────────────────────────────────────── */
@@ -489,8 +496,10 @@ interface Props {
 }
 
 export default function KioskMode({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit, onScoreboard }: Props) {
+  const sportIcon = getSportDef(tournament?.sport).icon
   const bracketActive = bracketSlots.some(s => s.home_id != null || s.away_id != null)
-  const effectiveViews = bracketActive ? ALL_VIEWS : ALL_VIEWS.filter(v => v.key !== 'bracket')
+  const allViews = getViews(sportIcon)
+  const effectiveViews = bracketActive ? allViews : allViews.filter(v => v.key !== 'bracket')
 
   const [idx, setIdx] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -535,7 +544,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
     setPaused(false)
   }
 
-  const subhdr = VIEW_SUBHEADERS[currentView.key]
+  const subhdr = getSubheaders(sportIcon)[currentView.key]
 
   return (
     <div onClick={handleClick} style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', flexDirection: 'column', background: C.bg, cursor: paused ? 'pointer' : 'default', userSelect: 'none', fontFamily: "'DM Sans', sans-serif", color: C.text }}>

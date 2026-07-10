@@ -29,6 +29,7 @@ import TipsAdminTab from './tabs/TipsAdminTab'
 import RefereesTab from './tabs/RefereesTab'
 import SponsorsTab from './tabs/SponsorsTab'
 import type { Sponsor } from '../../hooks/useSponsors'
+import { getSportDef } from '../../lib/sports'
 
 type ATab = 'info' | 'announcements' | 'rules' | 'teams' | 'referees' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'sponsors' | 'settings'
 
@@ -168,7 +169,7 @@ export default function AdminPanel(props: Props) {
           display: 'flex', alignItems: 'center', gap: '.65rem',
           flexShrink: 0,
         }}>
-          <span style={{ fontSize: '1.1rem' }}>⚽</span>
+          <span style={{ fontSize: '1.1rem' }}>{getSportDef(props.tournament?.sport).icon}</span>
           <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '.06em', flex: 1 }}>
             Admin panel
           </h2>

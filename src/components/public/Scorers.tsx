@@ -7,6 +7,7 @@ import type { BracketAssist } from '../../hooks/useBracketAssists'
 import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
+import { getSportDef } from '../../lib/sports'
 
 interface Props {
   goals: Goal[]
@@ -21,6 +22,7 @@ interface Props {
 export default function Scorers({ goals, bracketGoals, assists, bracketAssists, players, teams, tournament }: Props) {
   const gt = (id: string) => teams.find(t => t.id === id)
   const showAssists = tournament?.assists_enabled ?? false
+  const sportDef = getSportDef(tournament?.sport)
 
   const goalAgg: Record<string, number> = {}
   for (const g of goals) goalAgg[g.player_id] = (goalAgg[g.player_id] ?? 0) + g.count
@@ -37,7 +39,7 @@ export default function Scorers({ goals, bracketGoals, assists, bracketAssists, 
     .filter(s => s.goals > 0 || (showAssists && s.assists > 0))
     .sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists) || b.goals - a.goals)
 
-  if (!scorers.length) return <Empty icon="⚽" text="Žádní střelci." />
+  if (!scorers.length) return <Empty icon={sportDef.icon} text="Žádní střelci." />
 
   return (
     <div>
@@ -74,7 +76,7 @@ export default function Scorers({ goals, bracketGoals, assists, bracketAssists, 
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                <span style={{ fontSize: 'var(--fs-body)', opacity: .5 }}>⚽</span>
+                <span style={{ fontSize: 'var(--fs-body)', opacity: .5 }}>{sportDef.icon}</span>
                 <span style={{
                   fontFamily: "'Bebas Neue', sans-serif",
                   fontSize: 'var(--fs-goal)',

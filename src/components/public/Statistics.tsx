@@ -4,11 +4,14 @@ import type { Assist } from '../../hooks/useAssists'
 import type { BracketAssist } from '../../hooks/useBracketAssists'
 import type { Card } from '../../hooks/useCards'
 import type { BracketCard } from '../../hooks/useBracketCards'
+import type { Penalty } from '../../hooks/usePenalties'
+import type { BracketPenalty } from '../../hooks/useBracketPenalties'
 import type { Player } from '../../hooks/usePlayers'
 import type { Team } from '../../hooks/useTeams'
 import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
+import { getSportDef } from '../../lib/sports'
 
 interface Props {
   goals: Goal[]
@@ -17,6 +20,8 @@ interface Props {
   bracketAssists: BracketAssist[]
   cards: Card[]
   bracketCards: BracketCard[]
+  penalties: Penalty[]
+  bracketPenalties: BracketPenalty[]
   players: Player[]
   teams: Team[]
   tournament: Tournament | null
@@ -61,9 +66,11 @@ function SectionHead({ title, count }: { title: string; count: number }) {
   )
 }
 
-export default function Statistics({ goals, bracketGoals, assists, bracketAssists, cards, bracketCards, players, teams, tournament }: Props) {
+export default function Statistics({ goals, bracketGoals, assists, bracketAssists, cards, bracketCards, penalties, bracketPenalties, players, teams, tournament }: Props) {
   const showAssists = tournament?.assists_enabled ?? false
   const showCards = tournament?.cards_enabled ?? false
+  const showPenalties = tournament?.penalty_minutes_enabled ?? false
+  const sportDef = getSportDef(tournament?.sport)
 
   // ── Scorers ──────────────────────────────────────────────────────────────────
   const goalAgg: Record<string, number> = {}
@@ -103,7 +110,18 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
         .sort((a, b) => b.severity - a.severity)
     : []
 
-  const hasAnyData = scorers.length > 0 || nahrávači.length > 0 || disciplína.length > 0
+  // ── Penalty minutes leaderboard (hockey) ──────────────────────────────────────
+  const penaltyAgg: Record<string, number> = {}
+  if (showPenalties) {
+    for (const p of [...penalties, ...bracketPenalties]) penaltyAgg[p.player_id] = (penaltyAgg[p.player_id] ?? 0) + p.minutes
+  }
+  const trestnéMinuty = showPenalties
+    ? Object.entries(penaltyAgg)
+        .map(([id, minutes]) => ({ id, minutes }))
+        .sort((a, b) => b.minutes - a.minutes)
+    : []
+
+  const hasAnyData = scorers.length > 0 || nahrávači.length > 0 || disciplína.length > 0 || trestnéMinuty.length > 0
 
   if (!hasAnyData) return <Empty icon="📈" text="Žádné statistiky." />
 
@@ -112,7 +130,7 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
       {/* ── Střelci ── */}
       {scorers.length > 0 && (
         <>
-          <SectionHead title="⚽ Střelci" count={scorers.length} />
+          <SectionHead title={`${sportDef.icon} ${sportDef.terms.scorersLabel}`} count={scorers.length} />
           <div className="card" style={{ overflow: 'hidden' }}>
             {scorers.map((sc, i) => {
               const isFirst = i === 0
@@ -128,7 +146,7 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
                   </div>
                   <PlayerInfo playerId={sc.id} players={players} teams={teams} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                    <span style={{ fontSize: 'var(--fs-body)', opacity: .5 }}>⚽</span>
+                    <span style={{ fontSize: 'var(--fs-body)', opacity: .5 }}>{sportDef.icon}</span>
                     <span style={{
                       fontFamily: "'Bebas Neue', sans-serif",
                       fontSize: 'var(--fs-goal)',
@@ -222,6 +240,27 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
           </div>
           <div style={{ marginTop: '.6rem', fontSize: '.72rem', color: 'var(--muted)', textAlign: 'center' }}>
             🟡 žlutá · 🟡🔴 dvě žluté → červená · 🔴 přímá červená
+          </div>
+        </>
+      )}
+
+      {/* ── Trestné minuty ── */}
+      {showPenalties && trestnéMinuty.length > 0 && (
+        <>
+          <SectionHead title="🚨 Trestné minuty" count={trestnéMinuty.length} />
+          <div className="card" style={{ overflow: 'hidden' }}>
+            {trestnéMinuty.map((r, i) => (
+              <div key={r.id} style={{
+                ...ROW,
+                borderBottom: i < trestnéMinuty.length - 1 ? '1px solid var(--border)' : 'none',
+              }}>
+                <div style={{ textAlign: 'center', fontSize: '1.1rem' }}>🚨</div>
+                <PlayerInfo playerId={r.id} players={players} teams={teams} />
+                <span style={{ fontSize: '.75rem', fontWeight: 700, background: 'rgba(220,38,38,.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,.25)', borderRadius: 5, padding: '2px 7px' }}>
+                  {r.minutes} min
+                </span>
+              </div>
+            ))}
           </div>
         </>
       )}

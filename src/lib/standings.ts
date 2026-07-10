@@ -1,5 +1,6 @@
 import type { Group } from '../hooks/useGroups'
 import type { Match } from '../hooks/useMatches'
+import { getSportDef, type SportDef } from './sports'
 
 export interface StandingRow {
   id: string
@@ -13,7 +14,10 @@ export interface StandingRow {
   pts: number
 }
 
-export function calcGroupStandings(group: Group, matches: Match[]): StandingRow[] {
+export function calcGroupStandings(group: Group, matches: Match[], sportDef: SportDef = getSportDef('football')): StandingRow[] {
+  const { winPts, lossPts } = sportDef.standings
+  const tiePts = sportDef.standings.drawPts ?? lossPts
+
   const rows: Record<string, StandingRow> = {}
   for (const id of group.team_ids) {
     rows[id] = { id, played: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 }
@@ -26,9 +30,9 @@ export function calcGroupStandings(group: Group, matches: Match[]): StandingRow[
     h.gf += m.home_score; h.ga += m.away_score
     a.gf += m.away_score; a.ga += m.home_score
     h.played++; a.played++
-    if (m.home_score > m.away_score) { h.w++; h.pts += 3; a.l++ }
-    else if (m.home_score < m.away_score) { a.w++; a.pts += 3; h.l++ }
-    else { h.d++; h.pts++; a.d++; a.pts++ }
+    if (m.home_score > m.away_score) { h.w++; h.pts += winPts; a.l++; a.pts += lossPts }
+    else if (m.home_score < m.away_score) { a.w++; a.pts += winPts; h.l++; h.pts += lossPts }
+    else { h.d++; h.pts += tiePts; a.d++; a.pts += tiePts }
   }
 
   const arr = Object.values(rows).map(r => ({ ...r, gd: r.gf - r.ga }))
@@ -41,13 +45,13 @@ export function calcGroupStandings(group: Group, matches: Match[]): StandingRow[
     let aPts = 0, bPts = 0
     for (const m of h2h) {
       if (m.home_id === a.id) {
-        if (m.home_score > m.away_score) aPts += 3
-        else if (m.home_score === m.away_score) { aPts++; bPts++ }
-        else bPts += 3
+        if (m.home_score > m.away_score) aPts += winPts
+        else if (m.home_score === m.away_score) { aPts += tiePts; bPts += tiePts }
+        else bPts += winPts
       } else {
-        if (m.away_score > m.home_score) aPts += 3
-        else if (m.away_score === m.home_score) { aPts++; bPts++ }
-        else bPts += 3
+        if (m.away_score > m.home_score) aPts += winPts
+        else if (m.away_score === m.home_score) { aPts += tiePts; bPts += tiePts }
+        else bPts += winPts
       }
     }
     return bPts - aPts

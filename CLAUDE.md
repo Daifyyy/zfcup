@@ -14,6 +14,14 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 ## Multi-tenant architektura
 Každá datová tabulka má `tournament_id UUID NOT NULL FK → tournament(id)`. Viz `db-backup/05_migrations.sql`.
 
+## Multi-sport architektura
+Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'football'|'hockey'`, NOT NULL, default `'football'`) — viz `db-backup/07_multisport.sql`.
+- **Registr sportů**: `src/lib/sports.ts` — `SportDef` (ikona, terminologie hřiště/výkopu/částí zápasu, bodovací vzorec V/R/P, typ modulu disciplíny). `getSportDef(tournament?.sport)` vždy vrací platnou definici (fallback fotbal).
+- **Sport je needitovatelný po založení turnaje** — volí se jen ve `TournamentLanding` při vytváření; `SettingsTab` jej zobrazuje read-only. Důvod: změna sportu za chodu by rozbila konzistenci bodování a rozehraných dat.
+- **Bodování (`src/lib/standings.ts`)**: `calcGroupStandings(group, matches, sportDef?)` — třetí parametr volitelný s fotbalovým defaultem (V3/R1/P0), takže zpětně kompatibilní se všemi voláními, která jej nepředávají. Hokej: `allowDraws: false` → sloupec remíz se v `Standings.tsx`/`Scoreboard.tsx`/`KioskMode.tsx` skryje.
+- **Disciplína — dva paralelní moduly**: `cards`/`bracket_cards` (fotbal, žlutá/červená, `cards_enabled`) a `penalties`/`bracket_penalties` (hokej, trestné minuty 2/5/10, `penalty_minutes_enabled`). Hooky `usePenalties`/`useBracketPenalties`. Žádný modul nenahrazuje druhý — `SettingsTab` nabízí jen ten, který odpovídá `sportDef.discipline`.
+- **Známý dluh**: admin vstupní formulář pro trestné minuty (obdoba karet v `MatchesTab`/`BracketTab` slot editorech) zatím není implementován — DB, hooky i veřejné zobrazení (`Statistics.tsx`) jsou hotové, zadávání se teprve doplní. Podobně `tipsEval.ts` a `bracket-formats/*.ts` seedovací funkce zatím vždy počítají s fotbalovým bodováním (fast-follow, netýká se fotbalových turnajů).
+
 ### Typy uživatelů
 | Typ | Auth |
 |-----|------|
@@ -36,7 +44,8 @@ Stručný přehled RLS šablony: SELECT pro všechny (anon), ALL pro authenticat
 - `matches.scheduled_time TEXT NOT NULL`, `matches.round TEXT NOT NULL` — při UPDATE posílat `''`, **ne `null`** → jinak 400
 - `goals`: UNIQUE(player_id, match_id); `bracket_goals`: UNIQUE(slot_id, player_id) — **samostatná tabulka**, playoff sloty nejsou v `matches`
 - `special_tips.predicted_team_id` nullable — pro `top_scorer` INSERT nutno `predicted_team_id: null`
-- `tournament` klíčové sloupce: `format ('groups'|'league')`, `format_id TEXT`, `league_has_playoff BOOL`, `num_pitches INT DEFAULT 2`, `tips_enabled BOOL`, `tips_lock_from TEXT`, `assists_enabled BOOL`, `cards_enabled BOOL`, `sponsors_enabled BOOL`, `logo_url TEXT`, `slug TEXT UNIQUE NOT NULL`
+- `tournament` klíčové sloupce: `format ('groups'|'league')`, `format_id TEXT`, `league_has_playoff BOOL`, `num_pitches INT DEFAULT 2`, `tips_enabled BOOL`, `tips_lock_from TEXT`, `assists_enabled BOOL`, `cards_enabled BOOL`, `sponsors_enabled BOOL`, `logo_url TEXT`, `slug TEXT UNIQUE NOT NULL`, `sport TEXT NOT NULL DEFAULT 'football'` (`'football'|'hockey'`, needitovatelné po založení), `penalty_minutes_enabled BOOL`
+- `matches`/`bracket_slots.decided_in`: nullable `'regulation'|'ot'|'so'` — skeleton pro budoucí prodloužení/nájezdy, u fotbalu se nepoužívá
 - `sponsors`: `id, tournament_id, name, logo_url, website_url, position` — UNIQUE none; Storage `team-logos/sponsors/{id}.png`
 - `special_tips`: UNIQUE(tipster_id, tip_type, **tournament_id**) — `tournament_id` NOT NULL (migrace v 05_migrations.sql)
 - `announcements`: `type TEXT DEFAULT 'text'` (`'text'|'image'|'video'`), `media_url TEXT`
