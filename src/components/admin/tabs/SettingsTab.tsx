@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
 import { TOURNAMENT_FORMATS, getFormatDef } from '../../../lib/formats'
+import { getSportDef } from '../../../lib/sports'
 
 interface Props {
   tournament: Tournament | null
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function SettingsTab({ tournament, refetchTournament, refetchGroups, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals, showToast }: Props) {
+  const sportDef = getSportDef(tournament?.sport)
   const [p1, setP1] = useState('')
   const [p2, setP2] = useState('')
   const [loading, setLoading] = useState(false)
@@ -173,6 +175,18 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
 
   return (
     <div>
+      {/* ── Sport (needitovatelné po založení) ───────────────────────────── */}
+      <div className="sub-title">Sport</div>
+      <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+        <span style={{ fontSize: '1.3rem' }}>{sportDef.icon}</span>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: '.85rem' }}>{sportDef.label}</div>
+          <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: 2 }}>
+            Sport se volí při založení turnaje a nelze jej později změnit.
+          </div>
+        </div>
+      </div>
+
       {/* ── Format Picker ─────────────────────────────────────────────────── */}
       <div className="sub-title">Formát turnaje</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '.45rem', marginBottom: '1rem' }}>
@@ -223,14 +237,14 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
         })}
       </div>
 
-      {/* Počet hřišť — vždy viditelné, platí pro skupiny i ligu */}
+      {/* Počet hřišť/kluzišť — vždy viditelné, platí pro skupiny i ligu */}
       <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .95rem', marginBottom: '.75rem' }}>
         <div style={{ fontSize: '.72rem', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '.5rem' }}>
-          Počet hřišť
+          Počet {sportDef.terms.pitchLabel.toLowerCase()}
         </div>
         <div className="field-row" style={{ alignItems: 'flex-end' }}>
           <div className="field-group">
-            <label className="field-label">Hřiště k dispozici (1–4)</label>
+            <label className="field-label">{sportDef.terms.pitchLabel} k dispozici (1–4)</label>
             <input
               className="field-input"
               type="number"
@@ -245,7 +259,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
               if (!tournament) return
               const { error } = await supabase.from('tournament').update({ num_pitches: numPitches }).eq('id', tournament.id)
               if (error) showToast('Chyba: ' + error.message)
-              else { showToast(`Počet hřišť: ${numPitches} ✓`); refetchTournament() }
+              else { showToast(`Počet ${sportDef.terms.pitchLabel.toLowerCase()}: ${numPitches} ✓`); refetchTournament() }
             }}>💾 Uložit</button>
           </div>
         </div>
@@ -329,15 +343,16 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           </div>
           <div className="field-row">
             <div className="field-group">
-              <label className="field-label">Poločasy</label>
+              <label className="field-label">Počet částí zápasu</label>
               <select className="field-input field-select" value={leagueParams.halves}
                 onChange={e => setLeagueParams(p => ({ ...p, halves: parseInt(e.target.value) }))}>
-                <option value={1}>1 poločas</option>
-                <option value={2}>2 poločasy</option>
+                {sportDef.terms.periodOptions.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
             </div>
             <div className="field-group">
-              <label className="field-label">Playoff — čas výkopu</label>
+              <label className="field-label">Playoff — čas {sportDef.terms.kickoffLabel.toLowerCase()}u</label>
               <input className="field-input" type="time" value={leagueParams.playoff_kickoff}
                 onChange={e => setLeagueParams(p => ({ ...p, playoff_kickoff: e.target.value }))} />
             </div>
@@ -355,12 +370,18 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           title: 'Asistence',
           desc: (on: boolean) => on ? 'Pole pro asistenci viditelné při zadávání zápasů a v přehledu střelců' : 'Asistence jsou skryté — zadávají se jen góly',
         },
-        {
+        ...(sportDef.discipline === 'cards' ? [{
           key: 'cards_enabled' as const,
           enabled: tournament?.cards_enabled ?? false,
           title: 'Kartičky & disciplína',
           desc: (on: boolean) => on ? 'Záložka Disciplína viditelná; kartičky se zadávají u každého zápasu' : 'Kartičky jsou vypnuté',
-        },
+        }] : []),
+        ...(sportDef.discipline === 'penaltyMinutes' ? [{
+          key: 'penalty_minutes_enabled' as const,
+          enabled: tournament?.penalty_minutes_enabled ?? false,
+          title: 'Trestné minuty & disciplína',
+          desc: (on: boolean) => on ? 'Záložka Disciplína viditelná; trestné minuty se zadávají u každého zápasu' : 'Trestné minuty jsou vypnuté',
+        }] : []),
         {
           key: 'sponsors_enabled' as const,
           enabled: tournament?.sponsors_enabled ?? false,

@@ -6,6 +6,7 @@ import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
 import { getAdvancingCutoffs } from '../../lib/formats'
+import { getSportDef } from '../../lib/sports'
 
 interface Props {
   groups: Group[]
@@ -33,6 +34,8 @@ function rowStyle(i: number, advancing: number, consolation: number, sfCutoff?: 
 export default function Standings({ groups, matches, teams, tournament }: Props) {
   const gt = (id: string) => teams.find(t => t.id === id)
   const isLeague = tournament?.format === 'league'
+  const sportDef = getSportDef(tournament?.sport)
+  const allowDraws = sportDef.standings.allowDraws
 
   const cutoffs = tournament
     ? getAdvancingCutoffs(tournament.format_id ?? '', tournament)
@@ -51,7 +54,7 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
       </div>
 
       {groups.map(group => {
-        const rows = calcGroupStandings(group, matches)
+        const rows = calcGroupStandings(group, matches, sportDef)
         const playedCount = matches.filter(m => m.group_id === group.id && m.played).length
 
         return (
@@ -112,7 +115,7 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
             <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-body)' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                  {(['#', 'Tým', 'Z', 'V', 'R', 'P', 'Skóre', '+/−', 'Body'] as const).map((h, i) => (
+                  {(allowDraws ? ['#', 'Tým', 'Z', 'V', 'R', 'P', 'Skóre', '+/−', 'Body'] : ['#', 'Tým', 'Z', 'V', 'P', 'Skóre', '+/−', 'Body']).map((h, i) => (
                     <th key={h} style={{
                       padding: 'var(--pad-cell)',
                       color: 'var(--muted)', fontSize: 'var(--fs-label)',
@@ -152,7 +155,7 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
                           )}
                         </div>
                       </td>
-                      {[row.played, row.w, row.d, row.l].map((v, j) => (
+                      {(allowDraws ? [row.played, row.w, row.d, row.l] : [row.played, row.w, row.l]).map((v, j) => (
                         <td key={j} style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: 'var(--muted)' }}>{v}</td>
                       ))}
                       <td style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: 'var(--muted)' }}>{row.gf}:{row.ga}</td>

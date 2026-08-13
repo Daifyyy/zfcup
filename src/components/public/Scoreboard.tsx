@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { calcGroupStandings } from '../../lib/standings'
 import { addMinutes } from '../../lib/constants'
+import { getSportDef } from '../../lib/sports'
 import QRCode from '../ui/QRCode'
 import { TeamLogo } from '../ui/TeamLogo'
 import type { Tournament } from '../../hooks/useTournament'
@@ -69,6 +70,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
 }) {
   const gt = (id: string) => teams.find(t => t.id === id)
   const isLeague = tournament?.format === 'league'
+  const sportDef = getSportDef(tournament?.sport)
 
   // Top 5 scorers — aggregate group goals + bracket_goals (memoized)
   const scorers = useMemo(() => {
@@ -97,7 +99,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
           <div style={{ color: C.muted, fontSize: S.body }}>Žádné skupiny</div>
         ) : (
           groups.map(group => {
-            const rows = calcGroupStandings(group, matches)
+            const rows = calcGroupStandings(group, matches, sportDef)
             return (
               <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 {/* Header */}
@@ -194,7 +196,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
             color: C.gold,
             marginBottom: '.15rem',
           }}>
-            ⚽ Střelci
+            {sportDef.icon} {sportDef.terms.scorersLabel}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.08rem' }}>
             {scorers.map((s, i) => (
@@ -683,7 +685,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
   const isLeague = tournament?.format === 'league'
   const cols = [
     { icon: '📊', label: isLeague ? 'Liga — tabulka & střelci' : 'Skupiny — tabulky & střelci' },
-    { icon: '⚽', label: 'Zápasy — výsledky' },
+    { icon: getSportDef(tournament?.sport).icon, label: 'Zápasy — výsledky' },
   ]
 
   return (

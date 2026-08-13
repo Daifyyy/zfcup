@@ -9,10 +9,12 @@ import type { Match } from '../../hooks/useMatches'
 import type { Goal } from '../../hooks/useGoals'
 import type { Assist } from '../../hooks/useAssists'
 import type { Card } from '../../hooks/useCards'
+import type { Penalty } from '../../hooks/usePenalties'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { BracketAssist } from '../../hooks/useBracketAssists'
 import type { BracketCard } from '../../hooks/useBracketCards'
+import type { BracketPenalty } from '../../hooks/useBracketPenalties'
 import type { Announcement } from '../../hooks/useAnnouncements'
 import type { RuleItem } from '../../hooks/useRuleItems'
 import type { Referee } from '../../hooks/useReferees'
@@ -29,6 +31,7 @@ import TipsAdminTab from './tabs/TipsAdminTab'
 import RefereesTab from './tabs/RefereesTab'
 import SponsorsTab from './tabs/SponsorsTab'
 import type { Sponsor } from '../../hooks/useSponsors'
+import { getSportDef } from '../../lib/sports'
 
 type ATab = 'info' | 'announcements' | 'rules' | 'teams' | 'referees' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'sponsors' | 'settings'
 
@@ -61,6 +64,7 @@ interface Props {
   goals: Goal[]
   assists: Assist[]
   cards: Card[]
+  penalties: Penalty[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   announcements: Announcement[]
@@ -68,6 +72,7 @@ interface Props {
   bracketGoals: BracketGoal[]
   bracketAssists: BracketAssist[]
   bracketCards: BracketCard[]
+  bracketPenalties: BracketPenalty[]
   referees: Referee[]
   refetchTournament: () => void
   refetchTeams: () => void
@@ -77,6 +82,8 @@ interface Props {
   refetchGoals: () => void
   refetchAssists: () => void
   refetchCards: () => void
+  refetchPenalties: () => void
+  refetchBracketPenalties: () => void
   refetchBracket: () => void
   refetchBracketGoals: () => void
   refetchBracketAssists: () => void
@@ -168,7 +175,7 @@ export default function AdminPanel(props: Props) {
           display: 'flex', alignItems: 'center', gap: '.65rem',
           flexShrink: 0,
         }}>
-          <span style={{ fontSize: '1.1rem' }}>⚽</span>
+          <span style={{ fontSize: '1.1rem' }}>{getSportDef(props.tournament?.sport).icon}</span>
           <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '.06em', flex: 1 }}>
             Admin panel
           </h2>

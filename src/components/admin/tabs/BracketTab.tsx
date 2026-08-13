@@ -11,6 +11,8 @@ import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { BracketGoal } from '../../../hooks/useBracketGoals'
 import type { BracketAssist } from '../../../hooks/useBracketAssists'
 import type { BracketCard } from '../../../hooks/useBracketCards'
+import type { BracketPenalty } from '../../../hooks/useBracketPenalties'
+import type { PenaltyMinutes } from '../../../hooks/usePenalties'
 import type { Tournament } from '../../../hooks/useTournament'
 import type { Referee } from '../../../hooks/useReferees'
 
@@ -24,20 +26,22 @@ interface Props {
   bracketGoals: BracketGoal[]
   bracketAssists: BracketAssist[]
   bracketCards: BracketCard[]
+  bracketPenalties: BracketPenalty[]
   referees?: Referee[]
   refetchBracket: () => Promise<void> | void
   refetchBracketGoals: () => void
   refetchBracketAssists: () => void
   refetchBracketCards: () => void
+  refetchBracketPenalties: () => void
   tournament: Tournament | null
   showToast: (msg: string) => void
 }
 
 // ── Slot Editor (skóre + góly v jednom panelu, stejný layout jako MatchesTab) ──
 function SlotEditor({
-  slot, teams, players, bracketGoals, bracketAssists, bracketCards,
-  referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards,
-  assistsEnabled, cardsEnabled, tournamentId, showToast, onSave,
+  slot, teams, players, bracketGoals, bracketAssists, bracketCards, bracketPenalties,
+  referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, refetchBracketPenalties,
+  assistsEnabled, cardsEnabled, penaltiesEnabled, tournamentId, showToast, onSave,
 }: {
   slot: BracketSlot
   teams: Team[]
@@ -45,12 +49,15 @@ function SlotEditor({
   bracketGoals: BracketGoal[]
   bracketAssists: BracketAssist[]
   bracketCards: BracketCard[]
+  bracketPenalties: BracketPenalty[]
   referees: Referee[]
   refetchBracketGoals: () => void
   refetchBracketAssists: () => void
   refetchBracketCards: () => void
+  refetchBracketPenalties: () => void
   assistsEnabled: boolean
   cardsEnabled: boolean
+  penaltiesEnabled: boolean
   tournamentId: string
   showToast: (m: string) => void
   onSave: (data: Partial<BracketSlot>) => Promise<void>
@@ -91,16 +98,31 @@ function SlotEditor({
     return c
   }
 
+  const buildPenaltyData = (homeId: string | null, awayId: string | null) => {
+    const p: Record<string, PenaltyMinutes[]> = {}
+    for (const pl of [...players.filter(p => p.team_id === homeId), ...players.filter(p => p.team_id === awayId)]) {
+      p[pl.id] = bracketPenalties.filter(x => x.player_id === pl.id && x.slot_id === slot.id).map(x => x.minutes)
+    }
+    return p
+  }
+
   const [counts, setCounts] = useState<Record<string, number>>(() => buildCounts(slot.home_id, slot.away_id))
   const [assistCounts, setAssistCounts] = useState<Record<string, number>>(() => buildAssistCounts(slot.home_id, slot.away_id))
   const [cardData, setCardData] = useState<Record<string, { yellow: number; red: number }>>(() => buildCardData(slot.home_id, slot.away_id))
+  const [penaltyData, setPenaltyData] = useState<Record<string, PenaltyMinutes[]>>(() => buildPenaltyData(slot.home_id, slot.away_id))
 
   // Re-init when teams change
   useEffect(() => {
     setCounts(buildCounts(s.home_id, s.away_id))
     setAssistCounts(buildAssistCounts(s.home_id, s.away_id))
     setCardData(buildCardData(s.home_id, s.away_id))
+    setPenaltyData(buildPenaltyData(s.home_id, s.away_id))
   }, [s.home_id, s.away_id, slot.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addPenalty = (pid: string, minutes: PenaltyMinutes) =>
+    setPenaltyData(p => ({ ...p, [pid]: [...(p[pid] ?? []), minutes] }))
+  const removePenalty = (pid: string, index: number) =>
+    setPenaltyData(p => ({ ...p, [pid]: (p[pid] ?? []).filter((_, i) => i !== index) }))
 
   const changeScore = (k: 'home_score' | 'away_score', delta: number) => {
     setS(x => {
@@ -178,7 +200,20 @@ function SlotEditor({
         refetchBracketCards()
       }
 
-      // 4) Save slot + auto-advance
+      // 4) Save penalties
+      if (penaltiesEnabled) {
+        await supabase.from('bracket_penalties').delete().eq('slot_id', slot.id)
+        const penaltyRows = Object.entries(penaltyData).flatMap(([player_id, minutesList]) =>
+          minutesList.map(minutes => ({ player_id, slot_id: slot.id, minutes, tournament_id: tournamentId }))
+        )
+        if (penaltyRows.length > 0) {
+          const { error: pErr } = await supabase.from('bracket_penalties').insert(penaltyRows)
+          if (pErr) showToast('Chyba trestných minut: ' + pErr.message)
+        }
+        refetchBracketPenalties()
+      }
+
+      // 5) Save slot + auto-advance
       const autoPlayed = s.played || s.home_score > 0 || s.away_score > 0
       await onSave({
         home_id: s.home_id, away_id: s.away_id,
@@ -208,24 +243,46 @@ function SlotEditor({
   )
 
   const PlayerRow = ({ p, color }: { p: Player; color: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.38rem 0', borderBottom: '1px solid var(--border)' }}>
-      <span className="team-dot" style={{ background: color }} />
-      <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {stepper(counts[p.id] ?? 0, () => changeGoal(p.id, -1), () => changeGoal(p.id, +1))}
-        {assistsEnabled && stepper(assistCounts[p.id] ?? 0, () => changeAssist(p.id, -1), () => changeAssist(p.id, +1), true)}
-        {cardsEnabled && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 2 }}>
-            <button type="button" onClick={() => changeYellow(p.id, -1)}
-              style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.7rem', color: 'var(--muted)' }}>−</button>
-            <span style={{ fontSize: '.85rem' }}>{'🟡'.repeat(Math.max(0, cardData[p.id]?.yellow ?? 0))}{cardData[p.id]?.yellow === 2 ? '→🔴' : ''}</span>
-            <button type="button" onClick={() => changeYellow(p.id, +1)}
-              style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid #d97706', background: 'rgba(217,119,6,.08)', cursor: 'pointer', fontSize: '.7rem', color: '#d97706' }}>+</button>
-            <button type="button" onClick={() => toggleRed(p.id)}
-              style={{ width: 22, height: 22, borderRadius: 4, border: `1px solid ${cardData[p.id]?.red ? '#dc2626' : 'var(--border)'}`, background: cardData[p.id]?.red ? 'rgba(220,38,38,.1)' : '#f8fafc', cursor: 'pointer', fontSize: '.8rem' }}>🔴</button>
-          </div>
-        )}
+    <div style={{ padding: '.38rem 0', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+        <span className="team-dot" style={{ background: color }} />
+        <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {stepper(counts[p.id] ?? 0, () => changeGoal(p.id, -1), () => changeGoal(p.id, +1))}
+          {assistsEnabled && stepper(assistCounts[p.id] ?? 0, () => changeAssist(p.id, -1), () => changeAssist(p.id, +1), true)}
+          {cardsEnabled && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 2 }}>
+              <button type="button" onClick={() => changeYellow(p.id, -1)}
+                style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.7rem', color: 'var(--muted)' }}>−</button>
+              <span style={{ fontSize: '.85rem' }}>{'🟡'.repeat(Math.max(0, cardData[p.id]?.yellow ?? 0))}{cardData[p.id]?.yellow === 2 ? '→🔴' : ''}</span>
+              <button type="button" onClick={() => changeYellow(p.id, +1)}
+                style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid #d97706', background: 'rgba(217,119,6,.08)', cursor: 'pointer', fontSize: '.7rem', color: '#d97706' }}>+</button>
+              <button type="button" onClick={() => toggleRed(p.id)}
+                style={{ width: 22, height: 22, borderRadius: 4, border: `1px solid ${cardData[p.id]?.red ? '#dc2626' : 'var(--border)'}`, background: cardData[p.id]?.red ? 'rgba(220,38,38,.1)' : '#f8fafc', cursor: 'pointer', fontSize: '.8rem' }}>🔴</button>
+            </div>
+          )}
+          {penaltiesEnabled && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 2 }}>
+              {([2, 5, 10] as PenaltyMinutes[]).map(m => (
+                <button key={m} type="button" onClick={() => addPenalty(p.id, m)}
+                  style={{ padding: '2px 6px', borderRadius: 4, fontSize: '.68rem', fontWeight: 700, cursor: 'pointer', border: '1px solid #dc2626', background: 'rgba(220,38,38,.06)', color: '#dc2626' }}>
+                  +{m}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+      {penaltiesEnabled && (penaltyData[p.id]?.length ?? 0) > 0 && (
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: '.3rem', paddingLeft: '1.1rem' }}>
+          {(penaltyData[p.id] ?? []).map((m, i) => (
+            <span key={i} onClick={() => removePenalty(p.id, i)}
+              style={{ cursor: 'pointer', fontSize: '.68rem', fontWeight: 700, background: 'rgba(220,38,38,.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,.25)', borderRadius: 5, padding: '2px 6px' }}>
+              {m} min ✕
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 
@@ -306,7 +363,7 @@ function SlotEditor({
       {(homePlayers.length > 0 || awayPlayers.length > 0) && (
         <div style={{ marginBottom: '.75rem' }}>
           <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.45rem' }}>
-            ⚽ Góly{assistsEnabled ? ' + Asistence' : ''}{cardsEnabled ? ' + Kartičky' : ''}
+            ⚽ Góly{assistsEnabled ? ' + Asistence' : ''}{cardsEnabled ? ' + Kartičky' : ''}{penaltiesEnabled ? ' + Trestné minuty' : ''}
           </div>
           {ht && homePlayers.length > 0 && (
             <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.2rem', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -332,9 +389,9 @@ function SlotEditor({
 
 // ── Round Card ────────────────────────────────────────────────────────────────
 function RoundCard({
-  round, rSlots, teams, players, bracketGoals, bracketAssists, bracketCards,
-  referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards,
-  assistsEnabled, cardsEnabled, tournamentId, showToast, matchDuration, onSave, onRemove, onApplyTimes,
+  round, rSlots, teams, players, bracketGoals, bracketAssists, bracketCards, bracketPenalties,
+  referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, refetchBracketPenalties,
+  assistsEnabled, cardsEnabled, penaltiesEnabled, tournamentId, showToast, matchDuration, onSave, onRemove, onApplyTimes,
 }: {
   round: BracketRound
   rSlots: BracketSlot[]
@@ -343,12 +400,15 @@ function RoundCard({
   bracketGoals: BracketGoal[]
   bracketAssists: BracketAssist[]
   bracketCards: BracketCard[]
+  bracketPenalties: BracketPenalty[]
   referees: Referee[]
   refetchBracketGoals: () => void
   refetchBracketAssists: () => void
   refetchBracketCards: () => void
+  refetchBracketPenalties: () => void
   assistsEnabled: boolean
   cardsEnabled: boolean
+  penaltiesEnabled: boolean
   tournamentId: string
   showToast: (m: string) => void
   matchDuration: number
@@ -431,12 +491,13 @@ function RoundCard({
               {isOpen && (
                 <SlotEditor
                   slot={slot} teams={teams} players={players}
-                  bracketGoals={bracketGoals} bracketAssists={bracketAssists} bracketCards={bracketCards}
+                  bracketGoals={bracketGoals} bracketAssists={bracketAssists} bracketCards={bracketCards} bracketPenalties={bracketPenalties}
                   referees={referees}
                   refetchBracketGoals={refetchBracketGoals}
                   refetchBracketAssists={refetchBracketAssists}
                   refetchBracketCards={refetchBracketCards}
-                  assistsEnabled={assistsEnabled} cardsEnabled={cardsEnabled}
+                  refetchBracketPenalties={refetchBracketPenalties}
+                  assistsEnabled={assistsEnabled} cardsEnabled={cardsEnabled} penaltiesEnabled={penaltiesEnabled}
                   tournamentId={tournamentId}
                   showToast={showToast}
                   onSave={data => onSave(slot.id, data) as Promise<void>}
@@ -451,7 +512,7 @@ function RoundCard({
 }
 
 // ── Main BracketTab ───────────────────────────────────────────────────────────
-export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, bracketAssists, bracketCards, referees = [], refetchBracket, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, tournament, showToast }: Props) {
+export default function BracketTab({ teams, players, groups, matches, bracketRounds, bracketSlots, bracketGoals, bracketAssists, bracketCards, bracketPenalties, referees = [], refetchBracket, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, refetchBracketPenalties, tournament, showToast }: Props) {
   const [name, setName] = useState('')
   const [slotCount, setSlotCount] = useState('2')
   const [generating, setGenerating] = useState(false)
@@ -720,12 +781,15 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
             bracketGoals={bracketGoals}
             bracketAssists={bracketAssists}
             bracketCards={bracketCards}
+            bracketPenalties={bracketPenalties}
             referees={referees}
             refetchBracketGoals={refetchBracketGoals}
             refetchBracketAssists={refetchBracketAssists}
             refetchBracketCards={refetchBracketCards}
+            refetchBracketPenalties={refetchBracketPenalties}
             assistsEnabled={tournament?.assists_enabled ?? false}
             cardsEnabled={tournament?.cards_enabled ?? false}
+            penaltiesEnabled={tournament?.penalty_minutes_enabled ?? false}
             tournamentId={tournament?.id ?? ''}
             showToast={showToast}
             matchDuration={tournament?.match_duration ?? 20}

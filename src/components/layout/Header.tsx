@@ -1,5 +1,6 @@
 import type { Tab } from '../../App'
 import type { Tournament } from '../../hooks/useTournament'
+import { getSportDef } from '../../lib/sports'
 
 interface Props {
   tournament: Tournament | null
@@ -33,6 +34,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
   if (tipsEnabled) TABS = [...TABS, ['tips', 'Tipy']]
   if (sponsorsEnabled) TABS = [...TABS, ['sponsors', 'Sponzoři']]
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
+  const sportIcon = getSportDef(tournament?.sport).icon
 
   return (
     <div style={{
@@ -63,7 +65,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#e2e8f0' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#f1f5f9' }}
         >
-          ⚽
+          {sportIcon}
         </button>
 
         {/* Back to tournament list */}

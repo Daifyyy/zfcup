@@ -6,6 +6,7 @@ import type { Match } from '../../../hooks/useMatches'
 import type { Goal } from '../../../hooks/useGoals'
 import type { Assist } from '../../../hooks/useAssists'
 import type { Card } from '../../../hooks/useCards'
+import type { Penalty, PenaltyMinutes } from '../../../hooks/usePenalties'
 import type { Group } from '../../../hooks/useGroups'
 import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { Tournament } from '../../../hooks/useTournament'
@@ -21,6 +22,7 @@ interface Props {
   goals: Goal[]
   assists: Assist[]
   cards: Card[]
+  penalties: Penalty[]
   groups: Group[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
@@ -30,6 +32,7 @@ interface Props {
   refetchGoals: () => void
   refetchAssists: () => void
   refetchCards: () => void
+  refetchPenalties: () => void
   showToast: (msg: string) => void
 }
 
@@ -47,8 +50,8 @@ const DEF_FORM: MatchForm = { round: '', home_id: '', away_id: '', home_score: '
 
 // ── Inline editor: skóre + góly v jednom panelu ────────────────────────────
 function InlineMatchEditor({
-  match, group, teams, players, goals, assists, cards, tournament, groups, referees,
-  showToast, onClose, refetchMatches, refetchGoals, refetchAssists, refetchCards,
+  match, group, teams, players, goals, assists, cards, penalties, tournament, groups, referees,
+  showToast, onClose, refetchMatches, refetchGoals, refetchAssists, refetchCards, refetchPenalties,
 }: {
   match: Match
   group: Group | null
@@ -57,6 +60,7 @@ function InlineMatchEditor({
   goals: Goal[]
   assists: Assist[]
   cards: Card[]
+  penalties: Penalty[]
   tournament: Tournament | null
   groups: Group[]
   referees: Referee[]
@@ -66,6 +70,7 @@ function InlineMatchEditor({
   refetchGoals: () => void
   refetchAssists: () => void
   refetchCards: () => void
+  refetchPenalties: () => void
 }) {
   const [homeScore, setHomeScore] = useState(match.home_score ?? 0)
   const [awayScore, setAwayScore] = useState(match.away_score ?? 0)
@@ -111,6 +116,21 @@ function InlineMatchEditor({
     return c
   }
   const [cardData, setCardData] = useState<Record<string, { yellow: number; red: number }>>(initCardData)
+
+  const initPenaltyData = () => {
+    const p: Record<string, PenaltyMinutes[]> = {}
+    for (const pl of allPlayers) {
+      p[pl.id] = penalties.filter(x => x.player_id === pl.id && x.match_id === match.id).map(x => x.minutes)
+    }
+    return p
+  }
+  const [penaltyData, setPenaltyData] = useState<Record<string, PenaltyMinutes[]>>(initPenaltyData)
+
+  const addPenalty = (pid: string, minutes: PenaltyMinutes) =>
+    setPenaltyData(p => ({ ...p, [pid]: [...(p[pid] ?? []), minutes] }))
+
+  const removePenalty = (pid: string, index: number) =>
+    setPenaltyData(p => ({ ...p, [pid]: (p[pid] ?? []).filter((_, i) => i !== index) }))
 
   const changeGoal = (pid: string, delta: number) =>
     setCounts(c => ({ ...c, [pid]: Math.max(0, (c[pid] ?? 0) + delta) }))
@@ -200,6 +220,19 @@ function InlineMatchEditor({
         if (cardErr) { showToast('Chyba kartiček: ' + cardErr.message); savingRef.current = false; setSaving(false); return }
       }
       refetchCards()
+    }
+
+    // 5) Trestné minuty (pokud modul zapnut) — smazat staré, vložit nové
+    if (tournament?.penalty_minutes_enabled) {
+      await supabase.from('penalties').delete().eq('match_id', match.id)
+      const newPenalties = Object.entries(penaltyData).flatMap(([player_id, minutesList]) =>
+        minutesList.map(minutes => ({ player_id, match_id: match.id, minutes, tournament_id: tournament?.id }))
+      )
+      if (newPenalties.length > 0) {
+        const { error: penaltyErr } = await supabase.from('penalties').insert(newPenalties)
+        if (penaltyErr) { showToast('Chyba trestných minut: ' + penaltyErr.message); savingRef.current = false; setSaving(false); return }
+      }
+      refetchPenalties()
     }
 
     refetchMatches()
@@ -432,6 +465,47 @@ function InlineMatchEditor({
         </>
       )}
 
+      {/* Trestné minuty (modul zapnut) */}
+      {tournament?.penalty_minutes_enabled && allPlayers.length > 0 && (
+        <>
+          <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem', marginTop: '.65rem' }}>
+            🚨 Trestné minuty
+          </div>
+          <div style={{ marginBottom: '.75rem' }}>
+            {[...homePlayers, ...awayPlayers].map(p => {
+              const entries = penaltyData[p.id] ?? []
+              const teamColor = homePlayers.includes(p) ? ht?.color ?? '#94a3b8' : at?.color ?? '#94a3b8'
+              return (
+                <div key={p.id} style={{ padding: '.35rem 0', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                    <span className="team-dot" style={{ background: teamColor }} />
+                    <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {([2, 5, 10] as PenaltyMinutes[]).map(m => (
+                        <button key={m} type="button" onClick={() => addPenalty(p.id, m)}
+                          style={{ padding: '2px 7px', borderRadius: 5, fontSize: '.72rem', fontWeight: 700, cursor: 'pointer', border: '1px solid #dc2626', background: 'rgba(220,38,38,.06)', color: '#dc2626' }}>
+                          +{m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {entries.length > 0 && (
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: '.3rem', paddingLeft: '1.1rem' }}>
+                      {entries.map((m, i) => (
+                        <span key={i} onClick={() => removePenalty(p.id, i)}
+                          style={{ cursor: 'pointer', fontSize: '.7rem', fontWeight: 700, background: 'rgba(220,38,38,.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,.25)', borderRadius: 5, padding: '2px 6px' }}>
+                          {m} min ✕
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
       <div style={{ display: 'flex', gap: '.4rem' }}>
         <button type="button" className="btn btn-p btn-sm" onClick={saveAll}>
           {saving ? 'Ukládám…' : '💾 Uložit vše'}
@@ -442,7 +516,7 @@ function InlineMatchEditor({
   )
 }
 
-export default function MatchesTab({ teams, players, matches, goals, assists, cards, groups, bracketRounds, bracketSlots, tournament, referees = [], refetchMatches, refetchGoals, refetchAssists, refetchCards, showToast }: Props) {
+export default function MatchesTab({ teams, players, matches, goals, assists, cards, penalties, groups, bracketRounds, bracketSlots, tournament, referees = [], refetchMatches, refetchGoals, refetchAssists, refetchCards, refetchPenalties, showToast }: Props) {
   const [form, setForm] = useState<MatchForm>(DEF_FORM)
   const [inlineEditId, setInlineEditId] = useState<string | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
@@ -596,6 +670,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
                         goals={goals}
                         assists={assists}
                         cards={cards}
+                        penalties={penalties}
                         tournament={tournament}
                         groups={groups}
                         referees={referees}
@@ -605,6 +680,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
                         refetchGoals={refetchGoals}
                         refetchAssists={refetchAssists}
                         refetchCards={refetchCards}
+                        refetchPenalties={refetchPenalties}
                       />
                     )}
                   </div>

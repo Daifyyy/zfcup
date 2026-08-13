@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { subscribeTable } from '../lib/realtimeManager'
+import type { SportId } from '../lib/sports'
 
 export interface Tournament {
   id: string
@@ -28,6 +29,8 @@ export interface Tournament {
   assists_enabled: boolean
   cards_enabled: boolean
   sponsors_enabled: boolean
+  sport: SportId
+  penalty_minutes_enabled: boolean
 }
 
 export function useTournament(tournamentId?: string) {

@@ -10,6 +10,8 @@ import { useAssists } from './hooks/useAssists'
 import { useBracketAssists } from './hooks/useBracketAssists'
 import { useCards } from './hooks/useCards'
 import { useBracketCards } from './hooks/useBracketCards'
+import { usePenalties } from './hooks/usePenalties'
+import { useBracketPenalties } from './hooks/useBracketPenalties'
 import { useBracket } from './hooks/useBracket'
 import { useBracketGoals } from './hooks/useBracketGoals'
 import { useAnnouncements } from './hooks/useAnnouncements'
@@ -88,6 +90,8 @@ export default function App() {
   const { bracketAssists, refetch: refetchBracketAssists } = useBracketAssists(tournamentId)
   const { cards, refetch: refetchCards } = useCards(tournamentId)
   const { bracketCards, refetch: refetchBracketCards } = useBracketCards(tournamentId)
+  const { penalties, refetch: refetchPenalties } = usePenalties(tournamentId)
+  const { bracketPenalties, refetch: refetchBracketPenalties } = useBracketPenalties(tournamentId)
   const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket(tournamentId)
   const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals(tournamentId)
   const { announcements, refetch: refetchAnnouncements } = useAnnouncements(tournamentId)
@@ -257,7 +261,7 @@ export default function App() {
         {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} tournament={tournament} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
-        {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} players={players} teams={teams} tournament={tournament} />}
+        {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} penalties={penalties} bracketPenalties={bracketPenalties} players={players} teams={teams} tournament={tournament} />}
         {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
         {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
@@ -296,6 +300,8 @@ export default function App() {
           bracketCards={bracketCards}
           assists={assists}
           cards={cards}
+          penalties={penalties}
+          bracketPenalties={bracketPenalties}
           referees={referees}
           refetchTournament={refetchTournament}
           refetchTeams={refetchTeams}
@@ -305,6 +311,8 @@ export default function App() {
           refetchGoals={refetchGoals}
           refetchAssists={refetchAssists}
           refetchCards={refetchCards}
+          refetchPenalties={refetchPenalties}
+          refetchBracketPenalties={refetchBracketPenalties}
           refetchBracket={refetchBracket}
           refetchBracketGoals={refetchBracketGoals}
           refetchBracketAssists={refetchBracketAssists}

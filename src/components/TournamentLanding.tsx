@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Session } from '@supabase/supabase-js'
+import { SPORTS, getSportDef, type SportId } from '../lib/sports'
 
 interface TournamentSummary {
   id: string
@@ -8,6 +9,7 @@ interface TournamentSummary {
   subtitle: string
   date: string
   venue: string
+  sport: SportId
 }
 
 interface Props {
@@ -103,6 +105,7 @@ export default function TournamentLanding({ onSelect }: Props) {
   const [showCreate, setShowCreate] = useState(false)
   const [newName, setNewName] = useState('')
   const [newSlug, setNewSlug] = useState('')
+  const [newSport, setNewSport] = useState<SportId>('football')
   const [slugManual, setSlugManual] = useState(false)
   const [createError, setCreateError] = useState('')
   const [creating, setCreating] = useState(false)
@@ -117,7 +120,7 @@ export default function TournamentLanding({ onSelect }: Props) {
   // Load tournaments
   useEffect(() => {
     supabase.from('tournament')
-      .select('id, name, subtitle, date, venue')
+      .select('id, name, subtitle, date, venue, sport')
       .order('date', { ascending: false })
       .then(({ data, error: err }) => {
         if (err) setError('Nepodařilo se načíst turnaje.')
@@ -169,7 +172,7 @@ export default function TournamentLanding({ onSelect }: Props) {
     const user = (await supabase.auth.getUser()).data.user
     const { data, error: err } = await supabase
       .from('tournament')
-      .insert({ name: newName.trim(), slug: newSlug.trim(), owner_id: user?.id ?? null })
+      .insert({ name: newName.trim(), slug: newSlug.trim(), sport: newSport, owner_id: user?.id ?? null })
       .select('id')
       .single()
     setCreating(false)
@@ -180,6 +183,7 @@ export default function TournamentLanding({ onSelect }: Props) {
     setShowCreate(false)
     setNewName('')
     setNewSlug('')
+    setNewSport('football')
     setSlugManual(false)
     window.history.pushState({ tournamentId: data.id }, '', `/${data.id}`)
     onSelect(data.id)
@@ -302,7 +306,7 @@ export default function TournamentLanding({ onSelect }: Props) {
                 }}
               >
                 <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '.05em', color: '#2563eb' }}>
-                  {t.name || '(bez názvu)'}
+                  {getSportDef(t.sport).icon} {t.name || '(bez názvu)'}
                 </span>
                 {t.subtitle && (
                   <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', color: '#6b7280', fontWeight: 500 }}>
@@ -433,6 +437,23 @@ export default function TournamentLanding({ onSelect }: Props) {
                 />
                 <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.75rem', color: '#9ca3af', margin: '.3rem 0 0' }}>
                   Přístup: app.vercel.app/{newSlug || 'zf-cup-2027'}
+                </p>
+              </div>
+              <div>
+                <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', color: '#374151', display: 'block', marginBottom: '.3rem' }}>
+                  Sport
+                </label>
+                <select
+                  value={newSport}
+                  onChange={e => setNewSport(e.target.value as SportId)}
+                  style={inputStyle}
+                >
+                  {SPORTS.map(s => (
+                    <option key={s.id} value={s.id}>{s.icon} {s.label}</option>
+                  ))}
+                </select>
+                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.75rem', color: '#9ca3af', margin: '.3rem 0 0' }}>
+                  Sport nelze po založení turnaje změnit.
                 </p>
               </div>
               {createError && (
