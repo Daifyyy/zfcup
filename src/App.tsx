@@ -90,8 +90,8 @@ export default function App() {
   const { bracketAssists, refetch: refetchBracketAssists } = useBracketAssists(tournamentId)
   const { cards, refetch: refetchCards } = useCards(tournamentId)
   const { bracketCards, refetch: refetchBracketCards } = useBracketCards(tournamentId)
-  const { penalties } = usePenalties(tournamentId)
-  const { bracketPenalties } = useBracketPenalties(tournamentId)
+  const { penalties, refetch: refetchPenalties } = usePenalties(tournamentId)
+  const { bracketPenalties, refetch: refetchBracketPenalties } = useBracketPenalties(tournamentId)
   const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket(tournamentId)
   const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals(tournamentId)
   const { announcements, refetch: refetchAnnouncements } = useAnnouncements(tournamentId)
@@ -300,6 +300,8 @@ export default function App() {
           bracketCards={bracketCards}
           assists={assists}
           cards={cards}
+          penalties={penalties}
+          bracketPenalties={bracketPenalties}
           referees={referees}
           refetchTournament={refetchTournament}
           refetchTeams={refetchTeams}
@@ -309,6 +311,8 @@ export default function App() {
           refetchGoals={refetchGoals}
           refetchAssists={refetchAssists}
           refetchCards={refetchCards}
+          refetchPenalties={refetchPenalties}
+          refetchBracketPenalties={refetchBracketPenalties}
           refetchBracket={refetchBracket}
           refetchBracketGoals={refetchBracketGoals}
           refetchBracketAssists={refetchBracketAssists}

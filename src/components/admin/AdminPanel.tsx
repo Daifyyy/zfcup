@@ -9,10 +9,12 @@ import type { Match } from '../../hooks/useMatches'
 import type { Goal } from '../../hooks/useGoals'
 import type { Assist } from '../../hooks/useAssists'
 import type { Card } from '../../hooks/useCards'
+import type { Penalty } from '../../hooks/usePenalties'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { BracketAssist } from '../../hooks/useBracketAssists'
 import type { BracketCard } from '../../hooks/useBracketCards'
+import type { BracketPenalty } from '../../hooks/useBracketPenalties'
 import type { Announcement } from '../../hooks/useAnnouncements'
 import type { RuleItem } from '../../hooks/useRuleItems'
 import type { Referee } from '../../hooks/useReferees'
@@ -62,6 +64,7 @@ interface Props {
   goals: Goal[]
   assists: Assist[]
   cards: Card[]
+  penalties: Penalty[]
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   announcements: Announcement[]
@@ -69,6 +72,7 @@ interface Props {
   bracketGoals: BracketGoal[]
   bracketAssists: BracketAssist[]
   bracketCards: BracketCard[]
+  bracketPenalties: BracketPenalty[]
   referees: Referee[]
   refetchTournament: () => void
   refetchTeams: () => void
@@ -78,6 +82,8 @@ interface Props {
   refetchGoals: () => void
   refetchAssists: () => void
   refetchCards: () => void
+  refetchPenalties: () => void
+  refetchBracketPenalties: () => void
   refetchBracket: () => void
   refetchBracketGoals: () => void
   refetchBracketAssists: () => void
