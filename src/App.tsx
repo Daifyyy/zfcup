@@ -258,7 +258,7 @@ export default function App() {
       )}
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} />}
-        {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} tournament={tournament} />}
+        {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} penalties={penalties} bracketPenalties={bracketPenalties} tournament={tournament} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
         {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} penalties={penalties} bracketPenalties={bracketPenalties} players={players} teams={teams} tournament={tournament} />}

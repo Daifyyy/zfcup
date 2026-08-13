@@ -2,15 +2,19 @@ import type { Goal } from '../../../hooks/useGoals'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Team } from '../../../hooks/useTeams'
 import type { BracketGoal } from '../../../hooks/useBracketGoals'
+import type { Tournament } from '../../../hooks/useTournament'
+import { getSportDef } from '../../../lib/sports'
 
 interface Props {
   goals: Goal[]
   bracketGoals: BracketGoal[]
   players: Player[]
   teams: Team[]
+  tournament: Tournament | null
 }
 
-export default function ScorersTab({ goals, bracketGoals, players, teams }: Props) {
+export default function ScorersTab({ goals, bracketGoals, players, teams, tournament }: Props) {
+  const sportDef = getSportDef(tournament?.sport)
   const agg: Record<string, number> = {}
   for (const g of goals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
   for (const g of bracketGoals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
@@ -28,10 +32,10 @@ export default function ScorersTab({ goals, bracketGoals, players, teams }: Prop
   return (
     <div>
       <div className="info-box">
-        Střelci se generují automaticky z gólů zadaných v záložce <strong>Zápasy → ⚽ Góly</strong>.
+        {sportDef.terms.scorersLabel} se generují automaticky z gólů zadaných v záložce <strong>Zápasy → {sportDef.icon} Góly</strong>.
       </div>
       {!scorers.length ? (
-        <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Zatím žádní střelci.</p>
+        <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Zatím žádní {sportDef.terms.scorersLabel.toLowerCase()}.</p>
       ) : (
         <div className="a-list">
           {scorers.map((s, i) => (
@@ -49,7 +53,7 @@ export default function ScorersTab({ goals, bracketGoals, players, teams }: Prop
                 </div>
               </div>
               <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', color: 'var(--accent)' }}>
-                ⚽ {s.goals}
+                {sportDef.icon} {s.goals}
               </span>
             </div>
           ))}

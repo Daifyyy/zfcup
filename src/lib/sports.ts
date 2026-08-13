@@ -15,6 +15,8 @@ export interface SportDef {
     drawPts: number | null
     lossPts: number
     allowDraws: boolean
+    otWinPts?: number
+    otLossPts?: number
   }
   discipline: 'cards' | 'penaltyMinutes'
 }
@@ -59,6 +61,8 @@ const hockey: SportDef = {
     drawPts: null,
     lossPts: 0,
     allowDraws: false,
+    otWinPts: 2,
+    otLossPts: 1,
   },
   discipline: 'penaltyMinutes',
 }
@@ -67,4 +71,8 @@ export const SPORTS: SportDef[] = [football, hockey]
 
 export function getSportDef(sportId?: string | null): SportDef {
   return SPORTS.find(s => s.id === sportId) ?? football
+}
+
+export function sportHasOvertime(sportDef: SportDef): boolean {
+  return sportDef.standings.otWinPts !== undefined
 }

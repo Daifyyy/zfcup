@@ -21,6 +21,7 @@ export interface BracketSlot {
   played: boolean
   scheduled_time?: string | null
   referee_id?: string | null
+  decided_in?: 'regulation' | 'ot' | 'so' | null
 }
 
 export function useBracket(tournamentId: string) {

@@ -21,6 +21,7 @@ export function exportSchedule(
   teams: Team[],
   numPitches: number = 2,
   tournament?: { match_duration: number; round_break: number },
+  pitchLabel: string = 'Hřiště',
 ) {
   const sorted = [...matches].sort((a, b) =>
     (a.scheduled_time || '').localeCompare(b.scheduled_time || ''),
@@ -72,7 +73,7 @@ export function exportSchedule(
 
   const pitchLabels = 'ABCD'
   for (let i = 0; i < numPitches; i++) {
-    allRows.push([`Hřiště ${pitchLabels[i] ?? i + 1}`, '', '', ''])
+    allRows.push([`${pitchLabel} ${pitchLabels[i] ?? i + 1}`, '', '', ''])
     allRows.push(header)
     allRows.push(...buildFieldRows(i))
     allRows.push(['', '', '', ''])

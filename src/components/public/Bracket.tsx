@@ -9,6 +9,8 @@ interface Props {
   teams: Team[]
 }
 
+const DECIDED_IN_BADGE: Record<string, string> = { ot: 'PP', so: 'SN' }
+
 export default function Bracket({ rounds, slots, teams }: Props) {
   const gt = (id: string | null) => id ? teams.find(t => t.id === id) : null
 
@@ -145,6 +147,11 @@ export default function Bracket({ rounds, slots, teams }: Props) {
                       }}>
                         {slot.played ? '✓ Odehráno' : 'Plánováno'}
                       </span>
+                      {slot.played && slot.decided_in && DECIDED_IN_BADGE[slot.decided_in] && (
+                        <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '.06em' }}>
+                          {DECIDED_IN_BADGE[slot.decided_in]}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )

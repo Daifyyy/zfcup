@@ -12,6 +12,7 @@ import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Tournament } from '../../hooks/useTournament'
 import { TeamLogo } from '../ui/TeamLogo'
 import { recalcTipsterPoints } from '../../lib/tipsEval'
+import { getSportDef } from '../../lib/sports'
 
 const STORAGE_KEY = 'turnajnik_tipster_id'
 
@@ -175,7 +176,7 @@ function Leaderboard({ tipsters, myId }: { tipsters: ReturnType<typeof useTipste
 
 // ── Special tips ───────────────────────────────────────────────────────────────
 
-function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, specialTips, anyMatchPlayed, anyPlayoffPlayed, showToast, isLeague }: {
+function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, specialTips, anyMatchPlayed, anyPlayoffPlayed, showToast, isLeague, sportIcon }: {
   groups: Group[]
   teams: Team[]
   players: Player[]
@@ -186,6 +187,7 @@ function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, s
   anyPlayoffPlayed: boolean
   showToast: (m: string) => void
   isLeague: boolean
+  sportIcon: string
 }) {
   // selected = what user sees in dropdowns (team-based tips)
   const [selected, setSelected] = useState<Record<string, string>>({})
@@ -431,7 +433,7 @@ function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, s
 
   const rows: { tipType: string; label: string; teamPool: Team[]; points: number }[] = [
     { tipType: 'tournament_winner', label: '🏆 Vítěz turnaje (vč. playoff)', teamPool: teams, points: 10 },
-    { tipType: 'most_goals_team', label: '⚽ Tým s nejvíce góly', teamPool: teams, points: 5 },
+    { tipType: 'most_goals_team', label: `${sportIcon} Tým s nejvíce góly`, teamPool: teams, points: 5 },
     ...sortedGroups.flatMap(g => {
       const groupTeams = teams.filter(t => g.team_ids.includes(t.id))
       const ligaGroup = isLeague && g.name === 'Liga'
@@ -959,6 +961,7 @@ export default function Tips({ matches, teams, players, groups, bracketRounds, b
                 : bracketSlots.some(s => s.home_id != null || s.away_id != null)
             }
             isLeague={isLeague}
+            sportIcon={getSportDef(tournament?.sport).icon}
           />
           <GroupTipsSection
             matches={groupMatches} teams={teams} myTips={tips}

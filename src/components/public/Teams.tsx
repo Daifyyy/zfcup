@@ -6,8 +6,11 @@ import type { Assist } from '../../hooks/useAssists'
 import type { BracketAssist } from '../../hooks/useBracketAssists'
 import type { Card } from '../../hooks/useCards'
 import type { BracketCard } from '../../hooks/useBracketCards'
+import type { Penalty } from '../../hooks/usePenalties'
+import type { BracketPenalty } from '../../hooks/useBracketPenalties'
 import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
+import { getSportDef } from '../../lib/sports'
 
 interface Props {
   teams: Team[]
@@ -18,6 +21,8 @@ interface Props {
   bracketAssists?: BracketAssist[]
   cards?: Card[]
   bracketCards?: BracketCard[]
+  penalties?: Penalty[]
+  bracketPenalties?: BracketPenalty[]
   tournament?: Tournament | null
 }
 
@@ -38,11 +43,13 @@ function RoleBadge({ role }: { role: string | null }) {
   return null
 }
 
-export default function Teams({ teams, players, goals, bracketGoals = [], assists = [], bracketAssists = [], cards = [], bracketCards = [], tournament }: Props) {
+export default function Teams({ teams, players, goals, bracketGoals = [], assists = [], bracketAssists = [], cards = [], bracketCards = [], penalties = [], bracketPenalties = [], tournament }: Props) {
   if (!teams.length) return <Empty icon="👥" text="Žádné týmy." />
 
+  const sportDef = getSportDef(tournament?.sport)
   const showAssists = tournament?.assists_enabled ?? false
   const showCards = tournament?.cards_enabled ?? false
+  const showPenalties = tournament?.penalty_minutes_enabled ?? false
 
   // Aggregate goals per player (skupiny + playoff)
   const playerGoals: Record<string, number> = {}
@@ -66,6 +73,14 @@ export default function Teams({ teams, players, goals, bracketGoals = [], assist
       if (c.type === 'yellow') playerCards[c.player_id].yellow++
       if (c.type === 'red') playerCards[c.player_id].red++
       if (c.type === 'yellow_red') playerCards[c.player_id].yellowRed++
+    }
+  }
+
+  // Aggregate penalty minutes per player
+  const playerPenalties: Record<string, number> = {}
+  if (showPenalties) {
+    for (const p of [...penalties, ...bracketPenalties]) {
+      playerPenalties[p.player_id] = (playerPenalties[p.player_id] ?? 0) + p.minutes
     }
   }
 
@@ -115,6 +130,7 @@ export default function Teams({ teams, players, goals, bracketGoals = [], assist
                     const g = playerGoals[p.id] ?? 0
                     const a = playerAssists[p.id] ?? 0
                     const c = playerCards[p.id]
+                    const pen = playerPenalties[p.id] ?? 0
                     return (
                       <div key={p.id} style={{
                         display: 'flex', alignItems: 'center', gap: '.45rem',
@@ -135,7 +151,7 @@ export default function Teams({ teams, players, goals, bracketGoals = [], assist
                         <span style={{ display: 'flex', alignItems: 'center', gap: '.25rem', flexShrink: 0 }}>
                           {g > 0 && (
                             <span style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--accent)' }}>
-                              ⚽{g}
+                              {sportDef.icon}{g}
                             </span>
                           )}
                           {showAssists && a > 0 && (
@@ -149,6 +165,11 @@ export default function Teams({ teams, players, goals, bracketGoals = [], assist
                               {c.yellowRed > 0 && <span style={{ fontSize: '.65rem', fontWeight: 700 }}>🟡🔴</span>}
                               {c.red > 0 && <span style={{ fontSize: '.65rem', fontWeight: 700 }}>🔴</span>}
                             </>
+                          )}
+                          {showPenalties && pen > 0 && (
+                            <span style={{ fontSize: '.65rem', fontWeight: 700, color: '#dc2626' }}>
+                              🚨{pen}′
+                            </span>
                           )}
                         </span>
                       </div>

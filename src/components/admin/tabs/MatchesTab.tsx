@@ -14,6 +14,7 @@ import type { Referee } from '../../../hooks/useReferees'
 import { calcGroupStandings } from '../../../lib/standings'
 import { exportSchedule, exportRefCards } from '../../../lib/exportExcel'
 import { checkGroupSpecialTips, checkLeagueTournamentWinner } from '../../../lib/tipsEval'
+import { getSportDef, sportHasOvertime } from '../../../lib/sports'
 
 interface Props {
   teams: Team[]
@@ -77,8 +78,12 @@ function InlineMatchEditor({
   const [played, setPlayed] = useState(Boolean(match.played))
   const [scheduledTime, setScheduledTime] = useState(match.scheduled_time || '')
   const [refereeId, setRefereeId] = useState<string>(match.referee_id ?? '')
+  const [decidedIn, setDecidedIn] = useState<'regulation' | 'ot' | 'so'>(match.decided_in ?? 'regulation')
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
+
+  const sportDef = getSportDef(tournament?.sport)
+  const hasOvertime = sportHasOvertime(sportDef)
 
   const homePlayers = players.filter(p => p.team_id === match.home_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const awayPlayers = players.filter(p => p.team_id === match.away_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -169,6 +174,13 @@ function InlineMatchEditor({
     setSaving(true)
     const autoPlayed = played || homeScore > 0 || awayScore > 0
 
+    if (autoPlayed && !sportDef.standings.allowDraws && homeScore === awayScore) {
+      showToast('Zápas nemůže skončit nerozhodně — zadejte konečné skóre po prodloužení/nájezdech')
+      savingRef.current = false
+      setSaving(false)
+      return
+    }
+
     // 1) Uložit skóre zápasu
     const { error: matchErr } = await supabase.from('matches').update({
       home_score: homeScore,
@@ -177,6 +189,7 @@ function InlineMatchEditor({
       scheduled_time: scheduledTime || '',
       round: match.round || '',
       referee_id: refereeId || null,
+      decided_in: hasOvertime ? decidedIn : null,
     }).eq('id', match.id)
 
     if (matchErr) { showToast('Chyba skóre: ' + matchErr.message); savingRef.current = false; setSaving(false); return }
@@ -349,9 +362,30 @@ function InlineMatchEditor({
         </div>
       )}
 
+      {/* Rozhodnuto v (prodloužení/nájezdy) */}
+      {hasOvertime && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: '.65rem' }}>
+          {([
+            ['regulation', 'Základní hrací doba'],
+            ['ot', 'Prodloužení'],
+            ['so', 'Nájezdy'],
+          ] as const).map(([val, label]) => (
+            <button key={val} type="button" onClick={() => setDecidedIn(val)}
+              style={{
+                padding: '4px 9px', borderRadius: 6, fontSize: '.71rem', fontWeight: 600, cursor: 'pointer',
+                border: `1px solid ${decidedIn === val ? 'var(--accent)' : 'var(--border)'}`,
+                background: decidedIn === val ? 'var(--accent-dim)' : '#f8fafc',
+                color: decidedIn === val ? 'var(--accent)' : 'var(--muted)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Góly hráčů */}
       <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem' }}>
-        ⚽ Góly hráčů
+        {sportDef.icon} Góly hráčů
       </div>
       {allPlayers.length === 0 ? (
         <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.65rem' }}>
@@ -520,6 +554,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
   const [form, setForm] = useState<MatchForm>(DEF_FORM)
   const [inlineEditId, setInlineEditId] = useState<string | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
+  const sportDef = getSportDef(tournament?.sport)
 
   const isLeague = tournament?.format === 'league'
   const groupMatches = matches.filter(m => groups.some(g => g.id === m.group_id))
@@ -608,7 +643,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
           <button
             type="button"
             className="btn btn-d btn-sm"
-            onClick={() => exportSchedule(matches, groups, teams, tournament?.num_pitches ?? 2, tournament ? { match_duration: tournament.match_duration ?? 20, round_break: tournament.round_break ?? 5 } : undefined)}
+            onClick={() => exportSchedule(matches, groups, teams, tournament?.num_pitches ?? 2, tournament ? { match_duration: tournament.match_duration ?? 20, round_break: tournament.round_break ?? 5 } : undefined, sportDef.terms.pitchLabel)}
           >
             📥 Exportovat rozpis (Excel)
           </button>
@@ -652,7 +687,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
                             <span style={{ color: 'var(--success)' }}>✓ {m.home_score}:{m.away_score}</span>
                           ) : 'Plánováno'}
                           {m.scheduled_time && <> · {m.scheduled_time}</>}
-                          {totalGoals > 0 && <> · ⚽ {totalGoals} gólů</>}
+                          {totalGoals > 0 && <> · {sportDef.icon} {totalGoals} gólů</>}
                         </div>
                       </div>
                       <button type="button" className={`btn btn-sm ${isOpen ? 'btn-p' : 'btn-d'}`}

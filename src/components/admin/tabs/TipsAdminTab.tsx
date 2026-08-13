@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase'
 import { useTipsters } from '../../../hooks/useTipsters'
 import { calcGroupStandings } from '../../../lib/standings'
 import { evaluateSpecialTip, evaluateSpecialTipPlayer, recalcTipsterPoints, checkTopScorer } from '../../../lib/tipsEval'
+import { getSportDef } from '../../../lib/sports'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
@@ -296,6 +297,7 @@ type GroupEvalStatus = 'pending' | 'running' | 'done' | 'incomplete'
 
 export default function TipsAdminTab({ showToast, tournament, teams, players, groups, matches, bracketSlots, bracketRounds }: Props) {
   const { tipsters } = useTipsters(tournament.id)
+  const sportDef = getSportDef(tournament?.sport)
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const [recalcing, setRecalcing] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
@@ -467,7 +469,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
         />
         <EvalRow
           tipType="most_goals_team"
-          label="⚽ Tým s nejvíce góly"
+          label={`${sportDef.icon} Tým s nejvíce góly`}
           teamPool={teams}
           showToast={showToast}
           tournamentId={tournament.id}

@@ -78,7 +78,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
     },
     {
       title: 'Tipujte výsledky zápasů',
-      desc: 'Zadejte předpokládané skóre každého zápasu a stiskněte tlačítko „💾 Uložit tipy". Tipy se neukládají automaticky! Každý zápas se uzamkne v čas výkopu.',
+      desc: 'Zadejte předpokládané skóre každého zápasu a stiskněte tlačítko „💾 Uložit tipy". Tipy se neukládají automaticky! Každý zápas se uzamkne v čase začátku zápasu.',
     },
     {
       title: 'Sledujte žebříček',
@@ -304,7 +304,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
 
           {/* Footer note */}
           <div style={{ fontSize: '.85rem', color: '#64748b', textAlign: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '.85rem', lineHeight: 1.6 }}>
-            ⏰ Tipy na každý zápas se uzamknou automaticky v čas výkopu — sleduj čas začátku!
+            ⏰ Tipy na každý zápas se uzamknou automaticky v čase začátku — sleduj čas začátku!
             {' · '}
             ⚠️ Tipy se neukládají automaticky — vždy stiskni tlačítko <strong>„Uložit tipy"</strong>!
           </div>

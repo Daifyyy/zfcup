@@ -5,6 +5,7 @@ import type { Tournament } from '../../hooks/useTournament'
 import type { Referee } from '../../hooks/useReferees'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
+import { getSportDef } from '../../lib/sports'
 
 interface Props {
   matches: Match[]
@@ -13,12 +14,15 @@ interface Props {
   referees?: Referee[]
 }
 
+const DECIDED_IN_BADGE: Record<string, string> = { ot: 'PP', so: 'SN' }
+
 // Sdílený layout jednoho zápasu
 function MatchRow({ m, teams, refereeName }: { m: Match; teams: Team[]; refereeName?: string }) {
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
   const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
   const hw = m.played && m.home_score > m.away_score
   const aw = m.played && m.away_score > m.home_score
+  const decidedBadge = m.decided_in ? DECIDED_IN_BADGE[m.decided_in] : undefined
   return (
     <div className="card match-grid">
       <div className="match-col-time">{m.scheduled_time || ''}</div>
@@ -38,6 +42,11 @@ function MatchRow({ m, teams, refereeName }: { m: Match; teams: Team[]; refereeN
         <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'var(--fs-score)', letterSpacing: '.1em', lineHeight: 1, color: m.played ? 'var(--text)' : 'var(--muted)' }}>
           {m.played ? `${m.home_score} : ${m.away_score}` : 'VS'}
         </div>
+        {m.played && decidedBadge && (
+          <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '.06em', marginTop: 2 }}>
+            {decidedBadge}
+          </div>
+        )}
       </div>
       <div className="match-col-away">
         <TeamLogo team={tt(m.away_id)} size={32} />
@@ -89,6 +98,7 @@ type StatusFilter = 'all' | 'played' | 'upcoming'
 export default function Results({ matches, teams, tournament, referees = [] }: Props) {
   const [teamFilter, setTeamFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const sportDef = getSportDef(tournament?.sport)
   const isLeague = tournament?.format === 'league'
   const refName = (m: Match) => m.referee_id ? referees.find(r => r.id === m.referee_id)?.name : undefined
 
@@ -138,7 +148,7 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
         {slots.map(([time, ms]) => {
           const pitchLabels = 'ABCD'
           const multiPitch = ms.length >= 2
-          const pitchNames = ms.map((_, i) => 'Hřiště ' + (pitchLabels[i] ?? String(i + 1)))
+          const pitchNames = ms.map((_, i) => sportDef.terms.pitchLabel + ' ' + (pitchLabels[i] ?? String(i + 1)))
           return (
           <div key={time}>
             <div style={SECTION_HEADER}>

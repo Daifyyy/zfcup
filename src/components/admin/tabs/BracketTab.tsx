@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase'
 import { addMinutes } from '../../../lib/constants'
 import { checkTournamentWinner } from '../../../lib/tipsEval'
 import { getFormatDef, getLegacyFormatDef } from '../../../lib/formats'
+import { getSportDef, sportHasOvertime } from '../../../lib/sports'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
@@ -13,6 +14,7 @@ import type { BracketAssist } from '../../../hooks/useBracketAssists'
 import type { BracketCard } from '../../../hooks/useBracketCards'
 import type { BracketPenalty } from '../../../hooks/useBracketPenalties'
 import type { PenaltyMinutes } from '../../../hooks/usePenalties'
+import type { SportDef } from '../../../lib/sports'
 import type { Tournament } from '../../../hooks/useTournament'
 import type { Referee } from '../../../hooks/useReferees'
 
@@ -41,7 +43,7 @@ interface Props {
 function SlotEditor({
   slot, teams, players, bracketGoals, bracketAssists, bracketCards, bracketPenalties,
   referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, refetchBracketPenalties,
-  assistsEnabled, cardsEnabled, penaltiesEnabled, tournamentId, showToast, onSave,
+  assistsEnabled, cardsEnabled, penaltiesEnabled, sportDef, tournamentId, showToast, onSave,
 }: {
   slot: BracketSlot
   teams: Team[]
@@ -58,14 +60,17 @@ function SlotEditor({
   assistsEnabled: boolean
   cardsEnabled: boolean
   penaltiesEnabled: boolean
+  sportDef: SportDef
   tournamentId: string
   showToast: (m: string) => void
   onSave: (data: Partial<BracketSlot>) => Promise<void>
 }) {
   const [s, setS] = useState({ ...slot, scheduled_time: slot.scheduled_time ?? '' })
   const [refereeId, setRefereeId] = useState<string>(slot.referee_id ?? '')
+  const [decidedIn, setDecidedIn] = useState<'regulation' | 'ot' | 'so'>(slot.decided_in ?? 'regulation')
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
+  const hasOvertime = sportHasOvertime(sportDef)
 
   const homePlayers = players.filter(p => p.team_id === s.home_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
   const awayPlayers = players.filter(p => p.team_id === s.away_id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
@@ -155,6 +160,11 @@ function SlotEditor({
 
   const saveAll = async () => {
     if (savingRef.current) return
+    const willBePlayed = s.played || s.home_score > 0 || s.away_score > 0
+    if (willBePlayed && !sportDef.standings.allowDraws && s.home_score === s.away_score) {
+      showToast('Zápas nemůže skončit nerozhodně — zadejte konečné skóre po prodloužení/nájezdech')
+      return
+    }
     savingRef.current = true
     setSaving(true)
     const allPlayers = [...homePlayers, ...awayPlayers]
@@ -221,6 +231,7 @@ function SlotEditor({
         played: autoPlayed,
         scheduled_time: s.scheduled_time || null,
         referee_id: refereeId || null,
+        decided_in: hasOvertime ? decidedIn : null,
       })
     } catch (e: unknown) {
       showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
@@ -359,11 +370,32 @@ function SlotEditor({
         </div>
       )}
 
+      {/* Rozhodnuto v (prodloužení/nájezdy) */}
+      {hasOvertime && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: '.65rem' }}>
+          {([
+            ['regulation', 'Základní hrací doba'],
+            ['ot', 'Prodloužení'],
+            ['so', 'Nájezdy'],
+          ] as const).map(([val, label]) => (
+            <button key={val} type="button" onClick={() => setDecidedIn(val)}
+              style={{
+                padding: '4px 9px', borderRadius: 6, fontSize: '.71rem', fontWeight: 600, cursor: 'pointer',
+                border: `1px solid ${decidedIn === val ? 'var(--accent)' : 'var(--border)'}`,
+                background: decidedIn === val ? 'var(--accent-dim)' : '#f8fafc',
+                color: decidedIn === val ? 'var(--accent)' : 'var(--muted)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Góly / asistence / kartičky hráčů — inline */}
       {(homePlayers.length > 0 || awayPlayers.length > 0) && (
         <div style={{ marginBottom: '.75rem' }}>
           <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.45rem' }}>
-            ⚽ Góly{assistsEnabled ? ' + Asistence' : ''}{cardsEnabled ? ' + Kartičky' : ''}{penaltiesEnabled ? ' + Trestné minuty' : ''}
+            {sportDef.icon} Góly{assistsEnabled ? ' + Asistence' : ''}{cardsEnabled ? ' + Kartičky' : ''}{penaltiesEnabled ? ' + Trestné minuty' : ''}
           </div>
           {ht && homePlayers.length > 0 && (
             <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.2rem', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -391,7 +423,7 @@ function SlotEditor({
 function RoundCard({
   round, rSlots, teams, players, bracketGoals, bracketAssists, bracketCards, bracketPenalties,
   referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, refetchBracketPenalties,
-  assistsEnabled, cardsEnabled, penaltiesEnabled, tournamentId, showToast, matchDuration, onSave, onRemove, onApplyTimes,
+  assistsEnabled, cardsEnabled, penaltiesEnabled, sportDef, tournamentId, showToast, matchDuration, onSave, onRemove, onApplyTimes,
 }: {
   round: BracketRound
   rSlots: BracketSlot[]
@@ -409,6 +441,7 @@ function RoundCard({
   assistsEnabled: boolean
   cardsEnabled: boolean
   penaltiesEnabled: boolean
+  sportDef: SportDef
   tournamentId: string
   showToast: (m: string) => void
   matchDuration: number
@@ -498,6 +531,7 @@ function RoundCard({
                   refetchBracketCards={refetchBracketCards}
                   refetchBracketPenalties={refetchBracketPenalties}
                   assistsEnabled={assistsEnabled} cardsEnabled={cardsEnabled} penaltiesEnabled={penaltiesEnabled}
+                  sportDef={sportDef}
                   tournamentId={tournamentId}
                   showToast={showToast}
                   onSave={data => onSave(slot.id, data) as Promise<void>}
@@ -517,6 +551,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
   const [slotCount, setSlotCount] = useState('2')
   const [generating, setGenerating] = useState(false)
 
+  const sportDef = getSportDef(tournament?.sport)
   const isLeague = tournament?.format === 'league'
 
   const groupMatches = matches.filter(m => groups.some(g => g.id === m.group_id))
@@ -790,6 +825,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
             assistsEnabled={tournament?.assists_enabled ?? false}
             cardsEnabled={tournament?.cards_enabled ?? false}
             penaltiesEnabled={tournament?.penalty_minutes_enabled ?? false}
+            sportDef={sportDef}
             tournamentId={tournament?.id ?? ''}
             showToast={showToast}
             matchDuration={tournament?.match_duration ?? 20}

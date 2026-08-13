@@ -421,7 +421,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       <hr className="divider" />
       <div className="sub-title">Tipovačka</div>
       <div style={{ marginBottom: '.75rem' }}>
-        <label className="field-label">Datum turnaje (uzamkne tipy v čas výkopu)</label>
+        <label className="field-label">Datum turnaje (uzamkne tipy v čase začátku zápasu)</label>
         <input
           className="field-input"
           type="date"

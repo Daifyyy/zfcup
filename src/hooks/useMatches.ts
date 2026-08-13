@@ -13,6 +13,7 @@ export interface Match {
   played: boolean
   scheduled_time: string
   referee_id?: string | null
+  decided_in?: 'regulation' | 'ot' | 'so' | null
 }
 
 export function useMatches(tournamentId: string) {

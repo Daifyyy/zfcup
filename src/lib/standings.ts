@@ -14,8 +14,17 @@ export interface StandingRow {
   pts: number
 }
 
+// Body za výhru/prohru — v základní hrací době, nebo (pokud sport podporuje OT/SO) v prodloužení/nájezdech.
+function resultPts(sportDef: SportDef, decidedIn: Match['decided_in']): { win: number; loss: number } {
+  const { winPts, lossPts, otWinPts, otLossPts } = sportDef.standings
+  if (decidedIn && decidedIn !== 'regulation' && otWinPts !== undefined) {
+    return { win: otWinPts, loss: otLossPts ?? lossPts }
+  }
+  return { win: winPts, loss: lossPts }
+}
+
 export function calcGroupStandings(group: Group, matches: Match[], sportDef: SportDef = getSportDef('football')): StandingRow[] {
-  const { winPts, lossPts } = sportDef.standings
+  const { lossPts } = sportDef.standings
   const tiePts = sportDef.standings.drawPts ?? lossPts
 
   const rows: Record<string, StandingRow> = {}
@@ -30,8 +39,9 @@ export function calcGroupStandings(group: Group, matches: Match[], sportDef: Spo
     h.gf += m.home_score; h.ga += m.away_score
     a.gf += m.away_score; a.ga += m.home_score
     h.played++; a.played++
-    if (m.home_score > m.away_score) { h.w++; h.pts += winPts; a.l++; a.pts += lossPts }
-    else if (m.home_score < m.away_score) { a.w++; a.pts += winPts; h.l++; h.pts += lossPts }
+    const { win, loss } = resultPts(sportDef, m.decided_in)
+    if (m.home_score > m.away_score) { h.w++; h.pts += win; a.l++; a.pts += loss }
+    else if (m.home_score < m.away_score) { a.w++; a.pts += win; h.l++; h.pts += loss }
     else { h.d++; h.pts += tiePts; a.d++; a.pts += tiePts }
   }
 
@@ -44,14 +54,15 @@ export function calcGroupStandings(group: Group, matches: Match[], sportDef: Spo
     )
     let aPts = 0, bPts = 0
     for (const m of h2h) {
+      const { win } = resultPts(sportDef, m.decided_in)
       if (m.home_id === a.id) {
-        if (m.home_score > m.away_score) aPts += winPts
+        if (m.home_score > m.away_score) aPts += win
         else if (m.home_score === m.away_score) { aPts += tiePts; bPts += tiePts }
-        else bPts += winPts
+        else bPts += win
       } else {
-        if (m.away_score > m.home_score) aPts += winPts
+        if (m.away_score > m.home_score) aPts += win
         else if (m.away_score === m.home_score) { aPts += tiePts; bPts += tiePts }
-        else bPts += winPts
+        else bPts += win
       }
     }
     return bPts - aPts
