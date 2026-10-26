@@ -219,6 +219,7 @@ export default function App() {
           tournament={tournament}
           onExit={() => setKiosk(false)}
           onScoreboard={() => setScoreboard(true)}
+          sponsors={sponsorsEnabled ? sponsors : []}
         />
         {scoreboard && (
           <Scoreboard
@@ -231,8 +232,9 @@ export default function App() {
             bracketGoals={bracketGoals}
             bracketRounds={bracketRounds}
             bracketSlots={bracketSlots}
-            referees={referees}
             onExit={() => setScoreboard(false)}
+            sponsors={sponsorsEnabled ? sponsors : []}
+            presentedBy={presentedBy}
           />
         )}
       </TournamentProvider>
@@ -296,6 +298,8 @@ export default function App() {
           bracketRounds={bracketRounds}
           bracketSlots={bracketSlots}
           onExit={() => setScoreboard(false)}
+          sponsors={sponsorsEnabled ? sponsors : []}
+          presentedBy={presentedBy}
         />
       )}
       {adminOpen && (
