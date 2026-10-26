@@ -34,17 +34,19 @@ import Info from './components/public/Info'
 import Rules from './components/public/Rules'
 import Tips from './components/public/Tips'
 import Sponsors from './components/public/Sponsors'
-import PrintBulletin from './components/public/PrintBulletin'
 import Media from './components/public/Media'
-import AdminPanel from './components/admin/AdminPanel'
-import KioskMode from './components/kiosk/KioskMode'
-import Scoreboard from './components/public/Scoreboard'
 import Toast from './components/ui/Toast'
 import TournamentLanding from './components/TournamentLanding'
 import PasswordResetOverlay from './components/PasswordResetOverlay'
 import type { Session } from '@supabase/supabase-js'
 
 import type { Sponsor } from './hooks/useSponsors'
+import { lazyComponent } from './lib/lazyComponent'
+
+const PrintBulletin = lazyComponent(() => import('./components/public/PrintBulletin'))
+const AdminPanel = lazyComponent(() => import('./components/admin/AdminPanel'))
+const KioskMode = lazyComponent(() => import('./components/kiosk/KioskMode'))
+const Scoreboard = lazyComponent(() => import('./components/public/Scoreboard'))
 
 function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
   const img = sponsor.logo_url ? (
