@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
 import { TOURNAMENT_FORMATS, getFormatDef } from '../../../lib/formats'
 import { getSportDef } from '../../../lib/sports'
+import BrandingSection from './BrandingSection'
 
 interface Props {
   tournament: Tournament | null
@@ -360,6 +361,9 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           <button type="button" className="btn btn-s" onClick={saveLeagueParams}>💾 Uložit parametry</button>
         </div>
       )}
+
+      <hr className="divider" />
+      <BrandingSection tournament={tournament} refetchTournament={refetchTournament} showToast={showToast} />
 
       <hr className="divider" />
       <div className="sub-title">Volitelné moduly</div>

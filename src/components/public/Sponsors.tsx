@@ -1,93 +1,49 @@
+import { ExternalLink } from 'lucide-react'
 import type { Sponsor } from '../../hooks/useSponsors'
+import { groupByTier } from '../../lib/partners'
+import { SectionHeader } from '../ui/Card'
+import Empty from '../ui/Empty'
 
 interface Props {
   sponsors: Sponsor[]
 }
 
-export default function Sponsors({ sponsors }: Props) {
-  if (!sponsors.length) {
-    return (
-      <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '3rem 1rem', fontFamily: 'var(--font-body)' }}>
-        Žádní sponzoři zatím nebyli přidáni.
+function PartnerTile({ sponsor, height }: { sponsor: Sponsor; height: number }) {
+  const inner = (
+    <>
+      <div className="pt-tile__logo" style={{ height }}>
+        {sponsor.logo_url
+          ? <img src={sponsor.logo_url} alt={sponsor.name} />
+          : <span className="pt-tile__fallback">{sponsor.name}</span>}
       </div>
-    )
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1.25rem' }}>
-        {sponsors.map(s => (
-          <SponsorCard key={s.id} sponsor={s} />
-        ))}
+      <div className="pt-tile__name">
+        {sponsor.name}
+        {sponsor.website_url && <ExternalLink size={12} />}
       </div>
-    </div>
+    </>
+  )
+  return sponsor.website_url ? (
+    <a className="pt-tile" href={sponsor.website_url} target="_blank" rel="noopener noreferrer">{inner}</a>
+  ) : (
+    <div className="pt-tile">{inner}</div>
   )
 }
 
-function SponsorCard({ sponsor }: { sponsor: Sponsor }) {
-  const content = (
-    <div style={{
-      background: '#fff',
-      border: '1px solid var(--border)',
-      borderRadius: 12,
-      padding: '1.25rem 1rem',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '.75rem',
-      boxShadow: 'var(--shadow-card)',
-      transition: 'box-shadow .15s, border-color .15s',
-      cursor: sponsor.website_url ? 'pointer' : 'default',
-    }}
-      onMouseEnter={e => {
-        if (!sponsor.website_url) return
-        const el = e.currentTarget as HTMLElement
-        el.style.boxShadow = '0 4px 16px rgba(37,99,235,.12)'
-        el.style.borderColor = 'var(--accent)'
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLElement
-        el.style.boxShadow = 'var(--shadow-card)'
-        el.style.borderColor = 'var(--border)'
-      }}
-    >
-      {sponsor.logo_url ? (
-        <img
-          src={sponsor.logo_url}
-          alt={sponsor.name}
-          style={{ width: 120, height: 70, objectFit: 'contain' }}
-        />
-      ) : (
-        <div style={{
-          width: 120, height: 70,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--accent-dim)', borderRadius: 8,
-          fontSize: '.8rem', fontWeight: 600, color: 'var(--accent)',
-          fontFamily: 'var(--font-body)', textAlign: 'center', padding: '.25rem',
-        }}>
-          {sponsor.name}
-        </div>
-      )}
-      {sponsor.name && (
-        <div style={{
-          fontFamily: 'var(--font-body)',
-          fontSize: '.78rem',
-          color: 'var(--muted)',
-          textAlign: 'center',
-          lineHeight: 1.3,
-        }}>
-          {sponsor.name}
-        </div>
-      )}
+export default function Sponsors({ sponsors }: Props) {
+  if (!sponsors.length) return <Empty text="Partneři turnaje budou brzy představeni." />
+  const groups = groupByTier(sponsors)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+      <SectionHeader title="Partneři turnaje" subtitle="Děkujeme partnerům, kteří turnaj podporují." />
+      {groups.map(({ tier, items }) => (
+        <section key={tier.id} className={`pt-group pt-group--${tier.id}`}>
+          <h3 className="pt-group__title">{tier.plural}</h3>
+          <div className="pt-group__grid" style={{ ['--pt-min' as string]: tier.id === 'title' ? '320px' : tier.id === 'main' ? '240px' : '180px' }}>
+            {items.map(s => <PartnerTile key={s.id} sponsor={s} height={tier.logoHeight} />)}
+          </div>
+        </section>
+      ))}
     </div>
   )
-
-  if (sponsor.website_url) {
-    return (
-      <a href={sponsor.website_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-        {content}
-      </a>
-    )
-  }
-  return content
 }

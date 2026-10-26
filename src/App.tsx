@@ -21,6 +21,8 @@ import { useSponsors } from './hooks/useSponsors'
 import { TournamentProvider } from './lib/TournamentContext'
 import Header, { HEADER_HEIGHT_DESKTOP } from './components/layout/Header'
 import { BRAND } from './lib/brand'
+import { sortByTier, getTitlePartner } from './lib/partners'
+import { applyTournamentTheme } from './lib/theme'
 import BottomNav from './components/layout/BottomNav'
 import Overview from './components/public/Overview'
 import Teams from './components/public/Teams'
@@ -162,6 +164,11 @@ export default function App() {
     setTab(t)
   }, [])
 
+  // ── Branding turnaje (barvy) ──────────────────────────
+  useEffect(() => {
+    applyTournamentTheme(tournamentId ? tournament : null)
+  }, [tournamentId, tournament?.brand_primary, tournament?.brand_secondary])
+
   // ── Titulek okna ──────────────────────────────────────
   useEffect(() => {
     document.title = tournament?.name ? `${tournament.name} · ${BRAND.name}` : BRAND.name
@@ -178,10 +185,11 @@ export default function App() {
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, ruleItems, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
   const sponsorsEnabled = tournament?.sponsors_enabled ?? false
-  // Generální partner („presented by“) — doplní se s úrovněmi partnerů
-  const presentedBy = null
-  const leftSponsors = sponsors.filter((_, i) => i % 2 === 0)
-  const rightSponsors = sponsors.filter((_, i) => i % 2 !== 0)
+  // Partneři seřazení podle úrovně; generální partner = „presented by“
+  const sortedSponsors = sortByTier(sponsors)
+  const presentedBy = sponsorsEnabled ? getTitlePartner(sponsors) : null
+  const leftSponsors = sortedSponsors.filter((_, i) => i % 2 === 0)
+  const rightSponsors = sortedSponsors.filter((_, i) => i % 2 !== 0)
 
   const goHome = useCallback(() => {
     setTournamentId('')
@@ -219,7 +227,7 @@ export default function App() {
           tournament={tournament}
           onExit={() => setKiosk(false)}
           onScoreboard={() => setScoreboard(true)}
-          sponsors={sponsorsEnabled ? sponsors : []}
+          sponsors={sponsorsEnabled ? sortedSponsors : []}
         />
         {scoreboard && (
           <Scoreboard
@@ -233,7 +241,7 @@ export default function App() {
             bracketRounds={bracketRounds}
             bracketSlots={bracketSlots}
             onExit={() => setScoreboard(false)}
-            sponsors={sponsorsEnabled ? sponsors : []}
+            sponsors={sponsorsEnabled ? sortedSponsors : []}
             presentedBy={presentedBy}
           />
         )}
@@ -268,7 +276,7 @@ export default function App() {
         </aside>
       )}
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-        {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} teams={teams} players={players} groups={groups} matches={matches} goals={goals} bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots} sponsors={sponsorsEnabled ? sponsors : []} presentedBy={presentedBy} />}
+        {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} teams={teams} players={players} groups={groups} matches={matches} goals={goals} bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots} sponsors={sponsorsEnabled ? sortedSponsors : []} presentedBy={presentedBy} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} penalties={penalties} bracketPenalties={bracketPenalties} tournament={tournament} matches={matches} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
@@ -298,7 +306,7 @@ export default function App() {
           bracketRounds={bracketRounds}
           bracketSlots={bracketSlots}
           onExit={() => setScoreboard(false)}
-          sponsors={sponsorsEnabled ? sponsors : []}
+          sponsors={sponsorsEnabled ? sortedSponsors : []}
           presentedBy={presentedBy}
         />
       )}

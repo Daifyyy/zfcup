@@ -31,6 +31,14 @@ export interface Tournament {
   sponsors_enabled: boolean
   sport: SportId
   penalty_minutes_enabled: boolean
+  // Migrace 08 — dokud neproběhne, jsou undefined
+  brand_primary?: string | null
+  brand_secondary?: string | null
+  press_enabled?: boolean
+  press_contact_name?: string
+  press_contact_email?: string
+  press_contact_phone?: string
+  press_note?: string
 }
 
 export function useTournament(tournamentId?: string) {

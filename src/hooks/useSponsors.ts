@@ -9,6 +9,8 @@ export interface Sponsor {
   logo_url: string
   website_url: string
   position: number
+  /** Úroveň partnera — chybí, dokud není spuštěna migrace 08 */
+  tier?: 'title' | 'main' | 'partner' | 'supplier' | 'media'
 }
 
 export function useSponsors(tournamentId: string) {

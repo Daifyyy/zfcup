@@ -12,6 +12,9 @@ Spouštět v pořadí v **Supabase SQL Editoru**:
 3. `03_triggers.sql` — Vytvoří PL/pgSQL funkce a triggery pro tipovačku
 4. `04_storage.sql` — Instrukce pro Storage bucket (nutno ručně v Dashboardu)
 5. `05_migrations.sql` — Pouze pro **upgrade existující** DB (přidá chybějící sloupce)
+6. `06_indexes.sql` — Indexy
+7. `07_multisport.sql` — Multi-sport (fotbal/hokej), trestné minuty, OT/SO
+8. `08_partners_branding_media.sql` — Úrovně partnerů, barvy turnaje (branding), mediální sekce
 
 ## Použití (existující DB — upgrade)
 
