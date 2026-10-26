@@ -70,9 +70,6 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       if (def.groupConfig.leagueHasPlayoff !== undefined) {
         updates.league_has_playoff = def.groupConfig.leagueHasPlayoff
       }
-      if (def.groupConfig.tournamentFormat === 'league') {
-        updates.playoff_style = 'standard'
-      }
 
       const { error } = await supabase.from('tournament').update(updates).eq('id', tournament.id)
       if (error) showToast('Chyba: ' + error.message)
