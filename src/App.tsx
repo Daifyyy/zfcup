@@ -35,6 +35,7 @@ import Rules from './components/public/Rules'
 import Tips from './components/public/Tips'
 import Sponsors from './components/public/Sponsors'
 import PrintBulletin from './components/public/PrintBulletin'
+import Media from './components/public/Media'
 import AdminPanel from './components/admin/AdminPanel'
 import KioskMode from './components/kiosk/KioskMode'
 import Scoreboard from './components/public/Scoreboard'
@@ -185,6 +186,7 @@ export default function App() {
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, ruleItems, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
   const sponsorsEnabled = tournament?.sponsors_enabled ?? false
+  const mediaEnabled = tournament?.press_enabled ?? false
   // Partneři seřazení podle úrovně; generální partner = „presented by“
   const sortedSponsors = sortByTier(sponsors)
   const presentedBy = sponsorsEnabled ? getTitlePartner(sponsors) : null
@@ -267,6 +269,7 @@ export default function App() {
         cardsEnabled={tournament?.cards_enabled ?? false}
         sponsorsEnabled={sponsorsEnabled}
         presentedBy={presentedBy}
+        mediaEnabled={mediaEnabled}
       />
       {sponsorsEnabled && sponsors.length > 0 && (
         <aside className="sponsor-sidebar" style={{ position: 'fixed', left: 0, top: HEADER_HEIGHT_DESKTOP + 8, bottom: 0, width: 130, flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem', overflowY: 'auto' }}>
@@ -286,6 +289,7 @@ export default function App() {
         {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
         {tab === 'tips'      && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
         {tab === 'sponsors'  && <Sponsors sponsors={sponsors} />}
+        {tab === 'media'     && mediaEnabled && <Media tournament={tournament} sponsors={sponsorsEnabled ? sortedSponsors : []} matches={matches} groups={groups} teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots} onPrint={() => setPrintOpen(true)} showToast={showToast} />}
       </main>
       {sponsorsEnabled && sponsors.length > 0 && (
         <aside className="sponsor-sidebar" style={{ position: 'fixed', right: 0, top: HEADER_HEIGHT_DESKTOP + 8, bottom: 0, width: 130, flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem', overflowY: 'auto' }}>
@@ -346,7 +350,7 @@ export default function App() {
           onClose={() => setAdminOpen(false)}
         />
       )}
-      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} sponsorsEnabled={sponsorsEnabled} />
+      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} sponsorsEnabled={sponsorsEnabled} mediaEnabled={mediaEnabled} />
       <Toast message={toast} show={toastShow} />
       {passwordRecovery && <PasswordResetOverlay onDone={() => setPasswordRecovery(false)} />}
       {printOpen && (

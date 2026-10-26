@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
 import RichTextEditor from '../../ui/RichTextEditor'
+import MediaSection from './MediaSection'
 
 interface Props {
   tournament: Tournament | null
@@ -29,7 +30,7 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
     const { error } = await supabase.from('tournament').update(form).eq('id', tournament.id)
     if (error) { showToast('Chyba: ' + error.message); return }
     refetchTournament()
-    showToast('Uloženo ✓')
+    showToast('Uloženo')
   }
 
   const f = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -40,7 +41,8 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
     if (file.size > 512_000) { showToast('Max velikost je 500 KB'); return }
     if (!tournament?.id) return
     setUploading(true)
-    const path = 'tournament-logo.png'
+    // Každý turnaj má vlastní soubor (multi-tenant)
+    const path = `tournaments/${tournament.id}/logo.png`
     const { error: upErr } = await supabase.storage.from('team-logos').upload(path, file, { upsert: true })
     if (upErr) { showToast('Chyba uploadu: ' + upErr.message); setUploading(false); return }
     const { data } = supabase.storage.from('team-logos').getPublicUrl(path)
@@ -48,12 +50,15 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
     const { error } = await supabase.from('tournament').update({ logo_url: urlWithTs }).eq('id', tournament.id)
     setUploading(false)
     if (error) showToast('Chyba: ' + error.message)
-    else { refetchTournament(); showToast('Logo nahráno ✓') }
+    else { refetchTournament(); showToast('Logo nahráno') }
   }
 
   const removeLogo = async () => {
     if (!tournament?.id || !confirm('Smazat logo turnaje?')) return
-    await supabase.storage.from('team-logos').remove(['tournament-logo.png'])
+    // Sdílený starý soubor tournament-logo.png nemažeme — mohou ho používat jiné turnaje
+    if (tournament.logo_url?.includes(`tournaments/${tournament.id}/`)) {
+      await supabase.storage.from('team-logos').remove([`tournaments/${tournament.id}/logo.png`])
+    }
     await supabase.from('tournament').update({ logo_url: null }).eq('id', tournament.id)
     refetchTournament()
     showToast('Logo odstraněno')
@@ -87,7 +92,7 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
         />
       </div>
 
-      <button type="button" className="btn btn-p btn-full" onClick={save}>💾 Uložit</button>
+      <button type="button" className="btn btn-p btn-full" onClick={save}>Uložit</button>
 
       <hr className="divider" />
       <div className="sub-title">Logo turnaje</div>
@@ -103,10 +108,13 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
         <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
           <input ref={fileRef} type="file" accept=".png,image/png" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f) }} />
           <button type="button" className="btn btn-s btn-sm" onClick={() => fileRef.current?.click()} style={{ opacity: uploading ? .6 : 1 }}>
-            {uploading ? 'Nahrávám…' : '↑ Nahrát logo'}
+            {uploading ? 'Nahrávám…' : 'Nahrát logo'}
           </button>
         </div>
       )}
+
+      <hr className="divider" />
+      <MediaSection tournament={tournament} refetchTournament={refetchTournament} showToast={showToast} />
     </div>
   )
 }
