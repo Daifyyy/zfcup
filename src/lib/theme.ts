@@ -10,7 +10,7 @@ export const DEFAULT_BRAND_2 = '#e11d48'
 export const BRAND_PRESETS: { name: string; primary: string; secondary: string }[] = [
   { name: 'Modrá (výchozí)', primary: '#1d4ed8', secondary: '#e11d48' },
   { name: 'Námořní',         primary: '#0f2a5c', secondary: '#f59e0b' },
-  { name: 'Červená',         primary: '#c8102e', secondary: '#0b1220' },
+  { name: 'Vínová',          primary: '#9f1239', secondary: '#0b1220' },
   { name: 'Zelená',          primary: '#0f7b3f', secondary: '#facc15' },
   { name: 'Oranžová',        primary: '#ea580c', secondary: '#0b1220' },
   { name: 'Fialová',         primary: '#6d28d9', secondary: '#14b8a6' },

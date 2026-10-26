@@ -117,7 +117,13 @@ export function MatchGraphic({ format, tournament, sponsors, home, away, homeSco
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
           <div style={{ display: 'flex', gap: 10 }}>
             {[homeScore, awayScore].map((v, i) => (
-              <div key={i} style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 170, lineHeight: 1, width: 170, textAlign: 'center', padding: '14px 0', background: i === 0 ? 'var(--brand)' : '#1c2740', color: '#fff', borderRadius: i === 0 ? '14px 0 0 14px' : '0 14px 14px 0' }}>{v}</div>
+              <div key={i} style={{
+                fontFamily: DISPLAY, fontWeight: 800, fontSize: 170, lineHeight: 1, width: 190, textAlign: 'center', padding: '14px 0',
+                background: i === 0 ? 'var(--brand)' : '#1c2740', color: '#fff',
+                // podpisový motiv platformy — diagonální řez mezi skóre
+                clipPath: i === 0 ? 'polygon(0 0, 100% 0, calc(100% - 28px) 100%, 0 100%)' : 'polygon(28px 0, 100% 0, 100% 100%, 0 100%)',
+                margin: i === 0 ? '0 -14px 0 0' : '0 0 0 -14px',
+              }}>{v}</div>
             ))}
           </div>
           <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: MUTED }}>Konec{suffix && ` · ${suffix}`}</div>

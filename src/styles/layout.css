@@ -13,7 +13,9 @@
 .hdr__top { border-bottom: 1px solid var(--chrome-line); position: relative; }
 .hdr__top::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
-  background: linear-gradient(90deg, var(--brand) 0, var(--brand) 120px, transparent 120px);
+  width: 140px; right: auto; height: 3px; bottom: -2px;
+  background: var(--brand);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
 }
 .hdr__nav { background: var(--chrome-2); }
 .hdr__nav .hdr__inner { min-height: 46px; }
