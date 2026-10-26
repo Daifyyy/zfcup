@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react'
 import React from 'react'
 
 interface State { error: Error | null }
@@ -13,7 +14,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
     if (this.state.error) {
       return (
         <div style={{ padding: '3rem 1.5rem', textAlign: 'center', fontFamily: 'var(--font-body)' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
+          <div style={{ marginBottom: '1rem', color: 'var(--warn)', display: 'flex', justifyContent: 'center' }}><AlertTriangle size={40} strokeWidth={1.5} /></div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', marginBottom: '.5rem' }}>
             Aplikace narazila na chybu
           </h2>

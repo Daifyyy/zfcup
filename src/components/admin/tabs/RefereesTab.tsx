@@ -46,7 +46,7 @@ export default function RefereesTab({ referees, tournament, refetchReferees, sho
         <div className="a-list" style={{ marginBottom: '1rem' }}>
           {referees.map(r => (
             <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.45rem .7rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8 }}>
-              <span style={{ flex: 1, fontSize: '.84rem', fontWeight: 500 }}>⚖ {r.name}</span>
+              <span style={{ flex: 1, fontSize: '.84rem', fontWeight: 500 }}>{r.name}</span>
               <button type="button" className="btn btn-d btn-sm" onClick={() => removeReferee(r.id)}>Smazat</button>
             </div>
           ))}

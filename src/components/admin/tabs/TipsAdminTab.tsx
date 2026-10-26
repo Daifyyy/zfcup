@@ -414,7 +414,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
     <div>
       {/* Workflow přehled */}
       <div style={{ background: 'rgba(0,0,0,.03)', border: '1px solid var(--border)', borderRadius: 10, padding: '.75rem 1rem', marginBottom: '1rem', fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.55 }}>
-        <div style={{ fontWeight: 700, color: '#374151', marginBottom: '.3rem', fontSize: '.78rem' }}>ℹ️ Co je automatické a co ruční</div>
+        <div style={{ fontWeight: 700, color: '#374151', marginBottom: '.3rem', fontSize: '.78rem' }}>Co je automatické a co ruční</div>
         <div style={{ marginBottom: '.4rem' }}>
           <span style={{ fontWeight: 600, color: '#15803d' }}>Automaticky</span> (bez zásahu):{' '}
           skupinové tipy po každém zápase · playoff tipy po každém slotu · Vítěz skupiny / Poslední při otevření této záložky
@@ -428,7 +428,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
       {/* Návod k tipovačce */}
       <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.2)', borderRadius: 10, padding: '.85rem 1rem', marginBottom: '1.1rem', display: 'flex', alignItems: 'center', gap: '.8rem' }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '.82rem', fontWeight: 700, marginBottom: '.15rem' }}>📋 Návod k tipovačce</div>
+          <div style={{ fontSize: '.82rem', fontWeight: 700, marginBottom: '.15rem' }}>Návod k tipovačce</div>
           <div style={{ fontSize: '.72rem', color: 'var(--muted)' }}>
             Vygeneruje leták s QR kódem a pravidly — vytiskni nebo ulož jako PDF a vyvěs na informační tabuli.
           </div>
@@ -439,7 +439,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
           onClick={() => setShowGuide(true)}
           style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
         >
-          🖨️ Otevřít leták
+          Otevřít leták
         </button>
       </div>
 
@@ -461,7 +461,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
         {/* Vítěz turnaje — auto po finále, ruční override */}
         <EvalRow
           tipType="tournament_winner"
-          label="🏆 Vítěz turnaje"
+          label="Vítěz turnaje"
           teamPool={teams}
           showToast={showToast}
           autoWinnerId={autoTournamentWinnerId}
@@ -476,7 +476,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
         />
         <EvalRowPlayer
           tipType="top_scorer"
-          label="🏅 Nejlepší střelec"
+          label="Nejlepší střelec"
           playerPool={players}
           showToast={showToast}
           tournamentId={tournament.id}
@@ -496,7 +496,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '.8rem', fontWeight: 600 }}>{isLiga ? 'Ligová fáze' : `Skupina ${g.name}`}</div>
                 <div style={{ fontSize: '.67rem', color: 'var(--muted)' }}>
-                  🥇 vítěz 5 b. &nbsp;·&nbsp; ⬇️ poslední 3 b.
+                  vítěz 5 b. &nbsp;·&nbsp; poslední 3 b.
                 </div>
               </div>
               {status === 'incomplete' && (
@@ -513,10 +513,10 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
               {status === 'done' && info && (
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontSize: '.75rem', color: '#15803d', fontWeight: 600 }}>
-                    ✓ 🥇 {info.winner}
+                    ✓ Vítěz: {info.winner}
                   </div>
                   <div style={{ fontSize: '.75rem', color: '#15803d', fontWeight: 600 }}>
-                    ✓ ⬇️ {info.last}
+                    ✓ Poslední: {info.last}
                   </div>
                 </div>
               )}
@@ -532,7 +532,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
         Přepočítá body za všechny skupinové i playoff tipy podle aktuálních výsledků zápasů. Použij po opravě chybného výsledku.
       </p>
       <button type="button" className="btn btn-s" onClick={handleRecalcAll} style={{ opacity: recalcing ? .6 : 1 }}>
-        {recalcing ? 'Přepočítávám…' : '🔄 Přepočítat tipy ze zápasů'}
+        {recalcing ? 'Přepočítávám…' : 'Přepočítat tipy ze zápasů'}
       </button>
 
       {/* Nebezpečná zóna */}
@@ -542,7 +542,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
         Smaže všechny tipy (skupiny, playoff, speciální) a vynuluje body všem tipérům. Účty tipérů zůstanou.
       </p>
       <button type="button" className="btn btn-d" onClick={resetAll}>
-        🗑 Resetovat tipy
+        Resetovat tipy
       </button>
 
       {/* Tipéři — až dole */}

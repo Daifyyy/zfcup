@@ -205,7 +205,7 @@ export default function ImportTeamsModal({ open, existingTeams, tournamentId, on
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
               />
               <button type="button" className="btn btn-p" onClick={() => fileRef.current?.click()} style={{ width: '100%' }}>
-                📥 Vybrat soubor CSV / Excel
+                Vybrat soubor CSV / Excel
               </button>
             </>
           ) : (
@@ -218,8 +218,8 @@ export default function ImportTeamsModal({ open, existingTeams, tournamentId, on
                   <div key={i} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, padding: '.6rem .8rem' }}>
                     <div style={{ fontWeight: 700, fontSize: '.82rem', marginBottom: '.3rem' }}>
                       {existingTeams.find(t => t.name.toLowerCase() === team.name.toLowerCase())
-                        ? <span style={{ color: 'var(--muted)' }}>🔄 {team.name} <span style={{ fontWeight: 400 }}>(existující tým)</span></span>
-                        : <span>🆕 {team.name}</span>
+                        ? <span style={{ color: 'var(--muted)' }}>{team.name} <span style={{ fontWeight: 400 }}>(existující tým)</span></span>
+                        : <span>{team.name}</span>
                       }
                     </div>
                     {team.players.length > 0 ? (

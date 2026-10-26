@@ -4,6 +4,7 @@ import './index.css'
 import './styles/ui.css'
 import './styles/layout.css'
 import './styles/pages.css'
+import './styles/landing.css'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 

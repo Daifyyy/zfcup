@@ -261,7 +261,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
               const { error } = await supabase.from('tournament').update({ num_pitches: numPitches }).eq('id', tournament.id)
               if (error) showToast('Chyba: ' + error.message)
               else { showToast(`Počet ${sportDef.terms.pitchLabel.toLowerCase()}: ${numPitches} ✓`); refetchTournament() }
-            }}>💾 Uložit</button>
+            }}>Uložit</button>
           </div>
         </div>
         <div style={{ fontSize: '.69rem', color: 'var(--muted)', marginTop: '.25rem' }}>
@@ -293,12 +293,12 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
                 const { error } = await supabase.from('tournament').update({ advancing_per_group: advancingPerGroup }).eq('id', tournament.id)
                 if (error) showToast('Chyba: ' + error.message)
                 else { showToast(`Postupující: ${advancingPerGroup} ✓`); refetchTournament() }
-              }}>💾 Uložit</button>
+              }}>Uložit</button>
             </div>
           </div>
           {formatPreviewText && (
             <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 7, padding: '.4rem .65rem', fontSize: '.74rem', color: 'var(--accent)', marginTop: '.5rem' }}>
-              🏆 {formatPreviewText}
+              {formatPreviewText}
             </div>
           )}
           <div style={{ fontSize: '.69rem', color: 'var(--muted)', marginTop: '.35rem' }}>
@@ -327,7 +327,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           {/* Playoff preview */}
           {formatPreviewText && (
             <div style={{ background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.15)', borderRadius: 7, padding: '.45rem .65rem', fontSize: '.74rem', color: 'var(--accent)', marginBottom: '.7rem' }}>
-              🏆 {formatPreviewText}
+              {formatPreviewText}
             </div>
           )}
           <div className="field-row">
@@ -358,7 +358,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
                 onChange={e => setLeagueParams(p => ({ ...p, playoff_kickoff: e.target.value }))} />
             </div>
           </div>
-          <button type="button" className="btn btn-s" onClick={saveLeagueParams}>💾 Uložit parametry</button>
+          <button type="button" className="btn btn-s" onClick={saveLeagueParams}>Uložit parametry</button>
         </div>
       )}
 
@@ -483,7 +483,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           onKeyDown={e => e.key === 'Enter' && changePassword()} placeholder="Znovu nové heslo" />
       </div>
       <button type="button" className="btn btn-s" onClick={changePassword} style={{ opacity: loading ? 0.6 : 1 }}>
-        {loading ? 'Ukládám…' : '🔑 Změnit heslo'}
+        {loading ? 'Ukládám…' : 'Změnit heslo'}
       </button>
 
       <hr className="divider" />
@@ -493,7 +493,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
         <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .9rem' }}>
-          <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>🔄 Čistý start (zachovat týmy)</div>
+          <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>Čistý start (zachovat týmy)</div>
           <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.55rem' }}>
             Smaže zápasy, skupiny, góly, play-off a tipy všech uživatelů. Týmy a hráči zůstanou.
           </div>
@@ -503,11 +503,11 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
             style={{ border: '1px solid rgba(217,119,6,.4)', color: '#b45309' }}
             onClick={resetTournamentData}
           >
-            🔄 Resetovat zápasy &amp; tipy
+            Resetovat zápasy &amp; tipy
           </button>
         </div>
         <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .9rem' }}>
-          <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>🗑 Vymazat úplně vše</div>
+          <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>Vymazat úplně vše</div>
           <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.55rem' }}>
             Smaže veškerá data včetně týmů. Účet Supabase Auth zůstane zachován.
           </div>
@@ -517,7 +517,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
             style={{ border: '1px solid var(--border)' }}
             onClick={resetData}
           >
-            🗑 Vymazat vše
+            Vymazat vše
           </button>
         </div>
       </div>

@@ -1,15 +1,26 @@
 # CLAUDE.md — Instrukce pro Claude Code
 
 ## Role
-Jsi senior full-stack developer. Webová aplikace pro firemní fotbalový turnaj.
+Jsi senior full-stack developer. Multi-sportová platforma pro firemní a amatérské turnaje (prodávaný produkt, profesionální „broadcast“ vzhled).
 Referenční implementace: `turnaj_final.html` — zachovej veškerou existující funkcionalitu.
 
 ## Technický stack
-- **Frontend:** React 18 + Vite 6, TypeScript; **Styling:** Tailwind CSS 3 (světlé téma, #f8fafc / #2563eb)
+- **Frontend:** React 18 + Vite 6, TypeScript (`npm run typecheck`); **Styling:** CSS tokeny + Tailwind 3 — viz „Design systém“
 - **Backend:** Supabase (PostgreSQL + RLS + Realtime + Auth); **Hosting:** Vercel
-- **Fonty:** Bebas Neue (nadpisy), DM Sans (text)
+- **Fonty:** Barlow Condensed (nadpisy, skóre — `var(--font-display)`), Inter (text — `var(--font-body)`)
+- **Ikony:** `lucide-react` + vlastní sportovní ikony `SportDef.Icon` (`src/components/ui/icons/SportIcons.tsx`). **Žádná emoji v UI.**
 - **`@supabase/supabase-js` přesně `2.49.1`** — nepovyšovat! Verze 2.99+ neodesílá `apikey` header pro mutace → 400 Bad Request
 - `createClient` musí mít explicitní `global: { headers: { apikey: supabaseAnonKey } }` (viz `src/lib/supabase.ts`)
+
+## Design systém (broadcast vzhled)
+- **Tokeny** v `src/index.css` `:root`: `--surface-0/1/2`, `--ink`, `--ink-muted`, `--line`, `--chrome*` (tmavé lišty), `--brand*` (značka turnaje), `--live/--win/--loss/--draw/--warn/--gold`, `--radius*`. Staré názvy (`--accent`, `--muted`, `--border`, `--text`…) jsou aliasy → nepoužívat v novém kódu.
+- **Nikdy natvrdo hex barvy** v komponentách (výjimka: TV paleta `C` ve `Scoreboard`/`KioskMode`, sdílecí šablony).
+- Inline styl s `fontFamily: 'var(--font-display)'` dostane automaticky verzálky + tučné + tabulková čísla (pravidlo `[style*="font-display"]` v index.css).
+- **Primitiva** `src/components/ui/`: `Button` (prop `inactive` místo `disabled`), `Badge`/`MatchStatusBadge`, `Card`/`SectionHeader`/`StatTile`, `Tabs`/`Segmented`, `MatchRow` (výsledková lišta), `PartnerStrip`, `TvPartnerBar`, `CardChip` (žlutá/červená karta), `TeamLogo` (fallback = iniciály), `Empty` (řetězcová ikona se ignoruje).
+- **Styly**: `src/styles/ui.css` (primitiva), `layout.css` (hlavička, spodní navigace, TV tabule, admin), `pages.css` (veřejné stránky), `landing.css` (úvodní stránka).
+- **Značka platformy**: `src/lib/brand.ts` (`BRAND.name` — název zatím není finální, nikde jinde nepsat natvrdo).
+- **Stav zápasu** `getMatchState(match, tournament)` (`src/lib/matchState.ts`) → `scheduled|live|final`; „Živě“ jen v den turnaje (`tips_lock_from`) v okně `scheduled_time + match_duration`. Bez změny DB.
+- `src/lib/fixtures.ts`: `buildFixtures()` (zápasy + play-off sloty), `topScorers()`.
 
 ## Multi-tenant architektura
 Každá datová tabulka má `tournament_id UUID NOT NULL FK → tournament(id)`. Viz `db-backup/05_migrations.sql`.
@@ -47,6 +58,7 @@ Stručný přehled RLS šablony: SELECT pro všechny (anon), ALL pro authenticat
 - `matches.scheduled_time TEXT NOT NULL`, `matches.round TEXT NOT NULL` — při UPDATE posílat `''`, **ne `null`** → jinak 400
 - `goals`: UNIQUE(player_id, match_id); `bracket_goals`: UNIQUE(slot_id, player_id) — **samostatná tabulka**, playoff sloty nejsou v `matches`
 - `special_tips.predicted_team_id` nullable — pro `top_scorer` INSERT nutno `predicted_team_id: null`
+- **Migrace 08** (`db-backup/08_partners_branding_media.sql`): `sponsors.tier`, `tournament.brand_primary/brand_secondary`, `press_enabled`, `press_contact_name/email/phone`, `press_note`. Frontend musí fungovat i bez ní (`tier ?? 'partner'`, `press_enabled ?? false`; uložení hlásí migraci přes `isMissingColumnError` z `src/lib/partners.ts`).
 - `tournament` klíčové sloupce: `format ('groups'|'league')`, `format_id TEXT`, `league_has_playoff BOOL`, `num_pitches INT DEFAULT 2`, `tips_enabled BOOL`, `tips_lock_from TEXT`, `assists_enabled BOOL`, `cards_enabled BOOL`, `sponsors_enabled BOOL`, `logo_url TEXT`, `slug TEXT UNIQUE NOT NULL`, `sport TEXT NOT NULL DEFAULT 'football'` (`'football'|'hockey'`, needitovatelné po založení), `penalty_minutes_enabled BOOL`
 - `matches`/`bracket_slots.decided_in`: nullable `'regulation'|'ot'|'so'` — skeleton pro budoucí prodloužení/nájezdy, u fotbalu se nepoužívá
 - `sponsors`: `id, tournament_id, name, logo_url, website_url, position` — UNIQUE none; Storage `team-logos/sponsors/{id}.png`
@@ -114,7 +126,7 @@ leagueSlotCount(n, numPitches):
 Přidat nový formát = soubor v `src/lib/bracket-formats/` + řádek v `TOURNAMENT_FORMATS`.
 Klíčové funkce: `getFormatDef(formatId)`, `getLegacyFormatDef(tournament, groups)` (zpětná kompatibilita), `getAdvancingCutoffs(formatId, tournament)`
 
-### Registrované formáty (11)
+### Registrované formáty (12)
 | ID | Struktura | Skupin |
 |----|-----------|--------|
 | `league` | Jen tabulka | 1 |
@@ -128,6 +140,7 @@ Klíčové funkce: `getFormatDef(formatId)`, `getLegacyFormatDef(tournament, gro
 | `groups_full_placement` | Útěšné QF+QF+…+Final (10 kol) | 2 |
 | `knockout_8` | QF(4)+SF+O3+Final (bez skupin) | 0 |
 | `groups_ro16` | R16(8)+QF+SF+O3+Final | 8 |
+| `mini_4teams` | SF+O3+Final pro 4 týmy (`formatMini4.ts`) | 1 |
 
 ### BracketTab flow
 1. `generateStructure` → `formatDef.fns.generate()`
@@ -162,45 +175,50 @@ Speciální: Vítěz turnaje 10 b., Nejlepší střelec 10 b., Vítěz skupiny 5
 Všechny togglované v Admin → Nastavení → Volitelné moduly; řídí `tournament.assists_enabled` / `tournament.cards_enabled` / `tournament.sponsors_enabled`.
 - **Asistence**: hooky `useAssists`/`useBracketAssists`; ±stepper v editoru; Scorers — sloupec `G+A`, `+0A` s `color: transparent` pro zarovnání
 - **Kartičky**: hooky `useCards`/`useBracketCards`; záznamy INSERT/DELETE (ne upsert); záložka Disciplína — viditelná jen pokud `cards_enabled`
-- **Sponzoři**: hook `useSponsors(tournamentId)`; záložka `src/components/public/Sponsors.tsx` (grid karet); admin `src/components/admin/tabs/SponsorsTab.tsx` (add/edit/delete/řazení ↑↓/upload loga); Storage `team-logos/sponsors/{id}.png`, max 500 KB
-  - Sidebar loga: `position: fixed` po stranách viewportu, **ne grid wrapper** — hlavní obsah se nesmí zúžit; loga 120×90px; sudý index → levý sidebar, lichý → pravý
-  - CSS `.sponsor-sidebar { display: none }` → `display: flex` jen při ≥1500px; sidebary mají `left/right: 0`, `top: 70`, `bottom: 0`, `overflowY: auto`
+- **Partneři (sponzoři)**: hook `useSponsors(tournamentId)`; úrovně `sponsors.tier` = `title|main|partner|supplier|media` (`src/lib/partners.ts`: `sortByTier`, `groupByTier`, `getTitlePartner`). **Generální partner = první s tier `title`** → „Presented by“ v hlavičce, hero Přehledu a na TV tabuli. Veřejná stránka `Sponsors.tsx` seskupená dle úrovní; admin `SponsorsTab.tsx` (úroveň, řazení ↑↓ jen v rámci úrovně, upload loga); Storage `team-logos/sponsors/{id}.png`, max 500 KB
+  - Sidebar loga: `position: fixed` po stranách viewportu, **ne grid wrapper** — hlavní obsah se nesmí zúžit; loga 120×90px; seřazeno dle úrovně, sudý index → levý sidebar, lichý → pravý
+  - CSS `.sponsor-sidebar { display: none }` → `display: flex` jen při ≥1500px; sidebary mají `left/right: 0`, `top: HEADER_HEIGHT_DESKTOP + 8`, `bottom: 0`, `overflowY: auto`
+- **Branding turnaje**: `tournament.brand_primary/secondary` (hex); `applyTournamentTheme()` (`src/lib/theme.ts`) přepíše `--brand*` (WCAG kontrast, světlé barvy ztmaví); admin Nastavení → Vzhled turnaje (`BrandingSection.tsx`)
+- **Média**: veřejná záložka `media` (`Media.tsx`, jen `press_enabled`) — kontakt, loga ke stažení, XLSX výsledkový servis (`src/lib/exportPress.ts`, xlsx načítán dynamicky), bulletin; admin Info → Média a tisk (`MediaSection.tsx`)
+- **Sdílecí grafiky**: `src/components/share/` (šablony 1080×1080 / 1080×1920, `html-to-image`, líně přes `share/lazy.tsx`); tlačítka Sdílet v Zápasech, Tabulce, Statistikách. Obrázky v šablonách musí mít `crossOrigin="anonymous"`.
+- **Náhledy odkazů (OG)**: `api/og.ts` (Vercel Edge, `@vercel/og`, 1200×630) + `middleware.ts` vrací robotům sociálních sítí na `/{uuid}` HTML s OG meta. `vercel.json` rewrite vynechává `/api/`. Lokálně na Windows `@vercel/og` nejde spustit (chyba cest) — ověřovat po deployi.
   - Kapacita bez scrollování: ~6–9 log na stranu (závisí na výšce monitoru)
 - **Import CSV/Excel**: `src/components/admin/ImportTeamsModal.tsx`; balíček `xlsx`; List "Sheet1" se importuje pokud `players.length > 0`
 - **Fotky hráčů**: `players.avatar_url`; Storage `team-logos/players/{id}.png|.jpg`; max 200 KB, pouze PNG/JPG; zobrazují se v záložkách Týmy (32px kruh) i Statistiky (36px kruh vedle jména)
 - **Tisknutelný bulletin**: `src/components/public/PrintBulletin.tsx`; `window.print()` po 400ms
 
 ## Architektura záložek (přehled)
-**Veřejné**: overview, teams, results (label "Zápasy"), standings, scorers, bracket (skryta při `league && !league_has_playoff`), info, rules (`rule_items` karty), discipline (jen `cards_enabled`), tips (jen `tips_enabled`), sponsors (jen `sponsors_enabled`)
+**Veřejné** (pořadí = `buildPublicTabs()` v `Header.tsx`): overview (Přehled), results (Zápasy), standings (Tabulka), statistics, teams (+ detail týmu), bracket (Pavouk; skryt při `league && !league_has_playoff`), rules, tips (jen `tips_enabled`), sponsors (Partneři; jen `sponsors_enabled`), media (jen `press_enabled`). Mobil: `BottomNav` = Přehled/Zápasy/Tabulka/Statistiky + „Více“.
 
-**Admin pořadí**: Info → Oznámení → Pravidla → Týmy → Rozhodčí → Skupiny → Střelci → Zápasy → Play-off → Tipovačka → Sponzoři → Nastavení
-Aktivní záložky (Zápasy, Play-off, Tipovačka) = zelené pozadí (`ACTION_TABS` v AdminPanel.tsx)
+**Admin pořadí**: Info → Oznámení → Pravidla → Týmy → Rozhodčí → Skupiny → Střelci → Zápasy → Play-off → Tipovačka → Partneři → Nastavení — v `ADMIN_NAV` (AdminPanel.tsx) seskupeno do bloků Obsah / Soutěž / Průběh turnaje / Komerce / Systém, levý sidebar (mobil: horizontální lišta)
+Aktivní záložky (Zápasy, Play-off, Tipovačka) = zelené zvýraznění (`ACTION_TABS` v AdminPanel.tsx)
 
-**Standings barevné kódování**:
-- Liga: 0–1 zelená (→SF), 2–5 amber (→QF)
-- Groups: 0 zelená (vítěz), 1 světle modrá (postup)
+**Standings barevné kódování** (pruh vlevo + štítek, `zoneFor()` ve Standings.tsx): zelená `--win` = SF / postup, amber `--warn` = QF / útěcha. Forma posledních 5 zápasů (V/R/P).
 
 ## Loga (Supabase Storage, bucket "team-logos")
 - Týmová loga: `{teamId}.png`, max 500 KB; cache-bust: `?v={timestamp}`; komponenta `TeamLogo`
-- Logo turnaje: `tournament-logo.png`, 140px v Overview; po uploadu volat `refetchTournament()`
+- Logo turnaje: `tournaments/{tournamentId}/logo.png` (dříve sdílený `tournament-logo.png` — přepisoval logo všem turnajům, nepoužívat); 112px v hero Přehledu; po uploadu volat `refetchTournament()`
 - Loga sponzorů: `sponsors/{sponsorId}.png`, max 500 KB; cesta v `sponsors.logo_url`
 - **Storage RLS**: politiky pro upload musí být aplikovány v Supabase SQL Editoru — viz `db-backup/04_storage.sql`; bez nich vrací upload "new row violates row level security"
 
 ### TeamLogo sizes (referenční tabulka)
 | Kontext | Size |
 |---------|------|
+| Přehled — výsledkové lišty / mini tabulka / střelci | 28 / 22 / 22px |
+| Detail týmu (panel) | 64px |
 | Záložka Týmy — logo týmu (karta) | 52px |
 | Záložka Standings | 30px |
 | Záložka Scorers / Discipline | 34px |
 | Záložka Bracket (sloty) | 34px |
 | Záložka Tips (zápasové řádky) | 30px |
-| Záložka Results (match card) | 32px |
+| Záložka Results (MatchRow) | 30px |
 | Záložka Statistics — PlayerInfo | 28px |
 | Scoreboard — standings | 30px |
 | Scoreboard — zápasy skupin/ligy | 28px |
 | Scoreboard — play-off sloty | 28px |
 | Scoreboard — flat bracket | 30px |
 | Scoreboard — střelci | 26px |
+| Kiosk — všechna loga | 28px |
 
 ## Vercel deployment
 `VITE_SUPABASE_URL` a `VITE_SUPABASE_ANON_KEY` jsou baked při buildu — změna env vars v dashboardu vyžaduje redeploy.
@@ -210,6 +228,7 @@ Soubor `middleware.ts` v kořeni projektu chrání aplikaci heslem.
 - **Aktivace**: Vercel env var `MAINTENANCE = true` + Redeploy
 - **Deaktivace**: `MAINTENANCE = false` nebo smazat proměnnou + Redeploy (bez commitu)
 - Přihlašovací údaje: `denis` / `zftest2026`
+- Middleware dále obsluhuje OG náhledy pro roboty (viz Volitelné moduly → Náhledy odkazů); maintenance kontrola musí zůstat první
 - Proměnná `MAINTENANCE` je server-side (ne `VITE_` prefix) — čte ji edge middleware, ne frontend bundle
 
 **Checklist "No API key" / kód 21000:**

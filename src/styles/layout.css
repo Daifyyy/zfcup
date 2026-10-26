@@ -175,3 +175,77 @@
   font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
   padding: .12rem .35rem; border-radius: 3px; line-height: 1;
 }
+
+/* ── Administrace ───────────────────────────────────────────────────── */
+.adm {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(11,18,32,.5); backdrop-filter: blur(3px);
+  display: flex; justify-content: flex-end;
+}
+.adm__panel {
+  width: min(980px, 100vw); height: 100vh; background: var(--surface-1);
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: var(--shadow-panel); animation: adm-in .22s ease;
+}
+.adm__panel--narrow { width: min(460px, 100vw); }
+@keyframes adm-in { from { transform: translateX(40px); opacity: 0 } to { transform: none; opacity: 1 } }
+.adm__head {
+  display: flex; align-items: center; gap: .6rem; flex-shrink: 0;
+  padding: .7rem 1rem .7rem 1.25rem; background: var(--chrome); color: #fff;
+  border-bottom: 2px solid var(--brand);
+}
+.adm__eyebrow { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--chrome-muted); }
+.adm__title {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; text-transform: uppercase; line-height: 1.05;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.adm__user {
+  display: inline-flex; align-items: center; gap: .4rem; font-size: .74rem; color: var(--chrome-muted);
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.adm__user-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
+@media (max-width: 760px) { .adm__user { display: none; } }
+.adm__hbtn {
+  display: inline-flex; align-items: center; gap: .35rem; height: 32px; padding: 0 .65rem;
+  background: transparent; border: 1px solid var(--chrome-line); border-radius: var(--radius);
+  color: var(--chrome-muted); font-family: var(--font-body); font-size: .76rem; font-weight: 600; cursor: pointer;
+}
+.adm__hbtn:hover { color: #fff; border-color: rgba(255,255,255,.22); }
+.adm__body { flex: 1; min-height: 0; display: flex; }
+.adm__nav {
+  width: 208px; flex-shrink: 0; overflow-y: auto; padding: .8rem .6rem 1.2rem;
+  background: var(--surface-2); border-right: 1px solid var(--line);
+}
+.adm__nav-group + .adm__nav-group { margin-top: .9rem; }
+.adm__nav-label {
+  font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em;
+  color: var(--ink-faint); padding: 0 .6rem .3rem;
+}
+.adm__nav-label--live { color: var(--win); }
+.adm__nav-btn {
+  width: 100%; display: flex; align-items: center; gap: .6rem; padding: .5rem .6rem;
+  background: none; border: none; border-radius: var(--radius); cursor: pointer; text-align: left;
+  font-family: var(--font-body); font-size: .86rem; font-weight: 500; color: var(--ink-muted);
+}
+.adm__nav-btn:hover { background: var(--surface-1); color: var(--ink); }
+.adm__nav-btn--action { color: var(--win); font-weight: 600; }
+.adm__nav-btn--active { background: var(--surface-1); color: var(--ink); font-weight: 700; box-shadow: inset 3px 0 0 var(--brand), 0 1px 2px rgba(11,18,32,.06); }
+.adm__nav-btn--active.adm__nav-btn--action { box-shadow: inset 3px 0 0 var(--win), 0 1px 2px rgba(11,18,32,.06); }
+.adm__content { flex: 1; min-width: 0; overflow-y: auto; padding: 1.1rem 1.4rem 2rem; }
+.adm__content-title {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; text-transform: uppercase;
+  padding-bottom: .5rem; margin-bottom: 1rem; border-bottom: 2px solid var(--ink);
+}
+@media (max-width: 760px) {
+  .adm__body { flex-direction: column; }
+  .adm__nav {
+    width: auto; display: flex; gap: .25rem; overflow-x: auto; overflow-y: hidden; padding: .45rem .5rem;
+    border-right: none; border-bottom: 1px solid var(--line); flex-shrink: 0; scrollbar-width: none;
+  }
+  .adm__nav-group { display: flex; gap: .25rem; }
+  .adm__nav-group + .adm__nav-group { margin-top: 0; padding-left: .35rem; border-left: 1px solid var(--line); }
+  .adm__nav-label { display: none; }
+  .adm__nav-btn { width: auto; white-space: nowrap; padding: .45rem .6rem; font-size: .8rem; }
+  .adm__content { padding: 1rem 1rem 2rem; }
+  .adm__content-title { font-size: 1.3rem; }
+}

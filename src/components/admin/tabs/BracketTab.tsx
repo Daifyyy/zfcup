@@ -1,3 +1,5 @@
+import { Clock, Gavel } from 'lucide-react'
+import { CardChip } from '../../ui/CardChip'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { addMinutes } from '../../../lib/constants'
@@ -265,11 +267,11 @@ function SlotEditor({
             <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 2 }}>
               <button type="button" onClick={() => changeYellow(p.id, -1)}
                 style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.7rem', color: 'var(--muted)' }}>−</button>
-              <span style={{ fontSize: '.85rem' }}>{'🟡'.repeat(Math.max(0, cardData[p.id]?.yellow ?? 0))}{cardData[p.id]?.yellow === 2 ? '→🔴' : ''}</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>{Array.from({ length: Math.max(0, cardData[p.id]?.yellow ?? 0) }, (_, k) => <CardChip key={k} kind="yellow" />)}{cardData[p.id]?.yellow === 2 && <>→<CardChip kind="red" /></>}</span>
               <button type="button" onClick={() => changeYellow(p.id, +1)}
                 style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid #d97706', background: 'rgba(217,119,6,.08)', cursor: 'pointer', fontSize: '.7rem', color: '#d97706' }}>+</button>
               <button type="button" onClick={() => toggleRed(p.id)}
-                style={{ width: 22, height: 22, borderRadius: 4, border: `1px solid ${cardData[p.id]?.red ? '#dc2626' : 'var(--border)'}`, background: cardData[p.id]?.red ? 'rgba(220,38,38,.1)' : '#f8fafc', cursor: 'pointer', fontSize: '.8rem' }}>🔴</button>
+                style={{ width: 22, height: 22, borderRadius: 4, border: `1px solid ${cardData[p.id]?.red ? '#dc2626' : 'var(--border)'}`, background: cardData[p.id]?.red ? 'rgba(220,38,38,.1)' : '#f8fafc', cursor: 'pointer', fontSize: '.8rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><CardChip kind="red" /></button>
             </div>
           )}
           {penaltiesEnabled && (
@@ -302,7 +304,7 @@ function SlotEditor({
 
       {/* Tým selects */}
       <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem' }}>
-        🏟️ Týmy (Zápas {slot.position + 1})
+        Týmy (Zápas {slot.position + 1})
       </div>
       <div className="field-row" style={{ marginBottom: '.65rem' }}>
         <select className="field-input field-select" style={{ fontSize: '.78rem' }} value={s.home_id ?? ''}
@@ -319,7 +321,7 @@ function SlotEditor({
 
       {/* Skóre — každý tým na vlastním řádku */}
       <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.55rem' }}>
-        📝 Skóre zápasu
+        Skóre zápasu
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.55rem', marginBottom: '.3rem' }}>
         <span className="team-dot" style={{ background: ht?.color ?? '#94a3b8', flexShrink: 0 }} />
@@ -352,7 +354,7 @@ function SlotEditor({
           Odehrán {s.played && <span style={{ color: 'var(--success)' }}>✓</span>}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>🕐</span>
+          <Clock size={14} style={{ color: 'var(--muted)' }} aria-label="Čas" />
           <input type="time" value={s.scheduled_time} onChange={e => setS(x => ({ ...x, scheduled_time: e.target.value }))}
             style={{ fontSize: '.82rem', padding: '.25rem .45rem', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }} />
         </div>
@@ -361,7 +363,7 @@ function SlotEditor({
       {/* Rozhodčí */}
       {referees.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', marginBottom: '.65rem' }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>⚖</span>
+          <Gavel size={14} style={{ color: 'var(--muted)' }} aria-label="Rozhodčí" />
           <select className="field-input field-select" value={refereeId} onChange={e => setRefereeId(e.target.value)}
             style={{ fontSize: '.82rem', padding: '.25rem .45rem', flex: 1 }}>
             <option value="">— Bez rozhodčího —</option>
@@ -413,7 +415,7 @@ function SlotEditor({
       )}
 
       <button type="button" className="btn btn-p btn-sm" onClick={saveAll} style={{ opacity: saving ? 0.6 : 1 }}>
-        {saving ? 'Ukládám…' : '💾 Uložit vše'}
+        {saving ? 'Ukládám…' : 'Uložit vše'}
       </button>
     </div>
   )
@@ -482,7 +484,7 @@ function RoundCard({
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '.2rem' }}>
           <button type="button" className="btn btn-s btn-sm" onClick={() => onApplyTimes({ ...round, _start: start, _break: parseInt(brk) || 0 })}>
-            ⏰ Rozepsat časy
+            Rozepsat časy
           </button>
           {preview() && <span style={{ fontSize: '.67rem', color: 'var(--muted)' }}>{preview()}</span>}
         </div>
@@ -572,7 +574,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     if (!isLeague && groups.length < 1) { showToast('Potřebuješ aspoň 1 skupinu'); return }
     const hasResults = bracketSlots.some(s => s.played) || bracketGoals.length > 0
     const confirmMsg = hasResults
-      ? `Vytvořit strukturu playoff (${formatLabel})?\n\n⚠ Stávající pavouk včetně výsledků a gólů bude smazán. Tuto akci nelze vrátit.`
+      ? `Vytvořit strukturu playoff (${formatLabel})?\n\nStávající pavouk včetně výsledků a gólů bude smazán. Tuto akci nelze vrátit.`
       : `Vytvořit strukturu playoff (${formatLabel})? Stávající pavouk bude smazán.`
     if (!confirm(confirmMsg)) return
 
@@ -669,7 +671,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     if (currentRound.position === maxPos) {
       await refetchBracket()
       const evaluated = await checkTournamentWinner(bracketRounds, tournament?.id ?? '')
-      showToast(evaluated ? 'Uloženo ✓ · 🏆 Vítěz turnaje vyhodnocen' : 'Uloženo ✓')
+      showToast(evaluated ? 'Uloženo ✓ · Vítěz turnaje vyhodnocen' : 'Uloženo ✓')
       return
     }
 
@@ -750,27 +752,27 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
 
       {/* Step 1 — Structure */}
       <div className="info-box" style={{ marginBottom: '.75rem' }}>
-        <div style={{ fontWeight: 600, marginBottom: '.35rem', fontSize: '.82rem' }}>📋 Krok 1 — Vytvořit strukturu</div>
+        <div style={{ fontWeight: 600, marginBottom: '.35rem', fontSize: '.82rem' }}>Krok 1 — Vytvořit strukturu</div>
         <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '.6rem' }}>
           Vytvoří prázdný pavouk (všechna místa TBD). Lze udělat <strong>před turnajem</strong>.<br />
           {formatDef
             ? <><strong>{formatLabel}:</strong> {formatDescription}</>
-            : <span style={{ color: 'var(--danger)' }}>⚠️ Nejdříve vyber formát v záložce Nastavení</span>
+            : <span style={{ color: 'var(--danger)' }}>Nejdříve vyber formát v záložce Nastavení</span>
           }
         </div>
         <button type="button" className="btn btn-s" onClick={generateStructure} style={{ opacity: generating ? 0.6 : 1 }}>
-          {generating ? 'Vytvářím…' : '⚡ Vytvořit strukturu playoff'}
+          {generating ? 'Vytvářím…' : 'Vytvořit strukturu playoff'}
         </button>
       </div>
 
       {/* Step 2 — Seed teams */}
       <div className={allGroupsComplete ? 'info-box' : 'warn-box'} style={{ marginBottom: '1.2rem' }}>
-        <div style={{ fontWeight: 600, marginBottom: '.35rem', fontSize: '.82rem' }}>🏆 Krok 2 — Nasadit týmy ze skupin</div>
+        <div style={{ fontWeight: 600, marginBottom: '.35rem', fontSize: '.82rem' }}>Krok 2 — Nasadit týmy ze skupin</div>
         <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '.6rem' }}>
           {allGroupsComplete
-            ? <>✅ Všechny zápasy jsou odehrány. Lze nasadit týmy.<br />
+            ? <>Všechny zápasy jsou odehrány. Lze nasadit týmy.<br />
                {formatDescription}</>
-            : <>⏳ Zápasy nejsou dohrány — odehráno <strong>{playedCount}/{groupMatches.length}</strong> zápasů.</>
+            : <>Zápasy nejsou dohrány — odehráno <strong>{playedCount}/{groupMatches.length}</strong> zápasů.</>
           }
         </div>
         <button
@@ -779,7 +781,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
           onClick={seedTeams}
           style={{ opacity: allGroupsComplete && !generating ? 1 : 0.5 }}
         >
-          {generating ? 'Nasazuji…' : '🏆 Nasadit týmy do playoff'}
+          {generating ? 'Nasazuji…' : 'Nasadit týmy do playoff'}
         </button>
       </div>
 

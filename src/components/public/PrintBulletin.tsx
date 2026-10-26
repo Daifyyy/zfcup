@@ -51,7 +51,7 @@ export default function PrintBulletin({ tournament, teams, groups, matches, brac
 
       {/* Close button — hidden in print */}
       <div className="no-print" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
-        <button type="button" className="btn btn-p" onClick={() => window.print()}>🖨 Tisknout</button>
+        <button type="button" className="btn btn-p" onClick={() => window.print()}>Tisknout</button>
         <button type="button" className="btn btn-d" onClick={onClose}>✕ Zavřít</button>
       </div>
 

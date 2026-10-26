@@ -1,3 +1,5 @@
+import { Clock, Gavel } from 'lucide-react'
+import { CardChip } from '../../ui/CardChip'
 import { useState, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
@@ -258,7 +260,7 @@ function InlineMatchEditor({
         const ligaGroup = groups.find(g => g.name === 'Liga')
         if (ligaGroup) {
           const evaluated = await checkLeagueTournamentWinner(ligaGroup, tournament.id)
-          if (evaluated) { showToast('Uloženo ✓ · 🏆 Vítěz ligy vyhodnocen'); return }
+          if (evaluated) { showToast('Uloženo ✓ · Vítěz ligy vyhodnocen'); return }
         }
       }
       showToast('Uloženo ✓')
@@ -303,7 +305,7 @@ function InlineMatchEditor({
 
       {/* Skóre — každý tým na vlastním řádku */}
       <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.55rem' }}>
-        📝 Skóre zápasu
+        Skóre zápasu
       </div>
 
       {/* Domácí */}
@@ -344,7 +346,7 @@ function InlineMatchEditor({
           Odehrán {played && <span style={{ color: 'var(--success)' }}>✓</span>}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>🕐</span>
+          <Clock size={14} style={{ color: 'var(--muted)' }} aria-label="Čas" />
           <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
             style={{ fontSize: '.82rem', padding: '.25rem .45rem', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }} />
         </div>
@@ -353,7 +355,7 @@ function InlineMatchEditor({
       {/* Rozhodčí */}
       {referees.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', marginBottom: '.65rem' }}>
-          <span style={{ fontSize: '.75rem', color: 'var(--muted)' }}>⚖</span>
+          <Gavel size={14} style={{ color: 'var(--muted)' }} aria-label="Rozhodčí" />
           <select className="field-input field-select" value={refereeId} onChange={e => setRefereeId(e.target.value)}
             style={{ fontSize: '.82rem', padding: '.25rem .45rem', flex: 1 }}>
             <option value="">— Bez rozhodčího —</option>
@@ -412,7 +414,7 @@ function InlineMatchEditor({
       {tournament?.assists_enabled && allPlayers.length > 0 && (
         <>
           <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem', marginTop: '.65rem' }}>
-            🅰 Asistence
+            Asistence
           </div>
           <div style={{ marginBottom: '.75rem' }}>
             {ht && homePlayers.length > 0 && (
@@ -463,7 +465,7 @@ function InlineMatchEditor({
       {tournament?.cards_enabled && allPlayers.length > 0 && (
         <>
           <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem', marginTop: '.65rem' }}>
-            🟡 Kartičky
+            Kartičky
           </div>
           <div style={{ marginBottom: '.75rem' }}>
             {[...homePlayers, ...awayPlayers].map(p => {
@@ -481,14 +483,14 @@ function InlineMatchEditor({
                   <span style={{ flex: 1, fontSize: '.83rem', fontWeight: 500 }}>{p.name}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <button type="button" style={cardBtnStyle(cd.yellow >= 1, '#d97706')} onClick={() => changeYellow(p.id, cd.yellow >= 1 ? -1 : +1)}>
-                      🟡 {cd.yellow > 0 ? `×${cd.yellow}` : ''}
+                      <CardChip kind="yellow" />{cd.yellow > 0 ? ` ×${cd.yellow}` : ''}
                     </button>
                     {cd.yellow === 2 && (
-                      <span style={{ fontSize: '.72rem', color: '#dc2626', fontWeight: 700 }}>→🔴</span>
+                      <span style={{ fontSize: '.72rem', color: 'var(--loss)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>→<CardChip kind="red" /></span>
                     )}
                     {cd.yellow < 2 && (
                       <button type="button" style={cardBtnStyle(cd.red === 1, '#dc2626')} onClick={() => toggleRed(p.id)}>
-                        🔴
+                        <CardChip kind="red" />
                       </button>
                     )}
                   </div>
@@ -503,7 +505,7 @@ function InlineMatchEditor({
       {tournament?.penalty_minutes_enabled && allPlayers.length > 0 && (
         <>
           <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem', marginTop: '.65rem' }}>
-            🚨 Trestné minuty
+            Trestné minuty
           </div>
           <div style={{ marginBottom: '.75rem' }}>
             {[...homePlayers, ...awayPlayers].map(p => {
@@ -542,7 +544,7 @@ function InlineMatchEditor({
 
       <div style={{ display: 'flex', gap: '.4rem' }}>
         <button type="button" className="btn btn-p btn-sm" onClick={saveAll}>
-          {saving ? 'Ukládám…' : '💾 Uložit vše'}
+          {saving ? 'Ukládám…' : 'Uložit vše'}
         </button>
         <button type="button" className="btn btn-d btn-sm" onClick={onClose}>Zavřít</button>
       </div>
@@ -625,14 +627,14 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
       {!isLeague && groupMatches.length > 0 && allGroupsComplete && !bracketSlots.some(s => s.home_id || s.away_id) && (
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <div style={{ fontSize: '.78rem' }}>
-            ✅ Všechny skupinové zápasy odehrány — přejdi do záložky <strong>Play-off</strong> a nasaď týmy (Krok 2).
+            Všechny skupinové zápasy odehrány — přejdi do záložky <strong>Play-off</strong> a nasaď týmy (Krok 2).
           </div>
         </div>
       )}
       {!isLeague && groupMatches.length > 0 && !allGroupsComplete && !hasBracket && (
         <div className="info-box" style={{ marginBottom: '1rem' }}>
           <div style={{ fontSize: '.78rem', color: 'var(--muted)' }}>
-            ⏳ Odehráno {groupMatches.filter(m => m.played).length}/{groupMatches.length} skupinových zápasů. Nasazení do playoff bude dostupné po dokončení skupin v záložce <strong>Play-off</strong>.
+            Odehráno {groupMatches.filter(m => m.played).length}/{groupMatches.length} skupinových zápasů. Nasazení do playoff bude dostupné po dokončení skupin v záložce <strong>Play-off</strong>.
           </div>
         </div>
       )}
@@ -645,14 +647,14 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
             className="btn btn-d btn-sm"
             onClick={() => exportSchedule(matches, groups, teams, tournament?.num_pitches ?? 2, tournament ? { match_duration: tournament.match_duration ?? 20, round_break: tournament.round_break ?? 5 } : undefined, sportDef.terms.pitchLabel)}
           >
-            📥 Exportovat rozpis (Excel)
+            Exportovat rozpis (Excel)
           </button>
           <button
             type="button"
             className="btn btn-d btn-sm"
             onClick={() => exportRefCards(matches, groups, teams, players)}
           >
-            📋 Karty rozhodčího (Excel)
+            Karty rozhodčího (Excel)
           </button>
         </div>
       )}

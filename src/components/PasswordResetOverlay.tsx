@@ -1,3 +1,4 @@
+import { CheckCircle2 } from 'lucide-react'
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -39,7 +40,7 @@ export default function PasswordResetOverlay({ onDone }: Props) {
       }}>
         {done ? (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '.5rem' }}>✅</div>
+            <div style={{ marginBottom: '.5rem', color: 'var(--win)', display: 'flex', justifyContent: 'center' }}><CheckCircle2 size={40} strokeWidth={1.5} /></div>
             <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, color: '#111' }}>
               Heslo bylo změněno
             </p>

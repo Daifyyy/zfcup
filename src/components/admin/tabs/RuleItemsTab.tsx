@@ -98,7 +98,7 @@ export default function RuleItemsTab({ ruleItems, tournament, refetchRuleItems, 
       </div>
 
       <div className="btn-row">
-        <button type="button" className="btn btn-p" onClick={save}>{editId ? '💾 Uložit' : '+ Přidat'}</button>
+        <button type="button" className="btn btn-p" onClick={save}>{editId ? 'Uložit' : '+ Přidat'}</button>
         {editId && (
           <button type="button" className="btn btn-d btn-sm" onClick={() => { setEditId(null); setForm({ title: '', body: '' }) }}>✕ Zrušit</button>
         )}
@@ -112,7 +112,6 @@ export default function RuleItemsTab({ ruleItems, tournament, refetchRuleItems, 
         <div className="a-list">
           {items.map((r, i) => (
             <div key={r.id} className="a-item">
-              <span style={{ fontSize: '1.1rem' }}>📋</span>
               <div style={{ flex: 1 }}>
                 {r.title
                   ? <div className="a-item-main">{r.title}</div>

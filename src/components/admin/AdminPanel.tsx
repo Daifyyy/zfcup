@@ -31,23 +31,38 @@ import TipsAdminTab from './tabs/TipsAdminTab'
 import RefereesTab from './tabs/RefereesTab'
 import SponsorsTab from './tabs/SponsorsTab'
 import type { Sponsor } from '../../hooks/useSponsors'
-import { getSportDef } from '../../lib/sports'
+import {
+  BookOpen, CalendarClock, Gavel, GitBranch, Handshake, Info, Layers, LogOut, Megaphone,
+  Settings, Target, Trophy, Users, X,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 type ATab = 'info' | 'announcements' | 'rules' | 'teams' | 'referees' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'sponsors' | 'settings'
 
-const ADMIN_TABS: [ATab, string][] = [
-  ['info',          'Info'],
-  ['announcements', 'Informace'],
-  ['rules',         'Pravidla'],
-  ['teams',         'Týmy'],
-  ['referees',      'Rozhodčí'],
-  ['groups',        'Skupiny'],
-  ['scorers',       'Střelci'],
-  ['matches',       'Zápasy'],
-  ['bracket',       'Play-off'],
-  ['tips',          'Tipovačka'],
-  ['sponsors',      'Sponzoři'],
-  ['settings',      'Nastavení'],
+// Pořadí odpovídá CLAUDE.md (Info → … → Nastavení), jen seskupené do bloků.
+const ADMIN_NAV: { group: string; items: { id: ATab; label: string; icon: LucideIcon }[] }[] = [
+  { group: 'Obsah', items: [
+    { id: 'info',          label: 'Info',      icon: Info },
+    { id: 'announcements', label: 'Oznámení',  icon: Megaphone },
+    { id: 'rules',         label: 'Pravidla',  icon: BookOpen },
+  ] },
+  { group: 'Soutěž', items: [
+    { id: 'teams',    label: 'Týmy',     icon: Users },
+    { id: 'referees', label: 'Rozhodčí', icon: Gavel },
+    { id: 'groups',   label: 'Skupiny',  icon: Layers },
+    { id: 'scorers',  label: 'Střelci',  icon: Trophy },
+  ] },
+  { group: 'Průběh turnaje', items: [
+    { id: 'matches', label: 'Zápasy',    icon: CalendarClock },
+    { id: 'bracket', label: 'Play-off',  icon: GitBranch },
+    { id: 'tips',    label: 'Tipovačka', icon: Target },
+  ] },
+  { group: 'Komerce', items: [
+    { id: 'sponsors', label: 'Partneři', icon: Handshake },
+  ] },
+  { group: 'Systém', items: [
+    { id: 'settings', label: 'Nastavení', icon: Settings },
+  ] },
 ]
 
 // Záložky aktivně používané při turnaji — zvýraznit
@@ -136,68 +151,51 @@ export default function AdminPanel(props: Props) {
 
   const logout = async () => {
     const { error } = await supabase.auth.signOut()
-    showToast(error ? 'Chyba odhlášení: ' + error.message : 'Odhlášen ✓')
+    showToast(error ? 'Chyba odhlášení: ' + error.message : 'Odhlášen')
   }
 
   const tabProps = { ...props, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals }
   const isLeagueNoPlayoff = props.tournament?.format === 'league' && !(props.tournament?.league_has_playoff ?? true)
-  const visibleAdminTabs = ADMIN_TABS.filter(([id]) => !isLeagueNoPlayoff || id !== 'bracket')
+  const nav = ADMIN_NAV
+    .map(g => ({ ...g, items: g.items.filter(it => !isLeagueNoPlayoff || it.id !== 'bracket') }))
+    .filter(g => g.items.length > 0)
+  const current = nav.flatMap(g => g.items).find(it => it.id === aTab)
   const mouseDownOnBackdrop = useRef(false)
 
   return (
     <div
       onMouseDown={e => { mouseDownOnBackdrop.current = e.target === e.currentTarget }}
       onClick={e => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) onClose() }}
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,.45)',
-        zIndex: 1000,
-        backdropFilter: 'blur(4px)',
-        display: 'flex', justifyContent: 'flex-end',
-      }}
+      className="adm"
     >
-      <div style={{
-        width: 'min(560px, 100vw)',
-        height: '100vh',
-        background: '#fff',
-        borderLeft: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column',
-        overflow: 'hidden',
-        boxShadow: 'var(--shadow-panel)',
-        animation: 'slideIn .22s ease',
-      }}>
-        <style>{`@keyframes slideIn { from { transform: translateX(100%) } to { transform: translateX(0) } }`}</style>
+      <div className={session ? 'adm__panel' : 'adm__panel adm__panel--narrow'}>
 
         {/* Header */}
-        <div style={{
-          padding: '.85rem 1.3rem',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', gap: '.65rem',
-          flexShrink: 0,
-        }}>
-          <span style={{ fontSize: '1.1rem' }}>{getSportDef(props.tournament?.sport).icon}</span>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', letterSpacing: '.06em', flex: 1 }}>
-            Admin panel
-          </h2>
-          <span style={{
-            fontSize: '.61rem', background: 'var(--accent-dim)', color: 'var(--accent)',
-            border: '1px solid rgba(37,99,235,.2)', padding: '2px 8px',
-            borderRadius: 20, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em',
-          }}>
-            {session ? 'Přihlášen' : 'Správce'}
-          </span>
+        <header className="adm__head">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="adm__eyebrow">Administrace</div>
+            <h2 className="adm__title">{props.tournament?.name ?? 'Turnaj'}</h2>
+          </div>
           {session && (
-            <button type="button" onClick={logout} className="btn btn-d btn-sm" style={{ marginRight: '.25rem' }}>
-              Odhlásit
+            <span className="adm__user" title={session.user.email ?? ''}>
+              <span className="adm__user-dot" />{session.user.email}
+            </span>
+          )}
+          {session && (
+            <button type="button" onClick={logout} className="adm__hbtn" title="Odhlásit">
+              <LogOut size={15} /><span className="hide-mobile">Odhlásit</span>
             </button>
           )}
-          <button type="button" onClick={onClose} className="btn btn-d btn-sm">✕ Zavřít</button>
-        </div>
+          <button type="button" onClick={onClose} className="adm__hbtn" title="Zavřít (Esc)">
+            <X size={16} /><span className="hide-mobile">Zavřít</span>
+          </button>
+        </header>
 
         {!session ? (
           /* Login form */
           <div style={{ padding: '1.7rem', display: 'flex', flexDirection: 'column', gap: '.9rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', letterSpacing: '.06em' }}>Přihlášení</h3>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', textTransform: 'uppercase' }}>Přihlášení pořadatele</h3>
+            <p style={{ fontSize: '.84rem', color: 'var(--ink-muted)', marginTop: '-.4rem' }}>Správa turnaje je dostupná jen pro pořadatele.</p>
             <div className="field-group">
               <label className="field-label">Email</label>
               <input
@@ -234,15 +232,15 @@ export default function AdminPanel(props: Props) {
                 Zapomenuté heslo?
               </button>
             ) : resetSent ? (
-              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '.75rem', fontSize: '.82rem', fontFamily: 'var(--font-body)', color: '#166534' }}>
-                ✅ E-mail s odkazem pro reset hesla byl odeslán. Zkontroluj schránku (včetně spamu).
+              <div className="info-box" style={{ marginBottom: 0 }}>
+                E-mail s odkazem pro reset hesla byl odeslán. Zkontroluj schránku (včetně spamu).
                 <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setResetEmail('') }} style={{ display: 'block', marginTop: '.5rem', background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '.82rem', padding: 0, textDecoration: 'underline' }}>
-                  ← Zpět na přihlášení
+                  Zpět na přihlášení
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', background: '#f8fafc', borderRadius: 8, padding: '.85rem', border: '1px solid var(--border)' }}>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '.82rem', margin: 0, color: '#374151' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', background: 'var(--surface-2)', borderRadius: 'var(--radius)', padding: '.85rem', border: '1px solid var(--border)' }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '.82rem', margin: 0, color: 'var(--ink-muted)' }}>
                   Zadej svůj e-mail a pošleme ti odkaz pro reset hesla.
                 </p>
                 <input
@@ -265,48 +263,34 @@ export default function AdminPanel(props: Props) {
           </div>
         ) : (
           <>
-            {/* Admin tabs */}
-            <div style={{
-              display: 'flex',
-              borderBottom: '1px solid var(--border)',
-              padding: '0 .6rem',
-              overflowX: 'auto',
-              flexShrink: 0,
-            }}>
-              {visibleAdminTabs.map(([key, label]) => {
-                const isActive = aTab === key
-                const isAction = ACTION_TABS.includes(key)
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setATab(key)}
-                    style={{
-                      border: 'none',
-                      background: isActive ? 'none' : isAction ? 'rgba(22,163,74,.08)' : 'none',
-                      color: isActive ? 'var(--accent)' : isAction ? '#15803d' : 'var(--muted)',
-                      fontFamily: 'var(--font-body)',
-                      fontSize: '.67rem', fontWeight: isAction ? 700 : 600,
-                      textTransform: 'uppercase', letterSpacing: '.09em',
-                      padding: '.62rem .6rem', cursor: 'pointer',
-                      whiteSpace: 'nowrap', position: 'relative',
-                      transition: 'color .2s',
-                      borderBottom: isActive ? '2px solid var(--accent)' : isAction ? '2px solid rgba(22,163,74,.3)' : '2px solid transparent',
-                      marginBottom: -1,
-                    }}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-              <div style={{ fontSize: '.62rem', color: 'var(--muted)', padding: '.25rem .75rem .4rem', borderTop: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
-                <span style={{ display: 'inline-block', width: 10, height: 10, background: 'rgba(22,163,74,.15)', border: '1px solid rgba(22,163,74,.35)', borderRadius: 2, marginRight: 4, verticalAlign: 'middle' }} />
-                Zelené záložky — aktivní při průběhu turnaje
-              </div>
-            </div>
+            <div className="adm__body">
+              <nav className="adm__nav" aria-label="Sekce administrace">
+                {nav.map(g => (
+                  <div key={g.group} className="adm__nav-group">
+                    <div className={g.group === 'Průběh turnaje' ? 'adm__nav-label adm__nav-label--live' : 'adm__nav-label'}>{g.group}</div>
+                    {g.items.map(it => {
+                      const Icon = it.icon
+                      const active = aTab === it.id
+                      const action = ACTION_TABS.includes(it.id)
+                      return (
+                        <button
+                          key={it.id}
+                          type="button"
+                          onClick={() => setATab(it.id)}
+                          className={['adm__nav-btn', active && 'adm__nav-btn--active', action && 'adm__nav-btn--action'].filter(Boolean).join(' ')}
+                        >
+                          <Icon size={16} strokeWidth={1.9} />
+                          <span>{it.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
+              </nav>
 
-            {/* Tab body */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1.15rem 1.2rem' }}>
+            {/* Obsah záložky */}
+            <div className="adm__content">
+              {current && <h3 className="adm__content-title">{current.label}</h3>}
               {aTab === 'info'          && <InfoTab {...tabProps} />}
               {aTab === 'announcements' && <AnnouncementsTab {...tabProps} />}
               {aTab === 'rules'         && <RuleItemsTab ruleItems={props.ruleItems} tournament={props.tournament} refetchRuleItems={props.refetchRuleItems} showToast={showToast} />}
@@ -319,6 +303,7 @@ export default function AdminPanel(props: Props) {
               {aTab === 'tips'          && <TipsAdminTab showToast={showToast} tournament={props.tournament} teams={props.teams} players={props.players} groups={props.groups} matches={props.matches} bracketSlots={props.bracketSlots} bracketRounds={props.bracketRounds} />}
               {aTab === 'sponsors'      && <SponsorsTab sponsors={props.sponsors} tournament={props.tournament} refetchSponsors={props.refetchSponsors} showToast={showToast} />}
               {aTab === 'settings'      && <SettingsTab {...tabProps} />}
+            </div>
             </div>
           </>
         )}

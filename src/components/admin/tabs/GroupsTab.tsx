@@ -253,7 +253,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
 
           {leagueGroup && (
             <div className="warn-box" style={{ marginBottom: '.75rem' }}>
-              ⚠️ Ligový rozpis existuje: <strong>{matches.filter(m => m.group_id === leagueGroup.id).length} zápasů</strong>
+              Ligový rozpis existuje: <strong>{matches.filter(m => m.group_id === leagueGroup.id).length} zápasů</strong>
               {' '}({matches.filter(m => m.group_id === leagueGroup.id && m.played).length} odehráno).
               Generování smaže stávající rozpis.
             </div>
@@ -323,7 +323,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
           </div>
 
           <button type="button" className="btn btn-p" onClick={generateLeague} style={{ opacity: leagueGenerating ? 0.6 : 1 }}>
-            {leagueGenerating ? 'Generuji…' : '⚡ Generovat ligový rozpis'}
+            {leagueGenerating ? 'Generuji…' : 'Generovat ligový rozpis'}
           </button>
 
           <hr className="divider" />
@@ -360,7 +360,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
             }}>
               {groups.length === formatDef.groupConfig.defaultGroups
                 ? `✓ Formát „${formatDef.label}" — počet skupin odpovídá (${groups.length})`
-                : `⚠ Formát „${formatDef.label}" doporučuje ${formatDef.groupConfig.defaultGroups} skupin — aktuálně vytvořeno ${groups.length}`}
+                : `Formát „${formatDef.label}" doporučuje ${formatDef.groupConfig.defaultGroups} skupin — aktuálně vytvořeno ${groups.length}`}
             </div>
           )}
           <div className="sub-title">Vytvořit skupinu</div>
@@ -446,7 +446,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
           <input className="field-input" type="number" min="0" value={form.break_between} onChange={e => setForm(f => ({ ...f, break_between: e.target.value }))} />
         </div>
       </div>
-      <button type="button" className="btn btn-p" onClick={createGroup}>⚡ Vytvořit skupinu a generovat zápasy</button>
+      <button type="button" className="btn btn-p" onClick={createGroup}>Vytvořit skupinu a generovat zápasy</button>
 
       <hr className="divider" />
       <div className="sub-title">Existující skupiny</div>
@@ -463,7 +463,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
               <button type="button" className="btn btn-s btn-sm" onClick={() => {
                 setEditingTiebreakerGroupId(editingTiebreakerGroupId === g.id ? null : g.id)
                 setTiebreakerDraft(g.tiebreaker as typeof tiebreakerDraft)
-              }}>⚙ Tiebreaker</button>
+              }}>Tiebreaker</button>
               <button type="button" className="btn btn-d btn-sm" onClick={() => removeGroup(g)}>Smazat</button>
             </div>
             <div style={{ fontSize: '.71rem', color: 'var(--muted)', marginBottom: '.4rem' }}>
@@ -485,7 +485,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
                   </div>
                 ))}
                 <div style={{ display: 'flex', gap: '.4rem', marginTop: '.5rem' }}>
-                  <button type="button" className="btn btn-p btn-sm" onClick={() => saveTiebreaker(g.id)}>💾 Uložit</button>
+                  <button type="button" className="btn btn-p btn-sm" onClick={() => saveTiebreaker(g.id)}>Uložit</button>
                   <button type="button" className="btn btn-s btn-sm" onClick={() => setEditingTiebreakerGroupId(null)}>Zrušit</button>
                 </div>
               </div>

@@ -1,3 +1,4 @@
+import { Camera } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
@@ -209,11 +210,11 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                       {p.avatar_url
                         ? <img src={p.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border)' }} />
-                        : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', color: 'var(--muted)' }}>📷</div>
+                        : <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', color: 'var(--muted)' }}><Camera size={14} /></div>
                       }
                       <div>
                         <label style={{ cursor: 'pointer', fontSize: '.75rem', color: 'var(--accent)', fontWeight: 600, opacity: uploadingAvatar ? 0.5 : 1 }}>
-                          {uploadingAvatar ? 'Nahrávám…' : '📷 Nahrát foto'}
+                          {uploadingAvatar ? 'Nahrávám…' : 'Nahrát foto'}
                           <input type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style={{ display: 'none' }}
                             onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(p.id, f) }} />
                         </label>
@@ -321,7 +322,7 @@ export default function TeamsTab({ teams, players, tournament, refetchTeams, ref
       <hr className="divider" />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.5rem' }}>
         <div className="sub-title" style={{ margin: 0 }}>Týmy ({teams.length})</div>
-        <button type="button" className="btn btn-s btn-sm" onClick={() => setShowImport(true)}>📥 Import CSV/Excel</button>
+        <button type="button" className="btn btn-s btn-sm" onClick={() => setShowImport(true)}>Import CSV/Excel</button>
       </div>
       <ImportTeamsModal
         open={showImport}

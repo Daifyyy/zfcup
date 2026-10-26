@@ -79,7 +79,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
     },
     {
       title: 'Tipujte výsledky zápasů',
-      desc: 'Zadejte předpokládané skóre každého zápasu a stiskněte tlačítko „💾 Uložit tipy". Tipy se neukládají automaticky! Každý zápas se uzamkne v čase začátku zápasu.',
+      desc: 'Zadejte předpokládané skóre každého zápasu a stiskněte tlačítko „Uložit tipy". Tipy se neukládají automaticky! Každý zápas se uzamkne v čase začátku zápasu.',
     },
     {
       title: 'Sledujte žebříček',
@@ -144,7 +144,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
               whiteSpace: 'nowrap', flexShrink: 0,
             }}
           >
-            🖨️ Tisknout / PDF (A3)
+            Tisknout / PDF (A3)
           </button>
           <button
             type="button"
@@ -211,7 +211,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
                 Skenuj QR kód nebo navštiv adresu výše
               </div>
               <div style={{ marginTop: '.4rem', fontSize: '.82rem', color: '#64748b', textAlign: 'center', lineHeight: 1.5 }}>
-                📱 Funguje v mobilním prohlížeči<br />na jakémkoliv telefonu
+                Funguje v mobilním prohlížeči<br />na jakémkoliv telefonu
               </div>
             </div>
 
@@ -285,9 +285,9 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
                   Speciální tipy
                 </div>
                 {[
-                  { label: '🏆 Vítěz turnaje', pts: '10 b.' },
-                  { label: isLeague ? '🥇 Vítěz ligy' : '🥇 Vítěz skupiny', pts: '5 b.' },
-                  { label: isLeague ? '⬇️ Poslední v lize' : '⬇️ Poslední skupiny', pts: '3 b.' },
+                  { label: 'Vítěz turnaje', pts: '10 b.' },
+                  { label: isLeague ? 'Vítěz ligy' : 'Vítěz skupiny', pts: '5 b.' },
+                  { label: isLeague ? 'Poslední v lize' : 'Poslední skupiny', pts: '3 b.' },
                 ].map(row => (
                   <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.28rem .4rem', borderBottom: '1px solid rgba(37,99,235,.1)', fontSize: '.9rem' }}>
                     <span>{row.label}</span>
@@ -305,9 +305,9 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
 
           {/* Footer note */}
           <div style={{ fontSize: '.85rem', color: '#64748b', textAlign: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '.85rem', lineHeight: 1.6 }}>
-            ⏰ Tipy na každý zápas se uzamknou automaticky v čase začátku — sleduj čas začátku!
+            Tipy na každý zápas se uzamknou automaticky v čase začátku — sleduj čas začátku!
             {' · '}
-            ⚠️ Tipy se neukládají automaticky — vždy stiskni tlačítko <strong>„Uložit tipy"</strong>!
+            Tipy se neukládají automaticky — vždy stiskni tlačítko <strong>„Uložit tipy"</strong>!
           </div>
         </div>
       </div>
