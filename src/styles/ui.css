@@ -217,3 +217,13 @@
 }
 .ui-empty__icon { color: var(--ink-faint); }
 .ui-empty__text { font-size: .86rem; max-width: 36ch; }
+
+/* Sdílecí dialog */
+.shr { position: fixed; inset: 0; z-index: 3500; background: rgba(11,18,32,.6); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.shr__panel { background: var(--surface-1); border-radius: var(--radius-lg); padding: 1.1rem 1.25rem 1.25rem; box-shadow: var(--shadow-panel); max-height: 100%; overflow-y: auto; }
+.shr__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .9rem; }
+.shr__title { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; text-transform: uppercase; }
+.shr__sub { font-size: .8rem; color: var(--ink-muted); }
+.shr__close { background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: .35rem; cursor: pointer; color: var(--ink-muted); }
+.shr__preview { overflow: hidden; border-radius: var(--radius); box-shadow: 0 0 0 1px var(--line); margin: 0 auto; }
+.shr__actions { display: flex; gap: .5rem; justify-content: center; margin-top: 1rem; }

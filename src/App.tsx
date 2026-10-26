@@ -278,9 +278,9 @@ export default function App() {
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
         {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} teams={teams} players={players} groups={groups} matches={matches} goals={goals} bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots} sponsors={sponsorsEnabled ? sortedSponsors : []} presentedBy={presentedBy} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} penalties={penalties} bracketPenalties={bracketPenalties} tournament={tournament} matches={matches} />}
-        {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} />}
-        {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} />}
-        {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} penalties={penalties} bracketPenalties={bracketPenalties} players={players} teams={teams} tournament={tournament} />}
+        {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} sponsors={sponsorsEnabled ? sortedSponsors : []} showToast={showToast} />}
+        {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} sponsors={sponsorsEnabled ? sortedSponsors : []} showToast={showToast} />}
+        {tab === 'statistics' && <Statistics goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} penalties={penalties} bracketPenalties={bracketPenalties} players={players} teams={teams} tournament={tournament} sponsors={sponsorsEnabled ? sortedSponsors : []} showToast={showToast} />}
         {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
         {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}

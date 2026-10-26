@@ -1,4 +1,8 @@
+import { useState } from 'react'
+import { Share2 } from 'lucide-react'
 import { calcGroupStandings } from '../../lib/standings'
+import type { Sponsor } from '../../hooks/useSponsors'
+import { ShareTableDialog } from '../share/lazy'
 import type { Group } from '../../hooks/useGroups'
 import type { Match } from '../../hooks/useMatches'
 import type { Team } from '../../hooks/useTeams'
@@ -14,6 +18,8 @@ interface Props {
   matches: Match[]
   teams: Team[]
   tournament: Tournament | null
+  sponsors?: Sponsor[]
+  showToast?: (msg: string) => void
 }
 
 type Zone = { color: string; label: string } | null
@@ -56,7 +62,8 @@ function tiebreakerText(tb: Group['tiebreaker']): string {
   return 'rozdíl skóre → vstřelené'
 }
 
-export default function Standings({ groups, matches, teams, tournament }: Props) {
+export default function Standings({ groups, matches, teams, tournament, sponsors = [], showToast }: Props) {
+  const [shareGroupId, setShareGroupId] = useState<string | null>(null)
   const teamById = new Map(teams.map(t => [t.id, t]))
   const sportDef = getSportDef(tournament?.sport)
   const allowDraws = sportDef.standings.allowDraws
@@ -98,7 +105,14 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
             key={group.id}
             padded={false}
             title={group.name}
-            actions={<span style={{ fontSize: '.74rem', color: 'var(--ink-muted)' }}>{group.team_ids.length} týmů · {playedCount}/{groupMatches.length} odehráno</span>}
+            actions={
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem' }}>
+                <span className="hide-mobile" style={{ fontSize: '.74rem', color: 'var(--ink-muted)' }}>{group.team_ids.length} týmů · {playedCount}/{groupMatches.length} odehráno</span>
+                <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm" title="Sdílet grafiku tabulky" onClick={() => setShareGroupId(group.id)}>
+                  <Share2 size={14} />Sdílet
+                </button>
+              </span>
+            }
           >
             <div style={{ overflowX: 'auto' }}>
               <table className="ui-table standings-table">
@@ -157,6 +171,23 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
           </Card>
         )
       })}
+
+      {shareGroupId && (() => {
+        const g = groups.find(x => x.id === shareGroupId)
+        if (!g) return null
+        return (
+          <ShareTableDialog
+            tournament={tournament}
+            sponsors={sponsors}
+            groupName={g.name}
+            rows={calcGroupStandings(g, matches, sportDef)}
+            teams={teams}
+            allowDraws={allowDraws}
+            onClose={() => setShareGroupId(null)}
+            showToast={showToast}
+          />
+        )
+      })()}
     </div>
   )
 }

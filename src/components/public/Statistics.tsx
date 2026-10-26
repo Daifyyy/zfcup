@@ -1,4 +1,7 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { Share2 } from 'lucide-react'
+import type { Sponsor } from '../../hooks/useSponsors'
+import { ShareScorersDialog } from '../share/lazy'
 import type { Goal } from '../../hooks/useGoals'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { Assist } from '../../hooks/useAssists'
@@ -28,6 +31,8 @@ interface Props {
   players: Player[]
   teams: Team[]
   tournament: Tournament | null
+  sponsors?: Sponsor[]
+  showToast?: (msg: string) => void
 }
 
 function PlayerCell({ player, team }: { player?: Player; team?: Team }) {
@@ -47,7 +52,8 @@ function PlayerCell({ player, team }: { player?: Player; team?: Team }) {
 
 interface BoardRow { id: string; cells: ReactNode[]; primary: ReactNode }
 
-function Leaderboard({ title, columns, rows, players, teams, footer }: {
+function Leaderboard({ title, columns, rows, players, teams, footer, onShare }: {
+  onShare?: () => void
   title: string
   columns: string[]
   rows: BoardRow[]
@@ -56,7 +62,14 @@ function Leaderboard({ title, columns, rows, players, teams, footer }: {
   footer?: ReactNode
 }) {
   return (
-    <Card padded={false} title={title} actions={<span className="ui-badge">{rows.length}</span>}>
+    <Card padded={false} title={title} actions={
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}>
+        {onShare && (
+          <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" title="Sdílet grafiku" onClick={onShare}><Share2 size={14} /></button>
+        )}
+        <span className="ui-badge">{rows.length}</span>
+      </span>
+    }>
       <table className="ui-table">
         <thead>
           <tr>
@@ -85,7 +98,8 @@ function Leaderboard({ title, columns, rows, players, teams, footer }: {
   )
 }
 
-export default function Statistics({ goals, bracketGoals, assists, bracketAssists, cards, bracketCards, penalties, bracketPenalties, players, teams, tournament }: Props) {
+export default function Statistics({ goals, bracketGoals, assists, bracketAssists, cards, bracketCards, penalties, bracketPenalties, players, teams, tournament, sponsors = [], showToast }: Props) {
+  const [shareScorers, setShareScorers] = useState(false)
   const showAssists = tournament?.assists_enabled ?? false
   const showCards = tournament?.cards_enabled ?? false
   const showPenalties = tournament?.penalty_minutes_enabled ?? false
@@ -148,6 +162,7 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
             players={playerById}
             teams={teamById}
             footer={showAssists ? <span>G = góly · A = asistence · B = kanadské body</span> : undefined}
+            onShare={() => setShareScorers(true)}
           />
         )}
 
@@ -196,6 +211,20 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
           />
         )}
       </div>
+
+      {shareScorers && (
+        <ShareScorersDialog
+          tournament={tournament}
+          sponsors={sponsors}
+          title={`Nejlepší ${sportDef.terms.scorersLabel.toLowerCase()}`}
+          rows={[...scorers].sort((a, b) => b.goals - a.goals).filter(s => s.goals > 0).map(s => {
+            const p = playerById.get(s.id)
+            return { name: p?.name ?? '', team: p ? teamById.get(p.team_id) : undefined, value: s.goals }
+          })}
+          onClose={() => setShareScorers(false)}
+          showToast={showToast}
+        />
+      )}
     </div>
   )
 }

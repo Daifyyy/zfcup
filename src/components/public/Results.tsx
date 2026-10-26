@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Clock, Gavel } from 'lucide-react'
+import { Clock, Gavel, Share2 } from 'lucide-react'
 import type { Match } from '../../hooks/useMatches'
 import type { Team } from '../../hooks/useTeams'
 import type { Tournament } from '../../hooks/useTournament'
@@ -10,20 +10,26 @@ import { getMatchState } from '../../lib/matchState'
 import { Card, SectionHeader } from '../ui/Card'
 import { Segmented } from '../ui/Tabs'
 import { MatchRow } from '../ui/MatchRow'
+import { MatchStatusBadge } from '../ui/Badge'
+import type { Sponsor } from '../../hooks/useSponsors'
+import { ShareMatchDialog } from '../share/lazy'
 
 interface Props {
   matches: Match[]
   teams: Team[]
   tournament?: Tournament | null
   referees?: Referee[]
+  sponsors?: Sponsor[]
+  showToast?: (msg: string) => void
 }
 
 type StatusFilter = 'all' | 'played' | 'upcoming'
 
 const PITCH_LETTERS = 'ABCDEFGH'
 
-export default function Results({ matches, teams, tournament, referees = [] }: Props) {
+export default function Results({ matches, teams, tournament, referees = [], sponsors = [], showToast }: Props) {
   const [teamFilter, setTeamFilter] = useState('all')
+  const [shareId, setShareId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [, setTick] = useState(0)
   useEffect(() => {
@@ -114,6 +120,7 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
           {sec.items.map((m, i) => {
             const ref = refName(m)
             const pitch = isLeague && sec.items.length >= 2 ? `${sportDef.terms.pitchLabel} ${PITCH_LETTERS[i] ?? i + 1}` : null
+            const state = getMatchState(m, tournament)
             return (
               <MatchRow
                 key={m.id}
@@ -121,9 +128,17 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
                 away={teamById.get(m.away_id)}
                 homeScore={m.home_score}
                 awayScore={m.away_score}
-                state={getMatchState(m, tournament)}
+                state={state}
                 decidedIn={m.decided_in}
                 logoSize={30}
+                trailing={state === 'final' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem' }}>
+                    <MatchStatusBadge state={state} decidedIn={m.decided_in} />
+                    <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" title="Sdílet grafiku výsledku" onClick={() => setShareId(m.id)}>
+                      <Share2 size={15} />
+                    </button>
+                  </span>
+                ) : undefined}
                 meta={isLeague ? (pitch ?? m.scheduled_time) : (m.scheduled_time || '—')}
                 sub={ref ? <span><Gavel size={12} />{ref}</span> : undefined}
               />
@@ -131,6 +146,25 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
           })}
         </Card>
       ))}
+
+      {shareId && (() => {
+        const m = matches.find(x => x.id === shareId)
+        if (!m) return null
+        return (
+          <ShareMatchDialog
+            tournament={tournament ?? null}
+            sponsors={sponsors}
+            home={teamById.get(m.home_id)}
+            away={teamById.get(m.away_id)}
+            homeScore={m.home_score}
+            awayScore={m.away_score}
+            label={m.round || (isLeague ? 'Liga' : 'Zápas')}
+            decidedIn={m.decided_in}
+            onClose={() => setShareId(null)}
+            showToast={showToast}
+          />
+        )
+      })()}
 
       {sections.length === 0 && (
         <Empty text={teamFilter !== 'all' ? 'Tento tým nemá v tomto výběru žádné zápasy.' : 'Žádné zápasy v tomto výběru.'} />
