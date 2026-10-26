@@ -1,6 +1,10 @@
+import { ChevronLeft, Lock, LockOpen, MonitorPlay, Printer, Tv } from 'lucide-react'
 import type { Tab } from '../../App'
 import type { Tournament } from '../../hooks/useTournament'
+import type { Sponsor } from '../../hooks/useSponsors'
 import { getSportDef } from '../../lib/sports'
+import { BRAND } from '../../lib/brand'
+import { Tabs } from '../ui/Tabs'
 
 interface Props {
   tournament: Tournament | null
@@ -16,236 +20,101 @@ interface Props {
   showBracket?: boolean
   cardsEnabled?: boolean
   sponsorsEnabled?: boolean
+  /** Generální partner — zobrazí se jako „presented by“ */
+  presentedBy?: Sponsor | null
+  mediaEnabled?: boolean
 }
 
-const BASE_TABS: [Tab, string][] = [
-  ['overview',    'Přehled'],
-  ['teams',       'Týmy'],
-  ['results',     'Zápasy'],
-  ['standings',   'Tabulka'],
-  ['statistics',  'Statistiky'],
-  ['bracket',     'Pavouk'],
-  ['rules',       'Pravidla'],
-]
+export const HEADER_HEIGHT_DESKTOP = 104
 
-export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin, tipsEnabled, showBracket = true, cardsEnabled, sponsorsEnabled }: Props) {
-  const baseTabs: [Tab, string][] = showBracket ? BASE_TABS : BASE_TABS.filter(([key]) => key !== 'bracket')
-  let TABS: [Tab, string][] = [...baseTabs]
-  if (tipsEnabled) TABS = [...TABS, ['tips', 'Tipy']]
-  if (sponsorsEnabled) TABS = [...TABS, ['sponsors', 'Sponzoři']]
+export function buildPublicTabs({ showBracket = true, tipsEnabled, sponsorsEnabled, mediaEnabled }: {
+  showBracket?: boolean; tipsEnabled?: boolean; sponsorsEnabled?: boolean; mediaEnabled?: boolean
+}): { value: Tab; label: string }[] {
+  const tabs: { value: Tab; label: string }[] = [
+    { value: 'overview',   label: 'Přehled' },
+    { value: 'results',    label: 'Zápasy' },
+    { value: 'standings',  label: 'Tabulka' },
+    { value: 'statistics', label: 'Statistiky' },
+    { value: 'teams',      label: 'Týmy' },
+  ]
+  if (showBracket) tabs.push({ value: 'bracket', label: 'Pavouk' })
+  tabs.push({ value: 'rules', label: 'Pravidla' })
+  if (tipsEnabled) tabs.push({ value: 'tips', label: 'Tipovačka' })
+  if (sponsorsEnabled) tabs.push({ value: 'sponsors', label: 'Partneři' })
+  if (mediaEnabled) tabs.push({ value: 'media', label: 'Média' })
+  return tabs
+}
+
+function HeaderAction({ icon, label, title, onClick }: { icon: React.ReactNode; label: string; title: string; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} title={title} className="hdr-action">
+      {icon}
+      <span className="hdr-action__label">{label}</span>
+    </button>
+  )
+}
+
+export default function Header({
+  tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin,
+  tipsEnabled, showBracket = true, sponsorsEnabled, presentedBy, mediaEnabled,
+}: Props) {
+  const tabs = buildPublicTabs({ showBracket, tipsEnabled, sponsorsEnabled, mediaEnabled })
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
-  const sportIcon = getSportDef(tournament?.sport).icon
+  const sport = getSportDef(tournament?.sport)
+  const SportIcon = sport.Icon
 
   return (
-    <div style={{
-      position: 'sticky', top: 0, zIndex: 100,
-      background: 'rgba(255,255,255,.96)',
-      backdropFilter: 'blur(16px)',
-      borderBottom: '2px solid var(--border)',
-      boxShadow: '0 2px 12px rgba(0,0,0,.06)',
-    }}>
-      <div style={{
-        maxWidth: 1400, margin: '0 auto',
-        display: 'flex', alignItems: 'center',
-        gap: '.9rem', minHeight: 64, padding: '.5rem 2rem',
-      }}>
-        {/* Admin button */}
-        <button
-          type="button"
-          onClick={onAdmin}
-          title={isAdmin ? 'Admin panel (přihlášen)' : 'Admin panel (Ctrl+Shift+A)'}
-          style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: '#f1f5f9',
-            border: '1.5px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, cursor: 'pointer', flexShrink: 0,
-            transition: 'background .15s',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#e2e8f0' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#f1f5f9' }}
-        >
-          {sportIcon}
-        </button>
+    <header className="hdr">
+      <div className="hdr__top">
+        <div className="hdr__inner">
+          {onHome && (
+            <button type="button" onClick={onHome} title="Zpět na přehled turnajů" className="hdr-back">
+              <ChevronLeft size={18} />
+              <span className="hide-mobile">Turnaje</span>
+            </button>
+          )}
 
-        {/* Back to tournament list */}
-        {onHome && (
-          <button
-            type="button"
-            onClick={onHome}
-            title="Zpět na přehled turnajů"
-            style={{
-              height: 38, borderRadius: 10,
-              background: '#f1f5f9',
-              border: '1.5px solid var(--border)',
-              display: 'flex', alignItems: 'center', gap: '.3rem',
-              padding: '0 .65rem',
-              fontSize: '.7rem', fontWeight: 700,
-              color: 'var(--muted)',
-              textTransform: 'uppercase', letterSpacing: '.07em',
-              cursor: 'pointer', flexShrink: 0,
-              transition: 'all .15s',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement
-              el.style.background = '#e2e8f0'
-              el.style.color = 'var(--accent)'
-              el.style.borderColor = 'var(--accent)'
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement
-              el.style.background = '#f1f5f9'
-              el.style.color = 'var(--muted)'
-              el.style.borderColor = 'var(--border)'
-            }}
-          >
-            <span style={{ fontSize: '.85rem' }}>←</span>
-            <span className="hide-mobile">Turnaje</span>
-          </button>
-        )}
+          <div className="hdr__crest">
+            {tournament?.logo_url
+              ? <img src={tournament.logo_url} alt="" />
+              : <SportIcon size={22} />}
+          </div>
 
-        {/* Tournament name */}
-        <div style={{ flex: 1, minWidth: 130 }}>
-          <h1 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 'clamp(1.1rem, 2.8vw, 1.5rem)', letterSpacing: '.05em',
-            lineHeight: 1.1,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-            overflow: 'hidden', wordBreak: 'break-word',
-            color: 'var(--text)',
-          }}>
-            {tournament?.name || 'Turnajník'}
-          </h1>
-          {meta && (
-            <div style={{ fontSize: '.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.12em', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {meta}
+          {/* Název turnaje — line-clamp 2, minWidth 130 (jinak ho vytlačí akce) */}
+          <div className="hdr__title">
+            <h1 className="hdr__name">{tournament?.name || BRAND.name}</h1>
+            {meta && <div className="hdr__meta">{meta}</div>}
+          </div>
+
+          {presentedBy?.logo_url && (
+            <div className="hdr__presented desktop-only" title={presentedBy.name}>
+              <span>Presented by</span>
+              <img src={presentedBy.logo_url} alt={presentedBy.name} />
             </div>
           )}
-        </div>
 
-        {/* Scoreboard button — desktop only */}
-        <button
-          type="button"
-          className="desktop-only"
-          onClick={onScoreboard}
-          title="Výsledková tabule — fullscreen přehled skupin, zápasů a pavouka"
-          style={{
-            background: 'none', border: '1.5px solid var(--border)',
-            borderRadius: 9, color: 'var(--muted)',
-            fontSize: '.72rem', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '.07em',
-            padding: '.35rem .85rem', cursor: 'pointer',
-            transition: 'all .15s', flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: '.35rem',
-          }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.borderColor = 'var(--accent)'
-            el.style.color = 'var(--accent)'
-            el.style.background = 'var(--accent-dim)'
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.borderColor = 'var(--border)'
-            el.style.color = 'var(--muted)'
-            el.style.background = 'none'
-          }}
-        >
-          <span style={{ fontSize: '1rem', lineHeight: 1 }}>📋</span>
-          <span className="hide-mobile">Tabule</span>
-        </button>
+          <div className="hdr__actions desktop-only">
+            <HeaderAction icon={<MonitorPlay size={16} />} label="Tabule" title="Výsledková tabule — fullscreen přehled skupin, zápasů a pavouka" onClick={onScoreboard} />
+            {onPrint && <HeaderAction icon={<Printer size={16} />} label="Bulletin" title="Tisknutelný bulletin — program turnaje pro tisk" onClick={onPrint} />}
+            <HeaderAction icon={<Tv size={16} />} label="TV" title="Kiosk / TV mode — fullscreen, auto-rotace záložek" onClick={onKiosk} />
+          </div>
 
-        {/* Print bulletin button — desktop only */}
-        {onPrint && (
           <button
             type="button"
-            className="desktop-only"
-            onClick={onPrint}
-            title="Tisknutelný bulletin — program turnaje pro tisk"
-            style={{
-              background: 'none', border: '1.5px solid var(--border)',
-              borderRadius: 9, color: 'var(--muted)',
-              fontSize: '.72rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '.07em',
-              padding: '.35rem .85rem', cursor: 'pointer',
-              transition: 'all .15s', flexShrink: 0,
-              display: 'flex', alignItems: 'center', gap: '.35rem',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement
-              el.style.borderColor = 'var(--accent)'
-              el.style.color = 'var(--accent)'
-              el.style.background = 'var(--accent-dim)'
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement
-              el.style.borderColor = 'var(--border)'
-              el.style.color = 'var(--muted)'
-              el.style.background = 'none'
-            }}
+            onClick={onAdmin}
+            title={isAdmin ? 'Administrace (přihlášen)' : 'Administrace (Ctrl+Shift+A)'}
+            className={isAdmin ? 'hdr-admin hdr-admin--on' : 'hdr-admin'}
           >
-            <span style={{ fontSize: '1rem', lineHeight: 1 }}>🖨️</span>
-            <span className="hide-mobile">Bulletin</span>
+            {isAdmin ? <LockOpen size={16} /> : <Lock size={16} />}
           </button>
-        )}
-
-        {/* Kiosk button — desktop only */}
-        <button
-          type="button"
-          className="desktop-only"
-          onClick={onKiosk}
-          title="Kiosk / TV mode — fullscreen, auto-rotace záložek"
-          style={{
-            background: 'none', border: '1.5px solid var(--border)',
-            borderRadius: 9, color: 'var(--muted)',
-            fontSize: '.72rem', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '.07em',
-            padding: '.35rem .85rem', cursor: 'pointer',
-            transition: 'all .15s', flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: '.35rem',
-          }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.borderColor = 'var(--accent)'
-            el.style.color = 'var(--accent)'
-            el.style.background = 'var(--accent-dim)'
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement
-            el.style.borderColor = 'var(--border)'
-            el.style.color = 'var(--muted)'
-            el.style.background = 'none'
-          }}
-        >
-          <span style={{ fontSize: '1rem', lineHeight: 1 }}>📺</span>
-          <span className="hide-mobile">TV / Kiosk</span>
-        </button>
-
-        {/* Nav — desktop only */}
-        <nav className="desktop-only" style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', flex: '1 1 0', minWidth: 0 }}>
-          {TABS.map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onTab(key)}
-              style={{
-                background: 'none', border: 'none',
-                color: tab === key ? 'var(--accent)' : 'var(--muted)',
-                fontFamily: 'var(--font-body)',
-                fontSize: '.74rem', fontWeight: 700,
-                textTransform: 'uppercase', letterSpacing: '.09em',
-                padding: '0 .85rem', height: 64,
-                cursor: 'pointer', transition: 'color .2s',
-                whiteSpace: 'nowrap', flexShrink: 0,
-                borderBottom: tab === key ? '3px solid var(--accent)' : '3px solid transparent',
-                marginBottom: tab === key ? 0 : 0,
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+        </div>
       </div>
-    </div>
+
+      <div className="hdr__nav desktop-only">
+        <div className="hdr__inner">
+          <Tabs items={tabs} value={tab} onChange={onTab} variant="chrome" ariaLabel="Sekce turnaje" />
+        </div>
+      </div>
+    </header>
   )
 }

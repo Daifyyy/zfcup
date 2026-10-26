@@ -1,7 +1,9 @@
+import { Trophy } from 'lucide-react'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Team } from '../../hooks/useTeams'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
+import { SectionHeader } from '../ui/Card'
 
 interface Props {
   rounds: BracketRound[]
@@ -11,155 +13,75 @@ interface Props {
 
 const DECIDED_IN_BADGE: Record<string, string> = { ot: 'PP', so: 'SN' }
 
-export default function Bracket({ rounds, slots, teams }: Props) {
-  const gt = (id: string | null) => id ? teams.find(t => t.id === id) : null
+function SlotCard({ slot, teams, isFinal }: { slot: BracketSlot; teams: Map<string, Team>; isFinal: boolean }) {
+  const hT = slot.home_id ? teams.get(slot.home_id) : undefined
+  const aT = slot.away_id ? teams.get(slot.away_id) : undefined
+  const hw = slot.played && slot.home_score > slot.away_score
+  const aw = slot.played && slot.away_score > slot.home_score
+  const decided = slot.played && slot.decided_in ? DECIDED_IN_BADGE[slot.decided_in] : undefined
 
-  if (!rounds.length) return <Empty icon="🏆" text="Pavouk není nastaven." />
+  const row = (team: Team | undefined, score: number, won: boolean, lost: boolean) => (
+    <div className={`brk-team${won ? ' brk-team--won' : ''}${lost ? ' brk-team--lost' : ''}`}>
+      {team ? <TeamLogo team={team} size={26} /> : <span className="brk-team__ph" />}
+      <span className="brk-team__name">{team?.name ?? 'Určí se'}</span>
+      <span className="brk-team__score">{slot.played ? score : ''}</span>
+    </div>
+  )
+
+  return (
+    <div className={`brk-slot${isFinal ? ' brk-slot--final' : ''}`}>
+      {row(hT, slot.home_score, hw, aw)}
+      {row(aT, slot.away_score, aw, hw)}
+      <div className="brk-slot__meta">
+        <span>{slot.played ? 'Konec' : slot.scheduled_time || 'Termín upřesníme'}</span>
+        {decided && <span className="brk-slot__ot">{decided}</span>}
+      </div>
+    </div>
+  )
+}
+
+export default function Bracket({ rounds, slots, teams }: Props) {
+  const teamById = new Map(teams.map(t => [t.id, t]))
+
+  if (!rounds.length) return <Empty text="Play-off pavouk bude zveřejněn po skončení základní části." />
 
   const sorted = [...rounds].sort((a, b) => a.position - b.position)
   const maxPos = Math.max(...sorted.map(r => r.position))
+  const finalRound = sorted.find(r => r.position === maxPos)
+  const finalSlot = finalRound ? slots.find(s => s.round_id === finalRound.id) : undefined
+  const champion = finalSlot?.played
+    ? teamById.get((finalSlot.home_score > finalSlot.away_score ? finalSlot.home_id : finalSlot.away_id) ?? '')
+    : undefined
 
   return (
-    <div>
-      <div className="sec-head">
-        <span className="sec-title">Play-off</span>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <SectionHeader title="Play-off" />
 
-      {sorted.map(round => {
-        const roundSlots = [...slots]
-          .filter(s => s.round_id === round.id)
-          .sort((a, b) => a.position - b.position)
-
-        const isFinal = round.position === maxPos
-
-        return (
-          <div key={round.id} style={{ marginBottom: '2rem' }}>
-            {/* Round header */}
-            <div style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '1.25rem',
-              letterSpacing: '.12em',
-              textTransform: 'uppercase',
-              fontWeight: 700,
-              color: isFinal ? 'var(--gold)' : 'var(--text)',
-              padding: '.55rem 1rem',
-              borderLeft: `5px solid ${isFinal ? 'var(--gold)' : 'var(--accent)'}`,
-              background: isFinal ? 'rgba(217,119,6,.06)' : 'rgba(37,99,235,.04)',
-              borderRadius: '0 8px 8px 0',
-              marginBottom: '.9rem',
-            }}>
-              {round.name}
-            </div>
-
-            {/* Match cards — stacked team rows, works on any screen width */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
-              {roundSlots.map(slot => {
-                const hT = gt(slot.home_id)
-                const aT = gt(slot.away_id)
-                const hw = slot.played && slot.home_score > slot.away_score
-                const aw = slot.played && slot.away_score > slot.home_score
-
-                const winnerColor = isFinal ? 'var(--gold)' : 'var(--accent)'
-                const winnerBg   = isFinal ? 'rgba(217,119,6,.1)' : 'var(--accent-dim)'
-                const borderColor = isFinal ? 'rgba(217,119,6,.3)' : 'var(--border)'
-
-                return (
-                  <div
-                    key={slot.id}
-                    className="card"
-                    style={{
-                      padding: 0,
-                      overflow: 'hidden',
-                      border: isFinal ? '1.5px solid rgba(217,119,6,.3)' : undefined,
-                    }}
-                  >
-                    {/* Home row */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '.55rem',
-                      padding: '.55rem 1rem',
-                      borderBottom: `1px solid ${borderColor}`,
-                      background: hw ? winnerBg : 'transparent',
-                    }}>
-                      {hT && <TeamLogo team={hT} size={34} />}
-                      <span style={{
-                        flex: 1, minWidth: 0,
-                        fontWeight: hw ? 700 : 500,
-                        fontSize: 'var(--fs-body)',
-                        color: hw ? winnerColor : hT ? 'var(--text)' : 'var(--muted)',
-                        fontStyle: hT ? 'normal' : 'italic',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {hT ? hT.name : 'TBD'}
-                      </span>
-                      {slot.played && (
-                        <span style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: 'var(--fs-score)',
-                          color: hw ? winnerColor : 'var(--muted)',
-                          flexShrink: 0, marginLeft: '.3rem',
-                        }}>
-                          {slot.home_score}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Away row */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '.55rem',
-                      padding: '.55rem 1rem',
-                      background: aw ? winnerBg : 'transparent',
-                    }}>
-                      {aT && <TeamLogo team={aT} size={34} />}
-                      <span style={{
-                        flex: 1, minWidth: 0,
-                        fontWeight: aw ? 700 : 500,
-                        fontSize: 'var(--fs-body)',
-                        color: aw ? winnerColor : aT ? 'var(--text)' : 'var(--muted)',
-                        fontStyle: aT ? 'normal' : 'italic',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {aT ? aT.name : 'TBD'}
-                      </span>
-                      {slot.played && (
-                        <span style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: 'var(--fs-score)',
-                          color: aw ? winnerColor : 'var(--muted)',
-                          flexShrink: 0, marginLeft: '.3rem',
-                        }}>
-                          {slot.away_score}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Status badge */}
-                    <div style={{ padding: '.25rem 1rem', background: 'rgba(0,0,0,.02)', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                      {slot.scheduled_time && !slot.played && (
-                        <span style={{ fontSize: '.62rem', color: 'var(--accent)', fontWeight: 700 }}>
-                          {slot.scheduled_time}
-                        </span>
-                      )}
-                      <span style={{
-                        fontSize: '.6rem', fontWeight: 600, textTransform: 'uppercase',
-                        letterSpacing: '.1em', padding: '2px 7px', borderRadius: 20,
-                        background: slot.played ? 'rgba(22,163,74,.1)' : 'var(--border)',
-                        color: slot.played ? 'var(--success)' : 'var(--muted)',
-                      }}>
-                        {slot.played ? '✓ Odehráno' : 'Plánováno'}
-                      </span>
-                      {slot.played && slot.decided_in && DECIDED_IN_BADGE[slot.decided_in] && (
-                        <span style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '.06em' }}>
-                          {DECIDED_IN_BADGE[slot.decided_in]}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+      {champion && (
+        <div className="brk-champion">
+          <Trophy size={28} />
+          <TeamLogo team={champion} size={44} />
+          <div>
+            <div className="brk-champion__label">Vítěz turnaje</div>
+            <div className="brk-champion__name">{champion.name}</div>
           </div>
-        )
-      })}
+        </div>
+      )}
+
+      <div className="brk">
+        {sorted.map(round => {
+          const roundSlots = slots.filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
+          const isFinal = round.position === maxPos
+          return (
+            <section key={round.id} className="brk-col">
+              <h3 className={`brk-col__title${isFinal ? ' brk-col__title--final' : ''}`}>{round.name}</h3>
+              <div className="brk-col__slots">
+                {roundSlots.map(slot => <SlotCard key={slot.id} slot={slot} teams={teamById} isFinal={isFinal} />)}
+              </div>
+            </section>
+          )
+        })}
+      </div>
     </div>
   )
 }

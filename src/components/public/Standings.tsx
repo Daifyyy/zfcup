@@ -5,6 +5,7 @@ import type { Team } from '../../hooks/useTeams'
 import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
+import { Card, SectionHeader } from '../ui/Card'
 import { getAdvancingCutoffs } from '../../lib/formats'
 import { getSportDef } from '../../lib/sports'
 
@@ -15,25 +16,48 @@ interface Props {
   tournament: Tournament | null
 }
 
-// Barevné zvýraznění řádku dle pozice a formátu
-function rowStyle(i: number, advancing: number, consolation: number, sfCutoff?: number, qfCutoff?: number): {
-  bg: string; borderLeft: string; badge: string | null; badgeColor: string
-} {
-  // League mode (sfCutoff/qfCutoff defined)
+type Zone = { color: string; label: string } | null
+
+const ZONE_A = 'var(--win)'
+const ZONE_B = 'var(--warn)'
+
+/** Postupová zóna řádku dle pozice a formátu. */
+function zoneFor(i: number, advancing: number, consolation: number, sfCutoff?: number, qfCutoff?: number): Zone {
   if (sfCutoff !== undefined) {
-    if (i < sfCutoff) return { bg: 'rgba(22,163,74,.07)', borderLeft: '4px solid rgba(22,163,74,.55)', badge: '→ SF', badgeColor: '#15803d' }
-    if (qfCutoff !== undefined && i < qfCutoff) return { bg: 'rgba(245,158,11,.07)', borderLeft: '4px solid rgba(245,158,11,.5)', badge: '→ QF', badgeColor: '#b45309' }
-    return { bg: 'transparent', borderLeft: '4px solid transparent', badge: null, badgeColor: '' }
+    if (i < sfCutoff) return { color: ZONE_A, label: 'SF' }
+    if (qfCutoff !== undefined && i < qfCutoff) return { color: ZONE_B, label: 'QF' }
+    return null
   }
-  // Groups mode
-  if (advancing > 0 && i < advancing) return { bg: 'rgba(22,163,74,.07)', borderLeft: '4px solid rgba(22,163,74,.55)', badge: i === 0 ? '🥇' : '→ Playoff', badgeColor: '#15803d' }
-  if (consolation > 0 && i < advancing + consolation) return { bg: 'rgba(245,158,11,.07)', borderLeft: '4px solid rgba(245,158,11,.4)', badge: '→ Útěcha', badgeColor: '#b45309' }
-  return { bg: 'transparent', borderLeft: '4px solid transparent', badge: null, badgeColor: '' }
+  if (advancing > 0 && i < advancing) return { color: ZONE_A, label: i === 0 ? 'Vítěz' : 'Play-off' }
+  if (consolation > 0 && i < advancing + consolation) return { color: ZONE_B, label: 'Útěcha' }
+  return null
+}
+
+type FormResult = 'W' | 'D' | 'L'
+
+/** Forma: posledních 5 odehraných zápasů týmu ve skupině (nejnovější vpravo). */
+function teamForm(teamId: string, groupMatches: Match[]): FormResult[] {
+  return groupMatches
+    .filter(m => m.played && (m.home_id === teamId || m.away_id === teamId))
+    .sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))
+    .slice(-5)
+    .map(m => {
+      const own = m.home_id === teamId ? m.home_score : m.away_score
+      const opp = m.home_id === teamId ? m.away_score : m.home_score
+      return own > opp ? 'W' : own < opp ? 'L' : 'D'
+    })
+}
+
+const FORM_LABEL: Record<FormResult, string> = { W: 'V', D: 'R', L: 'P' }
+
+function tiebreakerText(tb: Group['tiebreaker']): string {
+  if (tb === 'h2h_first') return 'vzájemný zápas → rozdíl skóre → vstřelené'
+  if (tb === 'score_then_h2h') return 'rozdíl skóre → vstřelené → vzájemný zápas'
+  return 'rozdíl skóre → vstřelené'
 }
 
 export default function Standings({ groups, matches, teams, tournament }: Props) {
-  const gt = (id: string) => teams.find(t => t.id === id)
-  const isLeague = tournament?.format === 'league'
+  const teamById = new Map(teams.map(t => [t.id, t]))
   const sportDef = getSportDef(tournament?.sport)
   const allowDraws = sportDef.standings.allowDraws
 
@@ -45,161 +69,92 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
   const advancing = cutoffs.advancing ?? 1
   const consolation = cutoffs.consolation ?? 0
 
-  if (!groups.length) return <Empty icon="📊" text="Nejsou definovány žádné skupiny. Přidej je v admin panelu → Skupiny." />
+  if (!groups.length) return <Empty text="Tabulky se zobrazí po rozlosování skupin." />
+
+  const legend: { color: string; text: string }[] = []
+  if (sfCutoff !== undefined) {
+    legend.push({ color: ZONE_A, text: `1–${sfCutoff} postup do semifinále` })
+    if (qfCutoff !== undefined) legend.push({ color: ZONE_B, text: `${sfCutoff + 1}–${qfCutoff} postup do čtvrtfinále` })
+  } else {
+    if (advancing > 0) legend.push({ color: ZONE_A, text: advancing === 1 ? 'Vítěz skupiny postupuje do play-off' : `1–${advancing} postup do play-off` })
+    if (consolation > 0) legend.push({ color: ZONE_B, text: 'Útěšná část' })
+  }
+
+  const headers = allowDraws
+    ? ['Z', 'V', 'R', 'P', 'Skóre', '+/−', 'B']
+    : ['Z', 'V', 'P', 'Skóre', '+/−', 'B']
 
   return (
-    <div>
-      <div className="sec-head">
-        <span className="sec-title">Tabulka</span>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <SectionHeader title="Tabulka" />
 
       {groups.map(group => {
         const rows = calcGroupStandings(group, matches, sportDef)
-        const playedCount = matches.filter(m => m.group_id === group.id && m.played).length
+        const groupMatches = matches.filter(m => m.group_id === group.id)
+        const playedCount = groupMatches.filter(m => m.played).length
 
         return (
-          <div key={group.id} className="card" style={{ overflow: 'hidden', marginBottom: '1.4rem' }}>
-            {/* Header skupiny */}
-            <div style={{
-              padding: '1rem 1.5rem',
-              borderBottom: '1px solid var(--border)',
-              background: 'linear-gradient(135deg, #eff6ff 0%, #fff 100%)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', letterSpacing: '.08em' }}>
-                  {group.name}
-                </span>
-                <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>
-                  {group.team_ids.length} týmů · {playedCount} odehráno
-                </span>
-                {/* Legenda */}
-                {(sfCutoff !== undefined || advancing > 0 || consolation > 0) && rows.length > 1 && (
-                  <div style={{ display: 'flex', gap: '.6rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
-                    {sfCutoff !== undefined && (
-                      <span style={{ fontSize: 'var(--fs-label)', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(22,163,74,.55)' }} />
-                        1–{sfCutoff} → Semifinále
-                      </span>
-                    )}
-                    {qfCutoff !== undefined && (
-                      <span style={{ fontSize: 'var(--fs-label)', color: '#b45309', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(245,158,11,.55)' }} />
-                        {sfCutoff !== undefined ? `${sfCutoff + 1}–${qfCutoff}` : `1–${qfCutoff}`} → Čtvrtfinále
-                      </span>
-                    )}
-                    {sfCutoff === undefined && advancing > 0 && (
-                      <span style={{ fontSize: 'var(--fs-label)', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(22,163,74,.55)' }} />
-                        Vítěz skupiny → Playoff
-                      </span>
-                    )}
-                    {consolation > 0 && (
-                      <span style={{ fontSize: 'var(--fs-label)', color: '#b45309', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(245,158,11,.55)' }} />
-                        → Útěcha
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              {/* Tiebreaker info */}
-              <div style={{ fontSize: 'var(--fs-label)', color: 'var(--muted)', marginTop: '.3rem' }}>
-                Shoda bodů: {group.tiebreaker === 'h2h_first'
-                  ? 'vzájemný zápas → gólový rozdíl → vstřelené góly'
-                  : group.tiebreaker === 'score_then_h2h'
-                  ? 'gólový rozdíl → vstřelené góly → vzájemný zápas'
-                  : 'gólový rozdíl → vstřelené góly'}
-              </div>
-            </div>
-
-            <table className="standings-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--fs-body)' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                  {(allowDraws ? ['#', 'Tým', 'Z', 'V', 'R', 'P', 'Skóre', '+/−', 'Body'] : ['#', 'Tým', 'Z', 'V', 'P', 'Skóre', '+/−', 'Body']).map((h, i) => (
-                    <th key={h} style={{
-                      padding: 'var(--pad-cell)',
-                      color: 'var(--muted)', fontSize: 'var(--fs-label)',
-                      textTransform: 'uppercase', letterSpacing: '.12em',
-                      textAlign: i <= 1 ? 'left' : 'center',
-                      fontWeight: 600, whiteSpace: 'nowrap',
-                      width: i === 0 ? 40 : undefined,
-                    }}>
-                      {h}
-                    </th>
-                  ))}
-                  {/* Sloupec pro badge postupu */}
-                  {(sfCutoff !== undefined || advancing > 0) && <th style={{ width: 48 }} />}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, i) => {
-                  const team = gt(row.id)
-                  const rankClass = i === 0 ? 'rank rank-1' : i === 1 ? 'rank rank-2' : i === 2 ? 'rank rank-3' : 'rank'
-                  const gdColor = row.gd > 0 ? 'var(--success)' : row.gd < 0 ? 'var(--danger)' : 'var(--muted)'
-                  const rs = rowStyle(i, advancing, consolation, sfCutoff, qfCutoff)
-                  return (
-                    <tr key={row.id} style={{
-                      borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none',
-                      background: rs.bg,
-                    }}>
-                      <td style={{ padding: 'var(--pad-cell)', paddingLeft: 0, borderLeft: rs.borderLeft }}>
-                        <span className={rankClass} style={{ marginLeft: 8 }}>{i + 1}</span>
-                      </td>
-                      <td style={{ padding: 'var(--pad-cell)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {team && <TeamLogo team={team} size={30} />}
-                          <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
-                          {/* Badge 🥇 u vítěze skupiny (skupinový formát) */}
-                          {rs.badge && sfCutoff === undefined && i === 0 && (
-                            <span style={{ fontSize: '.65rem', marginLeft: 2 }}>{rs.badge}</span>
-                          )}
-                        </div>
-                      </td>
-                      {(allowDraws ? [row.played, row.w, row.d, row.l] : [row.played, row.w, row.l]).map((v, j) => (
-                        <td key={j} style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: 'var(--muted)' }}>{v}</td>
-                      ))}
-                      <td style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: 'var(--muted)' }}>{row.gf}:{row.ga}</td>
-                      <td style={{ textAlign: 'center', padding: 'var(--pad-cell)', color: gdColor, fontWeight: 600 }}>
-                        {row.gd > 0 ? '+' : ''}{row.gd}
-                      </td>
-                      <td style={{ textAlign: 'center', padding: 'var(--pad-cell)' }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-pts)', color: rs.badgeColor || 'var(--accent)' }}>
-                          {row.pts}
-                        </span>
-                      </td>
-                      {/* Badge → SF / → QF / → Playoff / → Útěcha */}
-                      {(sfCutoff !== undefined || advancing > 0) && (
-                        <td style={{ textAlign: 'center', padding: 'var(--pad-cell)' }}>
-                          {rs.badge && sfCutoff !== undefined && (
-                            <span style={{
-                              fontSize: 'var(--fs-label)', fontWeight: 700,
-                              color: rs.badgeColor,
-                              background: sfCutoff !== undefined && i < sfCutoff ? 'rgba(22,163,74,.12)' : 'rgba(245,158,11,.12)',
-                              border: `1px solid ${sfCutoff !== undefined && i < sfCutoff ? 'rgba(22,163,74,.3)' : 'rgba(245,158,11,.3)'}`,
-                              borderRadius: 20, padding: '2px 7px', whiteSpace: 'nowrap',
-                            }}>
-                              {rs.badge}
-                            </span>
-                          )}
-                          {rs.badge && sfCutoff === undefined && rs.badge !== '🥇' && (
-                            <span style={{
-                              fontSize: 'var(--fs-label)', fontWeight: 700,
-                              color: rs.badgeColor,
-                              background: consolation > 0 && i >= advancing ? 'rgba(245,158,11,.12)' : 'rgba(22,163,74,.12)',
-                              border: `1px solid ${consolation > 0 && i >= advancing ? 'rgba(245,158,11,.3)' : 'rgba(22,163,74,.3)'}`,
-                              borderRadius: 20, padding: '2px 7px', whiteSpace: 'nowrap',
-                            }}>
-                              {rs.badge}
-                            </span>
-                          )}
+          <Card
+            key={group.id}
+            padded={false}
+            title={group.name}
+            actions={<span style={{ fontSize: '.74rem', color: 'var(--ink-muted)' }}>{group.team_ids.length} týmů · {playedCount}/{groupMatches.length} odehráno</span>}
+          >
+            <div style={{ overflowX: 'auto' }}>
+              <table className="ui-table standings-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 44 }}>#</th>
+                    <th className="is-left">Tým</th>
+                    {headers.map(h => <th key={h} style={h === 'B' ? { width: 56 } : undefined}>{h}</th>)}
+                    <th className="hide-mobile" style={{ width: 120 }}>Forma</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, i) => {
+                    const team = teamById.get(row.id)
+                    const zone = zoneFor(i, advancing, consolation, sfCutoff, qfCutoff)
+                    const gdColor = row.gd > 0 ? 'var(--win)' : row.gd < 0 ? 'var(--loss)' : 'var(--ink-muted)'
+                    const cells = allowDraws ? [row.played, row.w, row.d, row.l] : [row.played, row.w, row.l]
+                    const form = teamForm(row.id, groupMatches)
+                    return (
+                      <tr key={row.id}>
+                        <td style={{ boxShadow: zone ? `inset 4px 0 0 ${zone.color}` : undefined, fontWeight: 700 }}>
+                          {i + 1}
                         </td>
-                      )}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <td className="is-left">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
+                            {team && <TeamLogo team={team} size={30} />}
+                            <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
+                            {zone && (i === 0 || sfCutoff !== undefined || advancing + consolation < rows.length) && (
+                              <span className="std-zone hide-mobile" style={{ color: zone.color, borderColor: zone.color }}>{zone.label}</span>
+                            )}
+                          </div>
+                        </td>
+                        {cells.map((v, j) => <td key={j} className="is-muted">{v}</td>)}
+                        <td className="is-muted">{row.gf}:{row.ga}</td>
+                        <td style={{ color: gdColor, fontWeight: 600 }}>{row.gd > 0 ? '+' : ''}{row.gd}</td>
+                        <td>
+                          <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-pts)', fontWeight: 800 }}>{row.pts}</span>
+                        </td>
+                        <td className="hide-mobile">
+                          <div className="std-form">
+                            {form.map((r, k) => <span key={k} className={`std-form__dot std-form__dot--${r}`}>{FORM_LABEL[r]}</span>)}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="std-foot">
+              {rows.length > 1 && legend.map(l => (
+                <span key={l.text}><i style={{ background: l.color }} />{l.text}</span>
+              ))}
+              <span className="std-foot__tb">Shoda bodů: {tiebreakerText(group.tiebreaker)}</span>
+            </div>
+          </Card>
         )
       })}
     </div>

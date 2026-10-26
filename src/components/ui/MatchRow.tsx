@@ -17,11 +17,13 @@ interface Props {
   /** Pravý sloupec: vlastní obsah místo status badge */
   trailing?: ReactNode
   logoSize?: number
+  /** Doplňující řádek pod zápasem (rozhodčí, hřiště…) */
+  sub?: ReactNode
   onClick?: () => void
 }
 
 /** Broadcast výsledková lišta: čas | domácí | skóre | hosté | stav. */
-export function MatchRow({ home, away, homeScore, awayScore, state, decidedIn, meta, trailing, logoSize = 28, onClick }: Props) {
+export function MatchRow({ home, away, homeScore, awayScore, state, decidedIn, meta, trailing, logoSize = 28, sub, onClick }: Props) {
   const showScore = state !== 'scheduled'
   const hs = homeScore ?? 0
   const as = awayScore ?? 0
@@ -52,6 +54,7 @@ export function MatchRow({ home, away, homeScore, awayScore, state, decidedIn, m
       <div className="ui-match__status">
         {trailing ?? <MatchStatusBadge state={state} decidedIn={decidedIn} />}
       </div>
+      {sub && <div className="ui-match__sub">{sub}</div>}
     </div>
   )
 }

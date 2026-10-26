@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Clock, Gavel } from 'lucide-react'
 import type { Match } from '../../hooks/useMatches'
 import type { Team } from '../../hooks/useTeams'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Referee } from '../../hooks/useReferees'
 import Empty from '../ui/Empty'
-import { TeamLogo } from '../ui/TeamLogo'
 import { getSportDef } from '../../lib/sports'
+import { getMatchState } from '../../lib/matchState'
+import { Card, SectionHeader } from '../ui/Card'
+import { Segmented } from '../ui/Tabs'
+import { MatchRow } from '../ui/MatchRow'
 
 interface Props {
   matches: Match[]
@@ -14,221 +18,122 @@ interface Props {
   referees?: Referee[]
 }
 
-const DECIDED_IN_BADGE: Record<string, string> = { ot: 'PP', so: 'SN' }
-
-// Sdílený layout jednoho zápasu
-function MatchRow({ m, teams, refereeName }: { m: Match; teams: Team[]; refereeName?: string }) {
-  const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
-  const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
-  const hw = m.played && m.home_score > m.away_score
-  const aw = m.played && m.away_score > m.home_score
-  const decidedBadge = m.decided_in ? DECIDED_IN_BADGE[m.decided_in] : undefined
-  return (
-    <div className="card match-grid">
-      <div className="match-col-time">{m.scheduled_time || ''}</div>
-      <div className="match-col-home">
-        <TeamLogo team={tt(m.home_id)} size={32} />
-        <span className="match-team-name" style={{
-          fontWeight: hw ? 700 : 500, fontSize: 'var(--fs-body)',
-          color: hw ? 'var(--accent)' : aw ? 'var(--muted)' : 'var(--text)',
-          background: hw ? 'var(--accent-dim)' : 'transparent',
-          padding: hw ? '2px 8px' : '2px 0', borderRadius: hw ? 5 : 0,
-        }}>{tn(m.home_id)}</span>
-        <span className="match-score-side" style={{ color: hw ? 'var(--accent)' : 'var(--muted)' }}>
-          {m.played ? m.home_score : ''}
-        </span>
-      </div>
-      <div className="match-col-score">
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-score)', letterSpacing: '.1em', lineHeight: 1, color: m.played ? 'var(--text)' : 'var(--muted)' }}>
-          {m.played ? `${m.home_score} : ${m.away_score}` : 'VS'}
-        </div>
-        {m.played && decidedBadge && (
-          <div style={{ fontSize: '.6rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '.06em', marginTop: 2 }}>
-            {decidedBadge}
-          </div>
-        )}
-      </div>
-      <div className="match-col-away">
-        <TeamLogo team={tt(m.away_id)} size={32} />
-        <span className="match-team-name" style={{
-          fontWeight: aw ? 700 : 500, fontSize: 'var(--fs-body)',
-          color: aw ? 'var(--accent)' : hw ? 'var(--muted)' : 'var(--text)',
-          background: aw ? 'var(--accent-dim)' : 'transparent',
-          padding: aw ? '2px 8px' : '2px 0', borderRadius: aw ? 5 : 0,
-        }}>{tn(m.away_id)}</span>
-        <span className="match-score-side" style={{ color: aw ? 'var(--accent)' : 'var(--muted)' }}>
-          {m.played ? m.away_score : ''}
-        </span>
-      </div>
-      <div className="match-col-badge">
-        <span style={{
-          fontSize: '.6rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em',
-          padding: '2px 6px', borderRadius: 20,
-          background: m.played ? 'rgba(22,163,74,.1)' : 'var(--border)',
-          color: m.played ? 'var(--success)' : 'var(--muted)', whiteSpace: 'nowrap',
-        }}>
-          {m.played ? '✓' : '—'}
-        </span>
-      </div>
-      {refereeName && (
-        <div style={{ gridColumn: '1 / -1', fontSize: '.68rem', color: 'var(--muted)', padding: '0 .5rem .4rem', marginTop: '-.15rem' }}>
-          ⚖ {refereeName}
-        </div>
-      )}
-    </div>
-  )
-}
-
-const SECTION_HEADER = {
-  fontFamily: 'var(--font-display)',
-  fontSize: '1.1rem',
-  letterSpacing: '.15em',
-  color: 'var(--text)',
-  textTransform: 'uppercase' as const,
-  fontWeight: 700,
-  margin: '1.6rem 0 .75rem',
-  padding: '.5rem 1rem',
-  borderLeft: '5px solid var(--accent)',
-  background: 'rgba(37,99,235,.04)',
-  borderRadius: '0 8px 8px 0',
-}
-
 type StatusFilter = 'all' | 'played' | 'upcoming'
+
+const PITCH_LETTERS = 'ABCDEFGH'
 
 export default function Results({ matches, teams, tournament, referees = [] }: Props) {
   const [teamFilter, setTeamFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   const sportDef = getSportDef(tournament?.sport)
   const isLeague = tournament?.format === 'league'
+  const teamById = new Map(teams.map(t => [t.id, t]))
   const refName = (m: Match) => m.referee_id ? referees.find(r => r.id === m.referee_id)?.name : undefined
 
-  if (!matches.length) return <Empty icon="📋" text="Žádné zápasy." />
+  if (!matches.length) return <Empty text="Rozpis zápasů zatím nebyl zveřejněn." />
 
-  // Filtr týmu + stavu
   const filtered = matches
     .filter(m => teamFilter === 'all' || m.home_id === teamFilter || m.away_id === teamFilter)
     .filter(m => statusFilter === 'all' || (statusFilter === 'played' ? m.played : !m.played))
 
-  // Seřazené týmy pro dropdown
   const sortedTeams = [...teams].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
 
+  // Liga: sekce po časových slotech (souběžné zápasy na více hřištích).
+  // Skupiny: sekce po kolech/skupinách.
+  const sections: { key: string; title: React.ReactNode; subtitle?: string; items: Match[] }[] = []
   if (isLeague) {
-    // Liga mód: skupiny dle scheduled_time; každý slot = 2 zápasy na 2 hřištích
-    const slotsMap = new Map<string, Match[]>()
+    const map = new Map<string, Match[]>()
     for (const m of [...filtered].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
-      const key = m.scheduled_time ?? '—'
-      if (!slotsMap.has(key)) slotsMap.set(key, [])
-      slotsMap.get(key)!.push(m)
+      const key = m.scheduled_time || '—'
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(m)
     }
-    const slots = [...slotsMap.entries()]
-
-    return (
-      <div>
-        <div className="sec-head" style={{ flexWrap: 'wrap', gap: '.5rem' }}>
-          <span className="sec-title">Zápasy</span>
-          <div style={{ display: 'flex', gap: '.3rem', flexShrink: 0 }}>
-            {(['all', 'upcoming', 'played'] as StatusFilter[]).map(s => (
-              <button key={s} type="button" onClick={() => setStatusFilter(s)}
-                style={{ fontSize: '.7rem', fontWeight: 700, padding: '.25rem .6rem', borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer', background: statusFilter === s ? 'var(--accent)' : '#f8fafc', color: statusFilter === s ? '#fff' : 'var(--muted)', transition: 'all .15s' }}>
-                {s === 'all' ? 'Vše' : s === 'upcoming' ? 'Nadcházející' : 'Výsledky'}
-              </button>
-            ))}
-          </div>
-          <select
-            className="field-input field-select"
-            value={teamFilter}
-            onChange={e => setTeamFilter(e.target.value)}
-            style={{ fontSize: '.78rem', padding: '.3rem .6rem', minWidth: 140 }}
-          >
-            <option value="all">Všechny týmy</option>
-            {sortedTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-
-        {slots.map(([time, ms]) => {
-          const pitchLabels = 'ABCD'
-          const multiPitch = ms.length >= 2
-          const pitchNames = ms.map((_, i) => sportDef.terms.pitchLabel + ' ' + (pitchLabels[i] ?? String(i + 1)))
-          return (
-          <div key={time}>
-            <div style={SECTION_HEADER}>
-              🕐 {time}
-              {multiPitch && (
-                <span style={{ fontSize: '.65rem', fontWeight: 400, letterSpacing: '.06em', marginLeft: '.6rem', color: 'var(--muted)', fontFamily: 'var(--font-body)' }}>
-                  {pitchNames.join(' & ')}
-                </span>
-              )}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '.55rem', marginBottom: '.5rem' }}>
-              {ms.map((m, i) => (
-                <div key={m.id} style={{ position: 'relative' }}>
-                  <MatchRow m={m} teams={teams} refereeName={refName(m)} />
-                  {multiPitch && (
-                    <span style={{
-                      position: 'absolute', top: '50%', right: '2.8rem', transform: 'translateY(-50%)',
-                      fontSize: '.58rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4,
-                      background: i === 0 ? 'rgba(37,99,235,.12)' : i === 1 ? 'rgba(16,185,129,.12)' : i === 2 ? 'rgba(245,158,11,.12)' : 'rgba(139,92,246,.12)',
-                      color: i === 0 ? 'var(--accent)' : i === 1 ? '#065f46' : i === 2 ? '#92400e' : '#5b21b6',
-                      letterSpacing: '.06em', whiteSpace: 'nowrap',
-                    }}>
-                      H{pitchLabels[i] ?? String(i + 1)}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          )
-        })}
-      </div>
-    )
+    for (const [time, items] of map) {
+      sections.push({
+        key: time,
+        title: <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.45rem' }}><Clock size={16} />{time}</span>,
+        subtitle: items.length >= 2 ? items.map((_, i) => `${sportDef.terms.pitchLabel} ${PITCH_LETTERS[i] ?? i + 1}`).join(' · ') : undefined,
+        items,
+      })
+    }
+  } else {
+    const map: Record<string, Match[]> = {}
+    for (const m of filtered) {
+      const r = m.round || 'Bez skupiny'
+      ;(map[r] ??= []).push(m)
+    }
+    for (const [round, items] of Object.entries(map).sort(([a], [b]) => a.localeCompare(b, 'cs'))) {
+      items.sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))
+      sections.push({ key: round, title: round, items })
+    }
   }
-
-  // Skupinový / standardní mód: skupiny dle round
-  const roundsMap: Record<string, Match[]> = {}
-  for (const m of filtered) {
-    const r = m.round || 'Bez skupiny'
-    if (!roundsMap[r]) roundsMap[r] = []
-    roundsMap[r].push(m)
-  }
-  const rounds = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
 
   return (
-    <div>
-      <div className="sec-head" style={{ flexWrap: 'wrap', gap: '.5rem' }}>
-        <span className="sec-title">Zápasy</span>
-        <div style={{ display: 'flex', gap: '.3rem', flexShrink: 0 }}>
-          {(['all', 'upcoming', 'played'] as StatusFilter[]).map(s => (
-            <button key={s} type="button" onClick={() => setStatusFilter(s)}
-              style={{ fontSize: '.7rem', fontWeight: 700, padding: '.25rem .6rem', borderRadius: 6, border: '1px solid var(--border)', cursor: 'pointer', background: statusFilter === s ? 'var(--accent)' : '#f8fafc', color: statusFilter === s ? '#fff' : 'var(--muted)', transition: 'all .15s' }}>
-              {s === 'all' ? 'Vše' : s === 'upcoming' ? 'Nadcházející' : 'Výsledky'}
-            </button>
-          ))}
-        </div>
-        <select
-          className="field-input field-select"
-          value={teamFilter}
-          onChange={e => setTeamFilter(e.target.value)}
-          style={{ fontSize: '.78rem', padding: '.3rem .6rem', minWidth: 140 }}
-        >
-          <option value="all">Všechny týmy</option>
-          {sortedTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+      <SectionHeader
+        title="Zápasy"
+        subtitle={`${matches.filter(m => m.played).length} z ${matches.length} odehráno`}
+        actions={
+          <>
+            <Segmented
+              value={statusFilter}
+              onChange={setStatusFilter}
+              items={[
+                { value: 'all', label: 'Vše' },
+                { value: 'upcoming', label: 'Program' },
+                { value: 'played', label: 'Výsledky' },
+              ]}
+            />
+            <select
+              className="field-input field-select"
+              value={teamFilter}
+              onChange={e => setTeamFilter(e.target.value)}
+              style={{ fontSize: '.8rem', padding: '.4rem 1.8rem .4rem .65rem', width: 'auto', minWidth: 150 }}
+              aria-label="Filtr týmu"
+            >
+              <option value="all">Všechny týmy</option>
+              {sortedTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </>
+        }
+      />
 
-      {rounds.map(([round, ms]) => (
-        <div key={round}>
-          <div style={SECTION_HEADER}>{round}</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '.55rem', marginBottom: '.5rem' }}>
-            {ms.map(m => <MatchRow key={m.id} m={m} teams={teams} refereeName={refName(m)} />)}
-          </div>
-        </div>
+      {sections.map(sec => (
+        <Card
+          key={sec.key}
+          padded={false}
+          title={sec.title}
+          actions={sec.subtitle ? <span style={{ fontSize: '.72rem', color: 'var(--ink-muted)' }}>{sec.subtitle}</span> : undefined}
+        >
+          {sec.items.map((m, i) => {
+            const ref = refName(m)
+            const pitch = isLeague && sec.items.length >= 2 ? `${sportDef.terms.pitchLabel} ${PITCH_LETTERS[i] ?? i + 1}` : null
+            return (
+              <MatchRow
+                key={m.id}
+                home={teamById.get(m.home_id)}
+                away={teamById.get(m.away_id)}
+                homeScore={m.home_score}
+                awayScore={m.away_score}
+                state={getMatchState(m, tournament)}
+                decidedIn={m.decided_in}
+                logoSize={30}
+                meta={isLeague ? (pitch ?? m.scheduled_time) : (m.scheduled_time || '—')}
+                sub={ref ? <span><Gavel size={12} />{ref}</span> : undefined}
+              />
+            )
+          })}
+        </Card>
       ))}
 
-      {rounds.length === 0 && teamFilter !== 'all' && (
-        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)', fontSize: 'var(--fs-body)' }}>
-          Tento tým nemá žádné zápasy.
-        </div>
+      {sections.length === 0 && (
+        <Empty text={teamFilter !== 'all' ? 'Tento tým nemá v tomto výběru žádné zápasy.' : 'Žádné zápasy v tomto výběru.'} />
       )}
     </div>
   )

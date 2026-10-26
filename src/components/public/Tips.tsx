@@ -1,3 +1,4 @@
+import { Lock } from 'lucide-react'
 import { useState, useEffect, Fragment } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useTipsters } from '../../hooks/useTipsters'
@@ -320,7 +321,7 @@ function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, s
             <span style={{ fontSize: '.78rem', color: savedVal ? 'var(--text)' : 'var(--muted)', fontStyle: savedVal ? 'normal' : 'italic' }}>
               {savedVal ? (teamPool.find(t => t.id === savedVal)?.name ?? '—') : 'nezadáno'}
             </span>
-            <span style={{ fontSize: '.7rem' }}>🔒</span>
+            <Lock size={12} style={{ color: 'var(--ink-faint)', flexShrink: 0 }} aria-label="Uzamčeno" />
           </div>
         </div>
       )
@@ -394,7 +395,7 @@ function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, s
             <span style={{ fontSize: '.78rem', color: savedVal ? 'var(--text)' : 'var(--muted)', fontStyle: savedVal ? 'normal' : 'italic' }}>
               {savedVal ? (pl?.name ?? '—') : 'nezadáno'}
             </span>
-            <span style={{ fontSize: '.7rem' }}>🔒</span>
+            <Lock size={12} style={{ color: 'var(--ink-faint)', flexShrink: 0 }} aria-label="Uzamčeno" />
           </div>
         </div>
       )
@@ -432,14 +433,14 @@ function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, s
   }
 
   const rows: { tipType: string; label: string; teamPool: Team[]; points: number }[] = [
-    { tipType: 'tournament_winner', label: '🏆 Vítěz turnaje (vč. playoff)', teamPool: teams, points: 10 },
-    { tipType: 'most_goals_team', label: `${sportIcon} Tým s nejvíce góly`, teamPool: teams, points: 5 },
+    { tipType: 'tournament_winner', label: 'Vítěz turnaje (vč. play-off)', teamPool: teams, points: 10 },
+    { tipType: 'most_goals_team', label: 'Tým s nejvíce góly', teamPool: teams, points: 5 },
     ...sortedGroups.flatMap(g => {
       const groupTeams = teams.filter(t => g.team_ids.includes(t.id))
       const ligaGroup = isLeague && g.name === 'Liga'
       return [
-        { tipType: `group_winner:${g.id}`, label: ligaGroup ? '🥇 Vítěz ligové fáze' : `🥇 Vítěz skupiny ${g.name}`, teamPool: groupTeams, points: 5 },
-        { tipType: `group_last:${g.id}`, label: ligaGroup ? '⬇️ Poslední v ligové fázi' : `⬇️ Poslední skupiny ${g.name}`, teamPool: groupTeams, points: 3 },
+        { tipType: `group_winner:${g.id}`, label: ligaGroup ? 'Vítěz ligové fáze' : `Vítěz skupiny ${g.name}`, teamPool: groupTeams, points: 5 },
+        { tipType: `group_last:${g.id}`, label: ligaGroup ? 'Poslední v ligové fázi' : `Poslední skupiny ${g.name}`, teamPool: groupTeams, points: 3 },
       ]
     }),
   ]
@@ -450,17 +451,17 @@ function SpecialTipsSection({ groups, teams, players, tipsterId, tournamentId, s
       <div style={groupHeader}>Speciální tipy</div>
       {anyMatchPlayed && !anyPlayoffPlayed && (
         <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.5rem', padding: '.3rem .8rem', background: 'rgba(0,0,0,.03)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-          🔒 Skupinové tipy jsou uzamčeny. Tipy na vítěze turnaje, nejlepšího střelce a nejgólnatější tým lze stále změnit.
+          Skupinové tipy jsou uzamčeny. Tipy na vítěze turnaje, nejlepšího střelce a nejgólnatější tým lze stále změnit.
         </div>
       )}
       {anyPlayoffPlayed && (
         <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.5rem', padding: '.3rem .8rem', background: 'rgba(0,0,0,.03)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-          🔒 Všechny speciální tipy jsou uzamčeny.
+          Všechny speciální tipy jsou uzamčeny.
         </div>
       )}
       <div className="card" style={{ overflow: 'hidden', marginBottom: '.3rem' }}>
         {rows.map((r, i) => renderRow(r.tipType, r.label, r.teamPool, r.points, i === rows.length - 1 && allItems === rows.length))}
-        {renderPlayerRow('top_scorer', '🏅 Nejlepší střelec', players, 10, true)}
+        {renderPlayerRow('top_scorer', 'Nejlepší střelec', players, 10, true)}
       </div>
       {!anyMatchPlayed && (
         <div style={{ fontSize: '.67rem', color: 'var(--muted)', padding: '0 .2rem' }}>
@@ -575,7 +576,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
     sections = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
   }
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
-  const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
+  const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#8b95a5', logo_url: null }
 
   if (loading) return (
     <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '2rem', fontSize: '.85rem' }}>
@@ -587,7 +588,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
     <div style={{ marginBottom: '1.8rem' }}>
       {sections.map(([label, ms]) => (
         <div key={label} style={{ marginBottom: '1rem' }}>
-          <div style={groupHeader}>{isLeague ? `🕐 ${label}` : label}</div>
+          <div style={groupHeader}>{label}</div>
           <div className="card" style={{ overflow: 'hidden' }}>
             {ms.map((m, i) => {
               const inp = inputs[m.id] ?? { home: '', away: '' }
@@ -628,7 +629,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
                     ) : timeLocked ? (
                       // Zámek po čase výkopu
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <span style={{ fontSize: '.7rem' }}>🔒</span>
+                        <Lock size={12} style={{ color: 'var(--ink-faint)', flexShrink: 0 }} aria-label="Uzamčeno" />
                         {tip ? (
                           <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>tip: {tip.predicted_home}:{tip.predicted_away}</span>
                         ) : (
@@ -661,7 +662,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
                   </div>
                 </div>
                 {isDirty && (
-                  <div style={{ padding: '2px .9rem 6px', fontSize: '.68rem', color: '#b45309', borderBottom: showBorder ? '1px solid var(--border)' : 'none' }}>
+                  <div style={{ padding: '2px .9rem 6px', fontSize: '.68rem', color: 'var(--warn)', borderBottom: showBorder ? '1px solid var(--border)' : 'none' }}>
                     ● neuloženo — klikni Uložit vše
                   </div>
                 )}
@@ -675,14 +676,14 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
         <div style={{
           background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.5)',
           borderRadius: 8, padding: '.5rem .85rem', marginBottom: '.55rem',
-          fontSize: '.76rem', fontWeight: 600, color: '#92400e',
+          fontSize: '.76rem', fontWeight: 600, color: 'var(--warn)',
           display: 'flex', alignItems: 'center', gap: '.5rem',
         }}>
-          ⚠️ Máš neuložené tipy! Stiskni tlačítko níže před odchodem ze záložky.
+          Máš neuložené tipy! Stiskni tlačítko níže před odchodem ze záložky.
         </div>
       )}
       <button type="button" className="btn btn-p btn-full" onClick={saveAll} style={{ opacity: saving ? .7 : 1 }}>
-        {saving ? 'Ukládám…' : '💾 Uložit tipy na skupiny'}
+        {saving ? 'Ukládám…' : 'Uložit tipy na skupiny'}
       </button>
     </div>
   )
@@ -819,7 +820,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                         </div>
                       ) : timeLocked ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                          <span style={{ fontSize: '.7rem' }}>🔒</span>
+                          <Lock size={12} style={{ color: 'var(--ink-faint)', flexShrink: 0 }} aria-label="Uzamčeno" />
                           {tip ? (
                             <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>tip: {tip.predicted_home}:{tip.predicted_away}</span>
                           ) : (
@@ -856,7 +857,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                     </div>
                   </div>
                   {isDirty && (
-                    <div style={{ padding: '2px .9rem 6px', fontSize: '.68rem', color: '#b45309', borderBottom: showBorder ? '1px solid var(--border)' : 'none' }}>
+                    <div style={{ padding: '2px .9rem 6px', fontSize: '.68rem', color: 'var(--warn)', borderBottom: showBorder ? '1px solid var(--border)' : 'none' }}>
                       ● neuloženo — klikni Uložit vše
                     </div>
                   )}
@@ -871,14 +872,14 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
         <div style={{
           background: 'rgba(245,158,11,.12)', border: '1px solid rgba(245,158,11,.5)',
           borderRadius: 8, padding: '.5rem .85rem', marginBottom: '.55rem',
-          fontSize: '.76rem', fontWeight: 600, color: '#92400e',
+          fontSize: '.76rem', fontWeight: 600, color: 'var(--warn)',
           display: 'flex', alignItems: 'center', gap: '.5rem',
         }}>
-          ⚠️ Máš neuložené playoff tipy! Stiskni tlačítko níže před odchodem ze záložky.
+          Máš neuložené playoff tipy! Stiskni tlačítko níže před odchodem ze záložky.
         </div>
       )}
       <button type="button" className="btn btn-p btn-full" onClick={saveAll} style={{ opacity: saving ? .7 : 1 }}>
-        {saving ? 'Ukládám…' : '💾 Uložit playoff tipy'}
+        {saving ? 'Ukládám…' : 'Uložit play-off tipy'}
       </button>
     </div>
   )

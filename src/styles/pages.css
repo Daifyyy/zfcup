@@ -1,0 +1,268 @@
+/* ── Veřejné stránky turnaje ────────────────────────────────────────── */
+
+/* Přehled — hero */
+.ov { display: flex; flex-direction: column; gap: 1.25rem; }
+.ov-hero {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 1.5rem;
+  padding: 1.75rem 1.75rem;
+  background: var(--chrome); color: var(--chrome-ink);
+  border-radius: var(--radius-lg);
+}
+.ov-hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0 58%, rgba(255,255,255,.035) 58% 70%, transparent 70%),
+    linear-gradient(90deg, var(--brand) 0 6px, transparent 6px);
+}
+.ov-hero > * { position: relative; }
+.ov-hero__crest {
+  width: 112px; height: 112px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border-radius: var(--radius-lg); color: var(--ink);
+  box-shadow: 0 6px 24px rgba(0,0,0,.35);
+}
+.ov-hero__crest img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+.ov-hero__main { flex: 1; min-width: 0; }
+.ov-hero__eyebrow {
+  display: flex; align-items: center; gap: .6rem; margin-bottom: .55rem;
+  font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--chrome-muted);
+}
+.ov-hero__name {
+  font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
+  font-size: clamp(2rem, 5vw, 3.4rem); line-height: .92; letter-spacing: .005em;
+  color: #fff; word-break: break-word;
+}
+.ov-hero__sub { margin-top: .45rem; color: var(--chrome-muted); font-size: .95rem; }
+.ov-hero__facts { display: flex; flex-wrap: wrap; gap: .4rem 1.25rem; margin-top: .9rem; font-size: .86rem; color: rgba(255,255,255,.85); }
+.ov-hero__facts span { display: inline-flex; align-items: center; gap: .4rem; }
+.ov-hero__facts svg { color: var(--chrome-muted); }
+.ov-hero__side { display: flex; flex-direction: column; align-items: flex-end; gap: 1rem; flex-shrink: 0; }
+.ov-hero__presented { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; }
+.ov-hero__presented span { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--chrome-muted); }
+.ov-hero__presented img { height: 44px; max-width: 160px; object-fit: contain; background: #fff; border-radius: var(--radius); padding: 5px 10px; }
+.ov-hero__qr { display: flex; align-items: center; gap: .6rem; }
+.ov-hero__qr > div { background: #fff; padding: 5px; border-radius: var(--radius-sm); line-height: 0; }
+.ov-hero__qr span { font-size: .66rem; color: var(--chrome-muted); max-width: 80px; line-height: 1.3; }
+@media (max-width: 700px) {
+  .ov-hero { flex-wrap: wrap; padding: 1.25rem; gap: 1rem; }
+  .ov-hero__crest { width: 72px; height: 72px; }
+  .ov-hero__side { width: 100%; align-items: flex-start; }
+  .ov-hero__presented { align-items: flex-start; flex-direction: row; align-items: center; gap: .6rem; }
+  .ov-hero__presented img { height: 34px; }
+}
+
+/* Přehled — KPI pás */
+.ov-kpis {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-lg);
+}
+.ov-kpi { padding: .85rem 1.1rem; display: flex; flex-direction: column; gap: .15rem; }
+.ov-kpi + .ov-kpi { border-left: 1px solid var(--line); }
+.ov-kpi b {
+  font-family: var(--font-display); font-weight: 800; font-size: 2rem; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.ov-kpi b small { font-size: 1.1rem; color: var(--ink-faint); font-weight: 700; }
+.ov-kpi span { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-muted); }
+@media (max-width: 600px) {
+  .ov-kpis { grid-template-columns: repeat(2, 1fr); }
+  .ov-kpi:nth-child(3) { border-left: none; }
+  .ov-kpi:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .ov-kpi b { font-size: 1.6rem; }
+}
+
+/* Přehled — mřížka */
+.ov-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 1.25rem; align-items: start; }
+.ov-col { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+@media (max-width: 980px) { .ov-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.ov-scorers { list-style: none; }
+.ov-scorers li {
+  display: flex; align-items: center; gap: .6rem; padding: .55rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.ov-scorers li:last-child { border-bottom: none; }
+.ov-scorers__rank { width: 18px; font-weight: 700; color: var(--ink-faint); font-variant-numeric: tabular-nums; font-size: .85rem; }
+.ov-scorers li:first-child .ov-scorers__rank { color: var(--gold); }
+.ov-scorers__name { flex: 1; min-width: 0; font-weight: 600; font-size: .88rem; line-height: 1.2; }
+.ov-scorers__name small { display: block; font-weight: 500; font-size: .72rem; color: var(--ink-muted); }
+.ov-scorers__val { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+
+.ov-news { display: flex; flex-direction: column; gap: .9rem; }
+.ov-news__head {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; text-transform: uppercase;
+  padding-bottom: .45rem; border-bottom: 2px solid var(--ink);
+}
+.ov-partners { padding: 1.5rem 1rem; border-top: 1px solid var(--line); margin-top: .5rem; }
+
+/* Novinková karta (oznámení) */
+.news-card {
+  background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden;
+}
+.news-card--text { border-left: 3px solid var(--brand); }
+.news-card__media { width: 100%; max-height: 360px; object-fit: cover; display: block; }
+.news-card__video { position: relative; padding-bottom: 56.25%; height: 0; background: #000; }
+.news-card__video iframe { position: absolute; inset: 0; width: 100%; height: 100%; }
+.news-card__body { padding: .9rem 1.1rem; }
+.news-card__title { font-family: var(--font-body); font-weight: 700; font-size: 1rem; letter-spacing: 0; color: var(--ink); margin-bottom: .25rem; }
+
+/* Tabulka — zóny, forma, legenda */
+.std-zone {
+  font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  border: 1px solid; border-radius: var(--radius-sm); padding: 1px 5px; line-height: 1.3; white-space: nowrap;
+}
+.std-form { display: flex; gap: 3px; justify-content: center; }
+.std-form__dot {
+  width: 20px; height: 20px; border-radius: var(--radius-sm);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: .62rem; font-weight: 700; color: #fff;
+}
+.std-form__dot--W { background: var(--win); }
+.std-form__dot--D { background: var(--draw); }
+.std-form__dot--L { background: var(--loss); }
+.std-foot {
+  display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; padding: .65rem 1rem;
+  border-top: 1px solid var(--line); background: var(--surface-2);
+  font-size: .72rem; color: var(--ink-muted);
+}
+.std-foot span { display: inline-flex; align-items: center; gap: .4rem; }
+.std-foot i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.std-foot__tb { margin-left: auto; }
+@media (max-width: 600px) { .std-foot__tb { margin-left: 0; } }
+
+/* Play-off pavouk */
+.brk {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr);
+  gap: 1.25rem; overflow-x: auto; padding-bottom: .5rem;
+}
+.brk-col { display: flex; flex-direction: column; min-width: 0; }
+.brk-col__title {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; text-transform: uppercase;
+  letter-spacing: .03em; color: var(--ink-muted);
+  padding-bottom: .45rem; margin-bottom: .8rem; border-bottom: 2px solid var(--line-strong);
+}
+.brk-col__title--final { color: var(--ink); border-bottom-color: var(--gold); }
+.brk-col__slots { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: .9rem; }
+.brk-slot {
+  position: relative; background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+/* Spojnice ke dalšímu kolu */
+.brk-col:not(:last-child) .brk-slot::after {
+  content: ''; position: absolute; top: 50%; right: -1.25rem; width: 1.25rem; height: 1px; background: var(--line-strong);
+}
+.brk-slot--final { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.brk-team {
+  display: flex; align-items: center; gap: .55rem; padding: .5rem .7rem;
+  border-bottom: 1px solid var(--line); font-size: .88rem;
+}
+.brk-team__ph { width: 26px; height: 26px; border-radius: 50%; border: 1px dashed var(--line-strong); flex-shrink: 0; }
+.brk-team__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.brk-team__score {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; min-width: 22px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.brk-team--won { box-shadow: inset 3px 0 0 var(--brand); }
+.brk-team--won .brk-team__score { color: var(--brand); }
+.brk-team--lost .brk-team__name, .brk-team--lost .brk-team__score { color: var(--ink-faint); font-weight: 500; }
+.brk-slot__meta {
+  display: flex; justify-content: space-between; gap: .5rem; padding: .3rem .7rem;
+  background: var(--surface-2); font-size: .68rem; font-weight: 600; color: var(--ink-muted);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.brk-slot__ot { color: var(--brand); font-weight: 700; }
+.brk-champion {
+  display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem;
+  background: var(--chrome); color: #fff; border-radius: var(--radius-lg);
+  border-left: 6px solid var(--gold);
+}
+.brk-champion > svg { color: var(--gold); }
+.brk-champion__label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--chrome-muted); }
+.brk-champion__name { font-family: var(--font-display); font-weight: 800; font-size: 1.8rem; text-transform: uppercase; line-height: 1; }
+@media (max-width: 700px) {
+  .brk { grid-auto-flow: row; grid-auto-columns: auto; }
+  .brk-col:not(:last-child) .brk-slot::after { display: none; }
+}
+
+/* Statistiky */
+.st-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.25rem; align-items: start; }
+@media (max-width: 480px) { .st-grid { grid-template-columns: minmax(0, 1fr); } }
+.st-player { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.st-player__avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.st-player__name { font-weight: 600; line-height: 1.2; }
+.st-player__team { font-size: .72rem; color: var(--ink-muted); }
+.st-val { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.ui-table tr.st-leader td { background: var(--brand-soft); }
+.ui-table tr.st-leader .st-val { color: var(--brand); font-size: 1.6rem; }
+.st-cardchip { display: inline-flex; align-items: center; gap: .25rem; }
+.st-cardchip b { font-size: .8rem; font-variant-numeric: tabular-nums; }
+.st-card { display: inline-block; width: 10px; height: 14px; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
+.st-card--y { background: #facc15; }
+.st-card--r { background: #dc2626; }
+
+/* Týmy */
+.tm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; align-items: start; }
+.tm-card {
+  background: var(--surface-1); border: 1px solid var(--line); border-top: 4px solid var(--line-strong);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.tm-card__head {
+  width: 100%; display: flex; align-items: center; gap: .75rem; padding: .9rem 1rem;
+  background: none; border: none; border-bottom: 1px solid var(--line); cursor: pointer; text-align: left;
+  font-family: var(--font-body); color: var(--ink);
+}
+.tm-card__head:hover { background: var(--surface-2); }
+.tm-card__head:hover .tm-card__chev { color: var(--brand); transform: translateX(2px); }
+.tm-card__chev { color: var(--ink-faint); transition: transform .15s, color .15s; flex-shrink: 0; }
+.tm-card__name { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; text-transform: uppercase; line-height: 1.05; }
+.tm-card__meta { font-size: .74rem; color: var(--ink-muted); margin-top: .15rem; }
+.tm-card__empty { padding: .8rem 1rem; font-size: .78rem; color: var(--ink-muted); font-style: italic; }
+.tm-roster { list-style: none; padding: .35rem 0; }
+.tm-roster li { display: flex; align-items: center; gap: .5rem; padding: .3rem 1rem; font-size: .84rem; }
+.tm-roster__num {
+  width: 26px; height: 26px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 700; color: var(--ink-muted); background: var(--surface-2); border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums;
+}
+.tm-roster__avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.tm-roster__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.tm-role {
+  font-size: .6rem; font-weight: 800; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 4px; line-height: 1.5; flex-shrink: 0;
+}
+.tm-role--gk { color: var(--brand); border-color: var(--brand-line); }
+.tm-stats { display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0; }
+.tm-stat { font-size: .7rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tm-stat--a { color: var(--ink-muted); }
+.tm-stat--pim { color: var(--loss); }
+
+.tm-drawer { position: fixed; inset: 0; z-index: 400; background: rgba(11,18,32,.5); display: flex; justify-content: flex-end; }
+.tm-drawer__panel {
+  width: min(620px, 100%); height: 100%; overflow-y: auto; background: var(--surface-0);
+  box-shadow: var(--shadow-panel); animation: tm-slide .2s ease-out;
+}
+@keyframes tm-slide { from { transform: translateX(24px); opacity: 0 } to { transform: none; opacity: 1 } }
+.tm-drawer__head {
+  display: flex; align-items: center; gap: 1rem; padding: 1.25rem; background: var(--chrome); color: #fff;
+  border-bottom: 4px solid; position: sticky; top: 0; z-index: 1;
+}
+.tm-drawer__name { font-family: var(--font-display); font-weight: 800; font-size: 2rem; text-transform: uppercase; line-height: 1; }
+.tm-drawer__meta { font-size: .8rem; color: var(--chrome-muted); margin-top: .2rem; }
+.tm-drawer__close { background: none; border: 1px solid var(--chrome-line); color: #fff; border-radius: var(--radius); padding: .4rem; cursor: pointer; }
+.tm-drawer__kpis { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface-1); border-bottom: 1px solid var(--line); }
+.tm-drawer__kpis div { padding: .8rem .5rem; text-align: center; display: flex; flex-direction: column; gap: .1rem; }
+.tm-drawer__kpis div + div { border-left: 1px solid var(--line); }
+.tm-drawer__kpis b { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; font-variant-numeric: tabular-nums; line-height: 1; }
+.tm-drawer__kpis span { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-muted); }
+.tm-drawer__sec { padding: 1.1rem 1.25rem 0; }
+.tm-drawer__sec:last-child { padding-bottom: 1.5rem; }
+.tm-drawer__sec h3 { font-size: 1.1rem; text-transform: uppercase; margin-bottom: .6rem; }
+
+/* Pravidla */
+.rl-list { list-style: none; display: flex; flex-direction: column; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; }
+.rl-item { display: flex; gap: 1.1rem; padding: 1.1rem 1.25rem; }
+.rl-item + .rl-item { border-top: 1px solid var(--line); }
+.rl-item__num { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; line-height: 1; color: var(--brand); min-width: 2ch; font-variant-numeric: tabular-nums; }
+.rl-item__body { flex: 1; min-width: 0; }
+.rl-item__title { font-family: var(--font-body); font-weight: 700; font-size: 1rem; letter-spacing: 0; margin-bottom: .3rem; }
