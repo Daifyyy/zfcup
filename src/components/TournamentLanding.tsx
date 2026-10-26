@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import { SPORTS, getSportDef, type SportId } from '../lib/sports'
 import { BRAND } from '../lib/brand'
+import { useCompetitions } from '../hooks/useCompetitions'
 import {
   ArrowRight, CalendarDays, ChevronRight, GitBranch, Handshake, Lock, LogOut, MapPin, MonitorPlay,
   Newspaper, Plus, Radio, Share2, Smartphone, Target, Trophy,
@@ -16,10 +17,13 @@ interface TournamentSummary {
   venue: string
   sport: SportId
   logo_url?: string | null
+  competition_id?: string | null
+  edition?: number | null
 }
 
 interface Props {
   onSelect: (tournamentId: string) => void
+  onSelectCompetition?: (slug: string) => void
 }
 
 function toSlug(name: string): string {
@@ -32,7 +36,8 @@ function toSlug(name: string): string {
     .slice(0, 60)
 }
 
-export default function TournamentLanding({ onSelect }: Props) {
+export default function TournamentLanding({ onSelect, onSelectCompetition }: Props) {
+  const { competitions } = useCompetitions()
   const [tournaments, setTournaments] = useState<TournamentSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -67,7 +72,7 @@ export default function TournamentLanding({ onSelect }: Props) {
   // Load tournaments
   useEffect(() => {
     supabase.from('tournament')
-      .select('id, name, subtitle, date, venue, sport, logo_url')
+      .select('*')
       .order('date', { ascending: false })
       .then(({ data, error: err }) => {
         if (err) setError('Nepodařilo se načíst turnaje.')
@@ -272,6 +277,38 @@ export default function TournamentLanding({ onSelect }: Props) {
         </div>
       </section>
 
+      {/* ── Soutěže ─────────────────────────────────── */}
+      {competitions.length > 0 && (
+        <section className="lp-section" id="souteze">
+          <div className="lp-wrap">
+            <div className="lp-section__head">
+              <h2>Soutěže</h2>
+              <p>Ligy a turnaje s více ročníky — síň vítězů, věčná tabulka a rekordy.</p>
+            </div>
+            <div className="lp-tournaments">
+              {competitions.map(c => {
+                const sport = getSportDef(c.sport)
+                const Icon = sport.Icon
+                const eds = tournaments.filter(t => t.competition_id === c.id)
+                return (
+                  <button key={c.id} type="button" className="lp-tcard" onClick={() => onSelectCompetition?.(c.slug)}>
+                    <div className="lp-tcard__crest">
+                      {c.logo_url ? <img src={c.logo_url} alt="" /> : <Icon size={28} strokeWidth={1.5} />}
+                    </div>
+                    <div className="lp-tcard__body">
+                      <div className="lp-tcard__sport"><Icon size={12} />{sport.label} · soutěž</div>
+                      <div className="lp-tcard__name">{c.name}</div>
+                      <div className="lp-tcard__meta"><span>{eds.length} {eds.length === 1 ? 'ročník' : eds.length >= 2 && eds.length <= 4 ? 'ročníky' : 'ročníků'}</span></div>
+                    </div>
+                    <ChevronRight size={18} className="lp-tcard__chev" />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── Turnaje ─────────────────────────────────── */}
       <section className="lp-section lp-section--alt" id="turnaje">
         <div className="lp-wrap">
@@ -312,7 +349,7 @@ export default function TournamentLanding({ onSelect }: Props) {
                       {t.logo_url ? <img src={t.logo_url} alt="" /> : <Icon size={28} strokeWidth={1.5} />}
                     </div>
                     <div className="lp-tcard__body">
-                      <div className="lp-tcard__sport"><Icon size={12} />{sport.label}</div>
+                      <div className="lp-tcard__sport"><Icon size={12} />{sport.label}{t.edition && t.competition_id ? ` · ${t.edition}. ročník` : ''}</div>
                       <div className="lp-tcard__name">{t.name || '(bez názvu)'}</div>
                       {t.subtitle && <div className="lp-tcard__sub">{t.subtitle}</div>}
                       <div className="lp-tcard__meta">

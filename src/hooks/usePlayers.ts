@@ -9,6 +9,8 @@ export interface Player {
   number: number | null
   role: string | null  // 'captain' | 'goalkeeper' | 'both' | null
   avatar_url: string | null
+  /** Osoba napříč ročníky soutěže — migrace 09 */
+  person_id?: string | null
 }
 
 export function usePlayers(tournamentId: string, teamId?: string) {

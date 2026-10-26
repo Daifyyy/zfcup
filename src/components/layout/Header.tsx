@@ -23,6 +23,9 @@ interface Props {
   /** Generální partner — zobrazí se jako „presented by“ */
   presentedBy?: Sponsor | null
   mediaEnabled?: boolean
+  /** Soutěž, do které ročník patří (migrace 09) */
+  competition?: { name: string; slug: string } | null
+  onOpenCompetition?: (slug: string) => void
 }
 
 export const HEADER_HEIGHT_DESKTOP = 104
@@ -56,7 +59,7 @@ function HeaderAction({ icon, label, title, onClick }: { icon: React.ReactNode; 
 
 export default function Header({
   tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin,
-  tipsEnabled, showBracket = true, sponsorsEnabled, presentedBy, mediaEnabled,
+  tipsEnabled, showBracket = true, sponsorsEnabled, presentedBy, mediaEnabled, competition, onOpenCompetition,
 }: Props) {
   const tabs = buildPublicTabs({ showBracket, tipsEnabled, sponsorsEnabled, mediaEnabled })
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
@@ -83,7 +86,12 @@ export default function Header({
           {/* Název turnaje — line-clamp 2, minWidth 130 (jinak ho vytlačí akce) */}
           <div className="hdr__title">
             <h1 className="hdr__name">{tournament?.name || BRAND.name}</h1>
-            {meta && <div className="hdr__meta">{meta}</div>}
+            {competition ? (
+              <button type="button" className="hdr__comp" onClick={() => onOpenCompetition?.(competition.slug)} title="Historie soutěže">
+                {tournament?.edition ? `${tournament.edition}. ročník · ` : ''}{competition.name}
+                {tournament?.season_label ? ` · ${tournament.season_label}` : ''}
+              </button>
+            ) : meta && <div className="hdr__meta">{meta}</div>}
           </div>
 
           {presentedBy?.logo_url && (

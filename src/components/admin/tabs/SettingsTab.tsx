@@ -4,6 +4,8 @@ import type { Tournament } from '../../../hooks/useTournament'
 import { TOURNAMENT_FORMATS, getFormatDef } from '../../../lib/formats'
 import { getSportDef } from '../../../lib/sports'
 import BrandingSection from './BrandingSection'
+import CompetitionSection from './CompetitionSection'
+import type { Team } from '../../../hooks/useTeams'
 
 interface Props {
   tournament: Tournament | null
@@ -14,9 +16,12 @@ interface Props {
   refetchBracket: () => void
   refetchBracketGoals: () => void
   showToast: (msg: string) => void
+  teams?: Team[]
+  refetchTeams?: () => void
+  refetchPlayers?: () => void
 }
 
-export default function SettingsTab({ tournament, refetchTournament, refetchGroups, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals, showToast }: Props) {
+export default function SettingsTab({ tournament, refetchTournament, refetchGroups, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals, showToast, teams = [], refetchTeams = () => {}, refetchPlayers = () => {} }: Props) {
   const sportDef = getSportDef(tournament?.sport)
   const [p1, setP1] = useState('')
   const [p2, setP2] = useState('')
@@ -358,6 +363,9 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           <button type="button" className="btn btn-s" onClick={saveLeagueParams}>Uložit parametry</button>
         </div>
       )}
+
+      <hr className="divider" />
+      <CompetitionSection tournament={tournament} teams={teams} refetchTournament={refetchTournament} refetchTeams={refetchTeams} refetchPlayers={refetchPlayers} showToast={showToast} />
 
       <hr className="divider" />
       <BrandingSection tournament={tournament} refetchTournament={refetchTournament} showToast={showToast} />

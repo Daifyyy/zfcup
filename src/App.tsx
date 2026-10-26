@@ -18,6 +18,7 @@ import { useAnnouncements } from './hooks/useAnnouncements'
 import { useRuleItems } from './hooks/useRuleItems'
 import { useReferees } from './hooks/useReferees'
 import { useSponsors } from './hooks/useSponsors'
+import { useCompetitions } from './hooks/useCompetitions'
 import { TournamentProvider } from './lib/TournamentContext'
 import Header, { HEADER_HEIGHT_DESKTOP } from './components/layout/Header'
 import { BRAND } from './lib/brand'
@@ -47,6 +48,7 @@ const PrintBulletin = lazyComponent(() => import('./components/public/PrintBulle
 const AdminPanel = lazyComponent(() => import('./components/admin/AdminPanel'))
 const KioskMode = lazyComponent(() => import('./components/kiosk/KioskMode'))
 const Scoreboard = lazyComponent(() => import('./components/public/Scoreboard'))
+const CompetitionPage = lazyComponent(() => import('./components/competition/CompetitionPage'))
 
 function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
   const img = sponsor.logo_url ? (
@@ -66,7 +68,14 @@ function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
 // E.g. /abc123 → 'abc123'; / → ''
 function detectTournamentIdFromUrl(): string {
   const segments = window.location.pathname.split('/').filter(Boolean)
+  if (segments[0] === 's') return ''
   return segments[0] ?? ''
+}
+
+// /s/{slug} → stránka soutěže
+function detectCompetitionSlugFromUrl(): string {
+  const segments = window.location.pathname.split('/').filter(Boolean)
+  return segments[0] === 's' ? (segments[1] ?? '') : ''
 }
 
 export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'statistics' | 'bracket' | 'info' | 'rules' | 'tips' | 'sponsors' | 'media'
@@ -74,6 +83,7 @@ const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'statist
 
 export default function App() {
   const [tournamentId, setTournamentId] = useState<string>(() => detectTournamentIdFromUrl())
+  const [competitionSlug, setCompetitionSlug] = useState<string>(() => detectCompetitionSlugFromUrl())
   const [tab, setTab] = useState<Tab>('overview')
   const [adminOpen, setAdminOpen] = useState(false)
   const [kiosk, setKiosk] = useState(() => new URLSearchParams(window.location.search).get('kiosk') === '1')
@@ -104,6 +114,7 @@ export default function App() {
   const { ruleItems, refetch: refetchRuleItems } = useRuleItems(tournamentId)
   const { referees, refetch: refetchReferees } = useReferees(tournamentId)
   const { sponsors, refetch: refetchSponsors } = useSponsors(tournamentId)
+  const { competitions } = useCompetitions()
 
   // ── Auth ──────────────────────────────────────────────
   useEffect(() => {
@@ -120,6 +131,7 @@ export default function App() {
     const handlePopstate = () => {
       const id = detectTournamentIdFromUrl()
       setTournamentId(id)
+      setCompetitionSlug(detectCompetitionSlugFromUrl())
     }
     window.addEventListener('popstate', handlePopstate)
     return () => window.removeEventListener('popstate', handlePopstate)
@@ -189,6 +201,7 @@ export default function App() {
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
   const sponsorsEnabled = tournament?.sponsors_enabled ?? false
   const mediaEnabled = tournament?.press_enabled ?? false
+  const currentCompetition = competitions.find(c => c.id === tournament?.competition_id) ?? null
   // Partneři seřazení podle úrovně; generální partner = „presented by“
   const sortedSponsors = sortByTier(sponsors)
   const presentedBy = sponsorsEnabled ? getTitlePartner(sponsors) : null
@@ -197,14 +210,37 @@ export default function App() {
 
   const goHome = useCallback(() => {
     setTournamentId('')
+    setCompetitionSlug('')
     window.history.pushState({}, '', '/')
   }, [])
 
   // ── Landing page: no tournamentId in URL ─────────────
+  const openCompetition = (slug: string) => {
+    window.history.pushState({}, '', `/s/${slug}`)
+    setTournamentId('')
+    setCompetitionSlug(slug)
+  }
+
+  if (competitionSlug) {
+    return (
+      <TournamentProvider tournamentId="">
+        <CompetitionPage
+          slug={competitionSlug}
+          onHome={goHome}
+          onOpenTournament={id => {
+            window.history.pushState({ tournamentId: id }, '', `/${id}`)
+            setCompetitionSlug('')
+            setTournamentId(id)
+          }}
+        />
+      </TournamentProvider>
+    )
+  }
+
   if (!tournamentId) {
     return (
       <TournamentProvider tournamentId="">
-        <TournamentLanding onSelect={id => setTournamentId(id)} />
+        <TournamentLanding onSelect={id => setTournamentId(id)} onSelectCompetition={openCompetition} />
         {passwordRecovery && <PasswordResetOverlay onDone={() => setPasswordRecovery(false)} />}
       </TournamentProvider>
     )
@@ -272,6 +308,8 @@ export default function App() {
         sponsorsEnabled={sponsorsEnabled}
         presentedBy={presentedBy}
         mediaEnabled={mediaEnabled}
+        competition={currentCompetition}
+        onOpenCompetition={openCompetition}
       />
       {sponsorsEnabled && sponsors.length > 0 && (
         <aside className="sponsor-sidebar" style={{ position: 'fixed', left: 0, top: HEADER_HEIGHT_DESKTOP + 8, bottom: 0, width: 130, flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem', overflowY: 'auto' }}>

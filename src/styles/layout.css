@@ -251,3 +251,11 @@
   .adm__content { padding: 1rem 1rem 2rem; }
   .adm__content-title { font-size: 1.3rem; }
 }
+
+/* Odkaz na soutěž v hlavičce ročníku */
+.hdr__comp {
+  display: block; max-width: 100%; margin-top: 2px; padding: 0; background: none; border: none; cursor: pointer;
+  font-family: var(--font-body); font-size: .72rem; font-weight: 600; color: #7aa7ff; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hdr__comp:hover { color: #fff; text-decoration: underline; }

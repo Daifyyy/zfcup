@@ -39,6 +39,11 @@ export interface Tournament {
   press_contact_email?: string
   press_contact_phone?: string
   press_note?: string
+  // Migrace 09 — soutěže a ročníky
+  competition_id?: string | null
+  edition?: number | null
+  season_label?: string
+  schedule_mode?: 'day' | 'season'
 }
 
 export function useTournament(tournamentId?: string) {

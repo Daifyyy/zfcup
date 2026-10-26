@@ -7,6 +7,8 @@ export interface Team {
   name: string
   color: string
   logo_url: string | null
+  /** Klub napříč ročníky soutěže — migrace 09 */
+  club_id?: string | null
 }
 
 export function useTeams(tournamentId: string) {

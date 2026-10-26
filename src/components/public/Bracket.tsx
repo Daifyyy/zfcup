@@ -4,6 +4,7 @@ import type { Team } from '../../hooks/useTeams'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
 import { SectionHeader } from '../ui/Card'
+import { isPlacementRound } from '../../lib/history'
 
 interface Props {
   rounds: BracketRound[]
@@ -13,10 +14,6 @@ interface Props {
 
 const DECIDED_IN_BADGE: Record<string, string> = { ot: 'PP', so: 'SN' }
 
-/** Kola o umístění (O 3. místo, O 5-6. místo, Útěšné QF…) — mimo hlavní pavouk. */
-export function isPlacementRound(name: string): boolean {
-  return /^o\s*\d/i.test(name.trim()) || /^útěš/i.test(name.trim())
-}
 
 function SlotCard({ slot, teams, isFinal }: { slot: BracketSlot; teams: Map<string, Team>; isFinal: boolean }) {
   const hT = slot.home_id ? teams.get(slot.home_id) : undefined

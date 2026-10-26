@@ -15,6 +15,7 @@ Spouštět v pořadí v **Supabase SQL Editoru**:
 6. `06_indexes.sql` — Indexy
 7. `07_multisport.sql` — Multi-sport (fotbal/hokej), trestné minuty, OT/SO
 8. `08_partners_branding_media.sql` — Úrovně partnerů, barvy turnaje (branding), mediální sekce
+9. `09_competitions_seasons.sql` — Soutěže s ročníky (competitions, clubs, persons), sezónní režim, datum zápasu
 
 ## Použití (existující DB — upgrade)
 
