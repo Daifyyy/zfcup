@@ -45,8 +45,9 @@ interface Props {
 function SlotEditor({
   slot, teams, players, bracketGoals, bracketAssists, bracketCards, bracketPenalties,
   referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, refetchBracketPenalties,
-  assistsEnabled, cardsEnabled, penaltiesEnabled, sportDef, tournamentId, showToast, onSave,
+  assistsEnabled, cardsEnabled, penaltiesEnabled, sportDef, tournamentId, showToast, onSave, isSeason = false,
 }: {
+  isSeason?: boolean
   slot: BracketSlot
   teams: Team[]
   players: Player[]
@@ -67,7 +68,7 @@ function SlotEditor({
   showToast: (m: string) => void
   onSave: (data: Partial<BracketSlot>) => Promise<void>
 }) {
-  const [s, setS] = useState({ ...slot, scheduled_time: slot.scheduled_time ?? '' })
+  const [s, setS] = useState({ ...slot, scheduled_time: slot.scheduled_time ?? '', match_date: slot.match_date ?? '' })
   const [refereeId, setRefereeId] = useState<string>(slot.referee_id ?? '')
   const [decidedIn, setDecidedIn] = useState<'regulation' | 'ot' | 'so'>(slot.decided_in ?? 'regulation')
   const [saving, setSaving] = useState(false)
@@ -234,6 +235,7 @@ function SlotEditor({
         scheduled_time: s.scheduled_time || null,
         referee_id: refereeId || null,
         decided_in: hasOvertime ? decidedIn : null,
+        ...(isSeason ? { match_date: s.match_date || null } : {}),
       })
     } catch (e: unknown) {
       showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
@@ -354,6 +356,10 @@ function SlotEditor({
           Odehrán {s.played && <span style={{ color: 'var(--success)' }}>✓</span>}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+          {isSeason && (
+            <input type="date" value={s.match_date ?? ''} onChange={e => setS(x => ({ ...x, match_date: e.target.value }))} aria-label="Datum zápasu"
+              style={{ fontSize: '.82rem', padding: '.25rem .45rem', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }} />
+          )}
           <Clock size={14} style={{ color: 'var(--muted)' }} aria-label="Čas" />
           <input type="time" value={s.scheduled_time} onChange={e => setS(x => ({ ...x, scheduled_time: e.target.value }))}
             style={{ fontSize: '.82rem', padding: '.25rem .45rem', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }} />
@@ -425,8 +431,9 @@ function SlotEditor({
 function RoundCard({
   round, rSlots, teams, players, bracketGoals, bracketAssists, bracketCards, bracketPenalties,
   referees, refetchBracketGoals, refetchBracketAssists, refetchBracketCards, refetchBracketPenalties,
-  assistsEnabled, cardsEnabled, penaltiesEnabled, sportDef, tournamentId, showToast, matchDuration, onSave, onRemove, onApplyTimes,
+  assistsEnabled, cardsEnabled, penaltiesEnabled, sportDef, tournamentId, showToast, matchDuration, onSave, onRemove, onApplyTimes, isSeason = false,
 }: {
+  isSeason?: boolean
   round: BracketRound
   rSlots: BracketSlot[]
   teams: Team[]
@@ -501,7 +508,7 @@ function RoundCard({
               {/* Kompaktní řádek */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.42rem .65rem', background: isOpen ? 'var(--accent-dim)' : '#fff' }}>
                 <span style={{ fontSize: '.68rem', color: 'var(--muted)', minWidth: 34, flexShrink: 0 }}>
-                  {slot.scheduled_time || '—'}
+                  {slot.match_date ? `${slot.match_date.slice(8, 10)}.${slot.match_date.slice(5, 7)}. ` : ''}{slot.scheduled_time || '—'}
                 </span>
                 <span style={{ flex: 1, fontSize: '.82rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {ht?.name ?? 'TBD'}
@@ -536,6 +543,7 @@ function RoundCard({
                   sportDef={sportDef}
                   tournamentId={tournamentId}
                   showToast={showToast}
+                  isSeason={isSeason}
                   onSave={data => onSave(slot.id, data) as Promise<void>}
                 />
               )}
@@ -811,6 +819,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         const rSlots = [...bracketSlots].filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
         return (
           <RoundCard
+            isSeason={tournament?.schedule_mode === 'season'}
             key={round.id}
             round={round}
             rSlots={rSlots}

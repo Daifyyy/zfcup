@@ -13,6 +13,8 @@ import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Announcement } from '../../hooks/useAnnouncements'
 import type { Sponsor } from '../../hooks/useSponsors'
 import { TvPartnerBar } from '../ui/TvPartnerBar'
+import { currentSeasonRound } from '../../lib/fixtures'
+import { formatDateWeekday } from '../../lib/dates'
 import { getSportDef } from '../../lib/sports'
 
 /* ── Palette ───────────────────────────────────────────── */
@@ -258,6 +260,12 @@ function KioskMatches({ tournament, teams, groups, matches, bracketRounds, brack
       Žádné zápasy
     </div>
   )
+
+  // Sezóna: jen aktuální kolo (zápasy jsou v různé dny)
+  const seasonRound = currentSeasonRound(groupMatches)
+  if (seasonRound) {
+    return <GroupMatchesSubCol groupName={`${seasonRound.round}${seasonRound.date ? ` · ${formatDateWeekday(seasonRound.date)}` : ''}`} matches={seasonRound.matches} teams={teams} />
+  }
 
   if (isLeague) {
     return <LeagueMatchesCol matches={groupMatches} teams={teams} numPitches={tournament?.num_pitches ?? 2} />

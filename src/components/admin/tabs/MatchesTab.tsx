@@ -79,6 +79,8 @@ function InlineMatchEditor({
   const [awayScore, setAwayScore] = useState(match.away_score ?? 0)
   const [played, setPlayed] = useState(Boolean(match.played))
   const [scheduledTime, setScheduledTime] = useState(match.scheduled_time || '')
+  const isSeason = tournament?.schedule_mode === 'season'
+  const [matchDate, setMatchDate] = useState(match.match_date || '')
   const [refereeId, setRefereeId] = useState<string>(match.referee_id ?? '')
   const [decidedIn, setDecidedIn] = useState<'regulation' | 'ot' | 'so'>(match.decided_in ?? 'regulation')
   const [saving, setSaving] = useState(false)
@@ -192,6 +194,8 @@ function InlineMatchEditor({
       round: match.round || '',
       referee_id: refereeId || null,
       decided_in: hasOvertime ? decidedIn : null,
+      // match_date jen v sezónním režimu (sloupec z migrace 09)
+      ...(isSeason ? { match_date: matchDate || null } : {}),
     }).eq('id', match.id)
 
     if (matchErr) { showToast('Chyba skóre: ' + matchErr.message); savingRef.current = false; setSaving(false); return }
@@ -346,6 +350,10 @@ function InlineMatchEditor({
           Odehrán {played && <span style={{ color: 'var(--success)' }}>✓</span>}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+          {isSeason && (
+            <input type="date" value={matchDate} onChange={e => setMatchDate(e.target.value)} aria-label="Datum zápasu"
+              style={{ fontSize: '.82rem', padding: '.25rem .45rem', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }} />
+          )}
           <Clock size={14} style={{ color: 'var(--muted)' }} aria-label="Čas" />
           <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
             style={{ fontSize: '.82rem', padding: '.25rem .45rem', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }} />
@@ -688,6 +696,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
                           {m.played ? (
                             <span style={{ color: 'var(--success)' }}>✓ {m.home_score}:{m.away_score}</span>
                           ) : 'Plánováno'}
+                          {m.match_date && <> · {m.match_date.split('-').reverse().join('. ').replace(/^0/, '')}</>}
                           {m.scheduled_time && <> · {m.scheduled_time}</>}
                           {totalGoals > 0 && <> · {totalGoals} gólů</>}
                         </div>

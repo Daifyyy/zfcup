@@ -18,6 +18,7 @@ import { SectionHeader } from '../ui/Card'
 import { CardChip } from '../ui/CardChip'
 import { MatchRow } from '../ui/MatchRow'
 import { getMatchState } from '../../lib/matchState'
+import { formatDateShort } from '../../lib/dates'
 
 interface Props {
   teams: Team[]
@@ -198,7 +199,7 @@ export default function Teams({ teams, players, goals, bracketGoals = [], assist
                         awayScore={m.away_score}
                         state={getMatchState(m, tournament)}
                         decidedIn={m.decided_in}
-                        meta={m.scheduled_time}
+                        meta={m.match_date ? `${formatDateShort(m.match_date)} ${m.scheduled_time}` : m.scheduled_time}
                         logoSize={24}
                       />
                     ))}

@@ -17,6 +17,8 @@ import { X } from 'lucide-react'
 import { BRAND } from '../../lib/brand'
 import { TvPartnerBar } from '../ui/TvPartnerBar'
 import { getMatchState } from '../../lib/matchState'
+import { currentSeasonRound } from '../../lib/fixtures'
+import { formatDateWeekday } from '../../lib/dates'
 
 interface Props {
   tournament: Tournament | null
@@ -541,6 +543,12 @@ function MatchesCol({ matches, teams, groups, bracketRounds, bracketSlots, tourn
       Žádné zápasy
     </div>
   )
+
+  // Sezóna: jen aktuální kolo (zápasy jsou v různé dny)
+  const seasonRound = currentSeasonRound(groupMatches)
+  if (seasonRound) {
+    return <GroupMatchesSubCol groupName={`${seasonRound.round}${seasonRound.date ? ` · ${formatDateWeekday(seasonRound.date)}` : ''}`} matches={seasonRound.matches} teams={teams} tournament={tournament} />
+  }
 
   if (isLeague) {
     return <LeagueMatchesCol matches={groupMatches} teams={teams} numPitches={tournament?.num_pitches ?? 2} tournament={tournament} />

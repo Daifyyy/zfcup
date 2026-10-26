@@ -23,6 +23,26 @@ export function exportSchedule(
   tournament?: { match_duration: number; round_break: number },
   pitchLabel: string = 'Hřiště',
 ) {
+  // Sezónní rozpis (zápasy s datem): po kolech — Kolo / Datum / Čas / Domácí / Hosté / Výsledek
+  if (matches.some(m => m.match_date)) {
+    const rows: string[][] = [['Kolo', 'Datum', 'Čas', 'Domácí', 'Hosté', 'Výsledek']]
+    const bySeason = [...matches].sort((x, y) =>
+      (x.match_date ?? '').localeCompare(y.match_date ?? '') || (x.scheduled_time ?? '').localeCompare(y.scheduled_time ?? ''))
+    let prevRound = ''
+    for (const m of bySeason) {
+      if (prevRound && m.round !== prevRound) rows.push(['', '', '', '', '', ''])
+      prevRound = m.round
+      const d = m.match_date ? m.match_date.split('-').reverse().join('.') : ''
+      rows.push([m.round, d, m.scheduled_time || '', teamName(m.home_id, teams), teamName(m.away_id, teams), m.played ? `${m.home_score}:${m.away_score}` : ''])
+    }
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 7 }, { wch: 24 }, { wch: 24 }, { wch: 9 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Rozpis')
+    XLSX.writeFile(wb, 'rozpis-sezony.xlsx')
+    return
+  }
+
   const sorted = [...matches].sort((a, b) =>
     (a.scheduled_time || '').localeCompare(b.scheduled_time || ''),
   )

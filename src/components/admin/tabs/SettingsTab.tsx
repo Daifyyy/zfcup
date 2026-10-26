@@ -183,9 +183,11 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
         <sportDef.Icon size={20} />
         <div>
-          <div style={{ fontWeight: 600, fontSize: '.85rem' }}>{sportDef.label}</div>
+          <div style={{ fontWeight: 600, fontSize: '.85rem' }}>
+            {sportDef.label} · {tournament?.schedule_mode === 'season' ? 'sezóna (kola v různé dny)' : 'jednodenní turnaj'}
+          </div>
           <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: 2 }}>
-            Sport se volí při založení turnaje a nelze jej později změnit.
+            Sport a průběh se volí při založení turnaje a nelze je později změnit.
           </div>
         </div>
       </div>

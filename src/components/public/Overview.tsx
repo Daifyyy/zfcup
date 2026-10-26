@@ -17,6 +17,7 @@ import { getSportDef } from '../../lib/sports'
 import { calcGroupStandings } from '../../lib/standings'
 import { getMatchState } from '../../lib/matchState'
 import { buildFixtures, topScorers } from '../../lib/fixtures'
+import { formatDateShort } from '../../lib/dates'
 import { AnnouncementCard } from './AnnouncementCard'
 import { Card } from '../ui/Card'
 import { Badge } from '../ui/Badge'
@@ -100,7 +101,7 @@ export default function Overview({
       awayScore={f.away_score}
       state={state}
       decidedIn={f.decided_in}
-      meta={<div>{f.scheduled_time || '—'}<div style={{ fontSize: '.66rem', color: 'var(--ink-faint)', fontWeight: 500, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.label}</div></div>}
+      meta={<div>{f.match_date ? <>{formatDateShort(f.match_date)} <span style={{ color: 'var(--ink-faint)' }}>{f.scheduled_time}</span></> : (f.scheduled_time || '—')}<div style={{ fontSize: '.66rem', color: 'var(--ink-faint)', fontWeight: 500, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.label}</div></div>}
     />
   )
 

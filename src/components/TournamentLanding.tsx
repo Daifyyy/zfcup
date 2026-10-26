@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js'
 import { SPORTS, getSportDef, type SportId } from '../lib/sports'
 import { BRAND } from '../lib/brand'
 import { useCompetitions } from '../hooks/useCompetitions'
+import { carryOverTeams, nextEditionNumber } from '../lib/editions'
 import {
   ArrowRight, CalendarDays, ChevronRight, GitBranch, Handshake, Lock, LogOut, MapPin, MonitorPlay,
   Newspaper, Plus, Radio, Share2, Smartphone, Target, Trophy,
@@ -58,6 +59,10 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
   const [newName, setNewName] = useState('')
   const [newSlug, setNewSlug] = useState('')
   const [newSport, setNewSport] = useState<SportId>('football')
+  const [newMode, setNewMode] = useState<'day' | 'season'>('day')
+  // Další ročník soutěže: '' = samostatný turnaj
+  const [newCompetitionId, setNewCompetitionId] = useState('')
+  const [newCarryOver, setNewCarryOver] = useState(true)
   const [slugManual, setSlugManual] = useState(false)
   const [createError, setCreateError] = useState('')
   const [creating, setCreating] = useState(false)
@@ -135,9 +140,16 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
     let data: { id: string } | null = null
     try {
       const user = (await supabase.auth.getUser()).data.user
+      const competition = competitions.find(c => c.id === newCompetitionId)
+      const edition = competition ? await nextEditionNumber(competition.id) : null
       const res = await supabase
         .from('tournament')
-        .insert({ name: newName.trim(), slug: newSlug.trim(), sport: newSport, owner_id: user?.id ?? null })
+        .insert({
+          name: newName.trim(), slug: newSlug.trim(), sport: competition?.sport ?? newSport, owner_id: user?.id ?? null,
+          // Nové sloupce (migrace 09) posílat jen když jsou potřeba — bez migrace jde založit běžný turnaj
+          ...(newMode === 'season' ? { schedule_mode: 'season' } : {}),
+          ...(competition ? { competition_id: competition.id, edition } : {}),
+        })
         .select('id')
         .single()
       if (res.error) {
@@ -145,6 +157,16 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
         return
       }
       data = res.data
+      // Převzít týmy a soupisky z posledního ročníku soutěže
+      if (competition && newCarryOver) {
+        const prev = tournaments
+          .filter(t => t.competition_id === competition.id && t.id !== data!.id)
+          .sort((a, b) => (b.edition ?? 0) - (a.edition ?? 0))[0]
+        if (prev) {
+          try { await carryOverTeams(prev.id, data.id, competition.id) }
+          catch (e) { setCreateError('Turnaj založen, ale převzetí týmů selhalo: ' + (e instanceof Error ? e.message : String(e))) }
+        }
+      }
     } finally {
       setCreating(false)
     }
@@ -153,6 +175,8 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
     setNewName('')
     setNewSlug('')
     setNewSport('football')
+    setNewMode('day')
+    setNewCompetitionId('')
     setSlugManual(false)
     window.history.pushState({ tournamentId: data.id }, '', `/${data.id}`)
     onSelect(data.id)
@@ -449,6 +473,35 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
                 </div>
                 <p className="lp-modal__hint">Sport nelze po založení turnaje změnit.</p>
               </div>
+              <div>
+                <label className="field-label">Průběh</label>
+                <div className="lp-sportpick">
+                  <button type="button" onClick={() => setNewMode('day')} className={newMode === 'day' ? 'lp-sportpick__btn lp-sportpick__btn--on' : 'lp-sportpick__btn'}>
+                    <CalendarDays size={20} />Jednodenní turnaj
+                  </button>
+                  <button type="button" onClick={() => setNewMode('season')} className={newMode === 'season' ? 'lp-sportpick__btn lp-sportpick__btn--on' : 'lp-sportpick__btn'}>
+                    <Trophy size={20} />Sezóna (kola v různé dny)
+                  </button>
+                </div>
+                <p className="lp-modal__hint">{newMode === 'season' ? 'Liga po kolech s datem každého zápasu (např. okresní liga).' : 'Všechny zápasy v jeden den (např. firemní turnaj).'}</p>
+              </div>
+              {competitions.filter(c => c.sport === newSport).length > 0 && (
+                <div>
+                  <label className="field-label">Soutěž</label>
+                  <select className="field-input field-select" value={newCompetitionId} onChange={e => setNewCompetitionId(e.target.value)}>
+                    <option value="">Samostatný turnaj</option>
+                    {competitions.filter(c => c.sport === newSport).map(c => (
+                      <option key={c.id} value={c.id}>Další ročník: {c.name}</option>
+                    ))}
+                  </select>
+                  {newCompetitionId && (
+                    <label className="chk-item" style={{ marginTop: '.45rem' }}>
+                      <input type="checkbox" checked={newCarryOver} onChange={e => setNewCarryOver(e.target.checked)} />
+                      <span style={{ fontSize: '.84rem' }}>Převzít týmy a soupisky z posledního ročníku</span>
+                    </label>
+                  )}
+                </div>
+              )}
               <div>
                 <label className="field-label">Název turnaje</label>
                 <input className="field-input" type="text" placeholder="např. Firemní pohár 2027" value={newName} onChange={e => handleNameChange(e.target.value)} required autoFocus />

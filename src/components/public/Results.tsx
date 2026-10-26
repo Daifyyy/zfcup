@@ -10,6 +10,8 @@ import { getMatchState } from '../../lib/matchState'
 import { Card, SectionHeader } from '../ui/Card'
 import { Segmented } from '../ui/Tabs'
 import { MatchRow } from '../ui/MatchRow'
+import { formatDateShort, formatDateWeekday } from '../../lib/dates'
+import { roundNumber } from '../../lib/leagueSchedule'
 import { MatchStatusBadge } from '../ui/Badge'
 import type { Sponsor } from '../../hooks/useSponsors'
 import { ShareMatchDialog } from '../share/lazy'
@@ -39,6 +41,7 @@ export default function Results({ matches, teams, tournament, referees = [], spo
 
   const sportDef = getSportDef(tournament?.sport)
   const isLeague = tournament?.format === 'league'
+  const isSeason = tournament?.schedule_mode === 'season'
   const teamById = new Map(teams.map(t => [t.id, t]))
   const refName = (m: Match) => m.referee_id ? referees.find(r => r.id === m.referee_id)?.name : undefined
 
@@ -53,7 +56,29 @@ export default function Results({ matches, teams, tournament, referees = [], spo
   // Liga: sekce po časových slotech (souběžné zápasy na více hřištích).
   // Skupiny: sekce po kolech/skupinách.
   const sections: { key: string; title: React.ReactNode; subtitle?: string; items: Match[] }[] = []
-  if (isLeague) {
+  if (isSeason) {
+    // Sezóna: sekce po kolech (1. kolo, 2. kolo…), uvnitř podle data a času
+    const map = new Map<string, Match[]>()
+    for (const m of filtered) {
+      const r = m.round || 'Bez kola'
+      if (!map.has(r)) map.set(r, [])
+      map.get(r)!.push(m)
+    }
+    const byDateTime = (a: Match, b: Match) =>
+      (a.match_date ?? '').localeCompare(b.match_date ?? '') || (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? '')
+    const rounds = [...map.entries()].sort(([a, ma], [b, mb]) =>
+      roundNumber(a) - roundNumber(b) || (ma[0]?.match_date ?? '').localeCompare(mb[0]?.match_date ?? '') || a.localeCompare(b, 'cs'))
+    for (const [round, items] of rounds) {
+      items.sort(byDateTime)
+      const dates = [...new Set(items.map(m => m.match_date).filter(Boolean))] as string[]
+      sections.push({
+        key: round,
+        title: round,
+        subtitle: dates.length === 1 ? formatDateWeekday(dates[0]) : dates.length > 1 ? `${formatDateShort(dates[0])} – ${formatDateShort(dates[dates.length - 1])}` : undefined,
+        items,
+      })
+    }
+  } else if (isLeague) {
     const map = new Map<string, Match[]>()
     for (const m of [...filtered].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
       const key = m.scheduled_time || '—'
@@ -119,7 +144,7 @@ export default function Results({ matches, teams, tournament, referees = [], spo
         >
           {sec.items.map((m, i) => {
             const ref = refName(m)
-            const pitch = isLeague && sec.items.length >= 2 ? `${sportDef.terms.pitchLabel} ${PITCH_LETTERS[i] ?? i + 1}` : null
+            const pitch = isLeague && !isSeason && sec.items.length >= 2 ? `${sportDef.terms.pitchLabel} ${PITCH_LETTERS[i] ?? i + 1}` : null
             const state = getMatchState(m, tournament)
             return (
               <MatchRow
@@ -139,7 +164,9 @@ export default function Results({ matches, teams, tournament, referees = [], spo
                     </button>
                   </span>
                 ) : undefined}
-                meta={isLeague ? (pitch ?? m.scheduled_time) : (m.scheduled_time || '—')}
+                meta={isSeason
+                  ? <div>{formatDateShort(m.match_date) || '—'}<div style={{ fontSize: '.68rem', color: 'var(--ink-faint)', fontWeight: 500 }}>{m.scheduled_time}</div></div>
+                  : isLeague ? (pitch ?? m.scheduled_time) : (m.scheduled_time || '—')}
                 sub={ref ? <span><Gavel size={12} />{ref}</span> : undefined}
               />
             )

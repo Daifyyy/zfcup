@@ -36,11 +36,13 @@ export async function exportPressResults(d: Input): Promise<void> {
   const wb = XLSX.utils.book_new()
 
   // Výsledky
-  const results: (string | number)[][] = [['Čas', 'Skupina / kolo', 'Domácí', 'Skóre', 'Hosté', 'Poznámka']]
-  for (const m of [...d.matches].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
+  const hasDates = d.matches.some(m => m.match_date)
+  const results: (string | number)[][] = [[...(hasDates ? ['Datum'] : []), 'Čas', 'Skupina / kolo', 'Domácí', 'Skóre', 'Hosté', 'Poznámka']]
+  for (const m of [...d.matches].sort((a, b) => (a.match_date ?? '').localeCompare(b.match_date ?? '') || (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
     results.push([
+      ...(hasDates ? [m.match_date ? m.match_date.split('-').reverse().join('.') : ''] : []),
       m.scheduled_time || '',
-      (m.group_id && groupName.get(m.group_id)) || m.round || '',
+      (hasDates && m.round) || (m.group_id && groupName.get(m.group_id)) || m.round || '',
       tn(m.home_id),
       m.played ? `${m.home_score}:${m.away_score}` : '—',
       tn(m.away_id),
@@ -48,7 +50,7 @@ export async function exportPressResults(d: Input): Promise<void> {
     ])
   }
   const wsR = XLSX.utils.aoa_to_sheet(results)
-  wsR['!cols'] = [{ wch: 7 }, { wch: 16 }, { wch: 24 }, { wch: 8 }, { wch: 24 }, { wch: 16 }]
+  wsR['!cols'] = [...(hasDates ? [{ wch: 11 }] : []), { wch: 7 }, { wch: 16 }, { wch: 24 }, { wch: 8 }, { wch: 24 }, { wch: 16 }]
   XLSX.utils.book_append_sheet(wb, wsR, 'Výsledky')
 
   // Tabulky

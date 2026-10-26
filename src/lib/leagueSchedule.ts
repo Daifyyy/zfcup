@@ -217,3 +217,101 @@ export function leagueSlotCount(n: number, numPitches = 2): number {
   const realPairs = n % 2 === 0 ? n / 2 : (n - 1) / 2
   return rounds * Math.ceil(realPairs / numPitches)
 }
+
+// ── Sezónní rozpis (ročník = sezóna, kola v různé dny) ─────────────────────────
+
+export interface SeasonMatch {
+  home_id: string
+  away_id: string
+  /** 1, 2, 3… — pořadí kola */
+  roundNo: number
+  /** „1. kolo“ */
+  round: string
+  /** YYYY-MM-DD */
+  match_date: string
+  /** HH:MM */
+  scheduled_time: string
+}
+
+export interface SeasonOptions {
+  /** Dvoukolově = každý s každým doma i venku */
+  twice: boolean
+  /** Datum 1. kola (YYYY-MM-DD) */
+  firstDate: string
+  /** Rozestup kol ve dnech (7 = týdně) */
+  intervalDays: number
+  /** Čas začátku zápasů (HH:MM) */
+  kickoffTime: string
+}
+
+/** Přičte dny k datu YYYY-MM-DD (počítá v UTC, takže nevadí letní čas). */
+export function addDays(isoDate: string, days: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + days))
+  return dt.toISOString().slice(0, 10)
+}
+
+/**
+ * Orientace „kdo hraje doma“ přes Eulerův tah (Hierholzer): každá hrana grafu zápasů se
+ * zorientuje ve směru průchodu, takže každý tým má stejně „odchozích“ (doma) jako
+ * „příchozích“ (venku) hran. U sudého počtu týmů se stupně dorovnají pomocnými hranami,
+ * které se pak zahodí → rozdíl doma/venku je nejvýš 1.
+ */
+function balancedOrientation(teamIds: string[], pairs: Array<[string, string]>): Map<string, [string, string]> {
+  type Edge = { a: string; b: string; key: string | null; used: boolean }
+  const edges: Edge[] = pairs.map(([a, b]) => ({ a, b, key: `${a}|${b}`, used: false }))
+  const degree = new Map(teamIds.map(id => [id, 0]))
+  for (const e of edges) { degree.set(e.a, degree.get(e.a)! + 1); degree.set(e.b, degree.get(e.b)! + 1) }
+  const odd = teamIds.filter(id => degree.get(id)! % 2 === 1)
+  for (let i = 0; i + 1 < odd.length; i += 2) edges.push({ a: odd[i], b: odd[i + 1], key: null, used: false })
+  const adj = new Map<string, number[]>(teamIds.map(id => [id, []]))
+  edges.forEach((e, i) => { adj.get(e.a)!.push(i); adj.get(e.b)!.push(i) })
+
+  const result = new Map<string, [string, string]>()
+  const ptr = new Map(teamIds.map(id => [id, 0]))
+  for (const start of teamIds) {
+    // Iterativní Hierholzer: zásobník (vrchol, hrana kterou jsme přišli)
+    const stack: { v: string }[] = [{ v: start }]
+    while (stack.length) {
+      const { v } = stack[stack.length - 1]
+      const list = adj.get(v)!
+      let p = ptr.get(v)!
+      while (p < list.length && edges[list[p]].used) p++
+      ptr.set(v, p)
+      if (p === list.length) { stack.pop(); continue }
+      const e = edges[list[p]]
+      e.used = true
+      const to = e.a === v ? e.b : e.a
+      if (e.key) result.set(e.key, [v, to])
+      stack.push({ v: to })
+    }
+  }
+  return result
+}
+
+/**
+ * Kruhová metoda (Berger) + vyvážení domácích zápasů Eulerovou orientací.
+ * Odveta (twice) prohodí domácí/hosty — každý tým má pak stejně zápasů doma i venku.
+ */
+export function generateSeasonSchedule(teamIds: string[], opts: SeasonOptions): SeasonMatch[] {
+  if (teamIds.length < 2) return []
+  const firstLeg = circleRounds(teamIds)
+  const orient = balancedOrientation(teamIds, firstLeg.flat())
+  const balanced = firstLeg.map(round => round.map(([a, b]) => orient.get(`${a}|${b}`) ?? [a, b] as [string, string]))
+  const legs = opts.twice ? [...balanced, ...balanced.map(r => r.map(([h, a]): [string, string] => [a, h]))] : balanced
+  const out: SeasonMatch[] = []
+  legs.forEach((pairs, i) => {
+    const roundNo = i + 1
+    const date = addDays(opts.firstDate, i * Math.max(1, opts.intervalDays))
+    for (const [home_id, away_id] of pairs) {
+      out.push({ home_id, away_id, roundNo, round: `${roundNo}. kolo`, match_date: date, scheduled_time: opts.kickoffTime })
+    }
+  })
+  return out
+}
+
+/** Číslo kola z názvu „12. kolo“ (pro řazení), jinak Infinity. */
+export function roundNumber(round: string | null | undefined): number {
+  const m = /^(\d+)\./.exec((round ?? '').trim())
+  return m ? Number(m[1]) : Infinity
+}

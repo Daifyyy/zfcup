@@ -5,7 +5,7 @@ import type { Group } from '../../../hooks/useGroups'
 import type { Match } from '../../../hooks/useMatches'
 import type { Tournament } from '../../../hooks/useTournament'
 import { matchCount, addMinutes } from '../../../lib/constants'
-import { generateLeagueSchedule, leagueMatchCount, leagueSlotCount } from '../../../lib/leagueSchedule'
+import { generateLeagueSchedule, generateSeasonSchedule, addDays, leagueMatchCount, leagueSlotCount } from '../../../lib/leagueSchedule'
 import { getFormatDef } from '../../../lib/formats'
 
 interface Props {
@@ -69,6 +69,12 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   const [leagueBreakWindowStart, setLeagueBreakWindowStart] = useState('')
   const [leagueBreakWindowDur, setLeagueBreakWindowDur] = useState('60')
   const [leagueGenerating, setLeagueGenerating] = useState(false)
+  // Sezónní režim (ročník = sezóna, kola v různé dny)
+  const isSeason = tournament?.schedule_mode === 'season'
+  const [seasonFirstDate, setSeasonFirstDate] = useState('')
+  const [seasonInterval, setSeasonInterval] = useState('7')
+  const [seasonKickoff, setSeasonKickoff] = useState('18:00')
+  const [seasonTwice, setSeasonTwice] = useState(true)
 
   // Tiebreaker edit state
   const [editingTiebreakerGroupId, setEditingTiebreakerGroupId] = useState<string | null>(null)
@@ -95,6 +101,14 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   const leaguePreview = () => {
     const n = leagueTeamIds.length
     if (n < 2) return null
+    if (isSeason) {
+      const rounds = (n % 2 === 0 ? n - 1 : n) * (seasonTwice ? 2 : 1)
+      const total = leagueMatchCount(n) * (seasonTwice ? 2 : 1)
+      const interval = Math.max(1, parseInt(seasonInterval) || 7)
+      const last = /^\d{4}-\d{2}-\d{2}$/.test(seasonFirstDate) ? addDays(seasonFirstDate, (rounds - 1) * interval) : null
+      const fmt = (d: string) => d.split('-').reverse().join('. ').replace(/^0/, '')
+      return `${n} týmů · ${total} zápasů · ${rounds} kol${last ? ` · ${fmt(seasonFirstDate)} – ${fmt(last)}` : ''}`
+    }
     const dur = parseInt(leagueDur) || 20
     const brk = parseInt(leagueBreak) || 5
     const numPitches = tournament?.num_pitches ?? 2
@@ -106,7 +120,10 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   const generateLeague = async () => {
     if (leagueGenerating) return
     if (leagueTeamIds.length < 3) { showToast('Vyber alespoň 3 týmy'); return }
-    if (!/^\d{1,2}:\d{2}$/.test(leagueStart)) { showToast('Zadej čas začátku prvního zápasu'); return }
+    if (isSeason) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(seasonFirstDate)) { showToast('Zadej datum 1. kola'); return }
+      if (!/^\d{1,2}:\d{2}$/.test(seasonKickoff)) { showToast('Zadej čas začátku zápasů'); return }
+    } else if (!/^\d{1,2}:\d{2}$/.test(leagueStart)) { showToast('Zadej čas začátku prvního zápasu'); return }
     if (!confirm(leagueGroup
       ? `Smazat stávající ligový rozpis a vygenerovat nový pro ${leagueTeamIds.length} týmů?`
       : `Vygenerovat ligový rozpis pro ${leagueTeamIds.length} týmů?`)) return
@@ -125,14 +142,40 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
       const { data: grp, error: grpErr } = await supabase.from('groups').insert({
         name: 'Liga',
         team_ids: leagueTeamIds,
-        schedule: 'once',
+        schedule: isSeason && seasonTwice ? 'twice' : 'once',
         tiebreaker: 'score_then_h2h',
-        start_time: leagueStart,
+        start_time: isSeason ? seasonKickoff : leagueStart,
         match_duration: parseInt(leagueDur) || 20,
         break_between: parseInt(leagueBreak) || 5,
         tournament_id: tournament?.id,
       }).select().single()
       if (grpErr) throw grpErr
+
+      if (isSeason) {
+        const season = generateSeasonSchedule(leagueTeamIds, {
+          twice: seasonTwice,
+          firstDate: seasonFirstDate,
+          intervalDays: Math.max(1, parseInt(seasonInterval) || 7),
+          kickoffTime: seasonKickoff,
+        })
+        const rows = season.map(m => ({
+          group_id: grp.id,
+          round: m.round,
+          home_id: m.home_id,
+          away_id: m.away_id,
+          home_score: 0,
+          away_score: 0,
+          played: false,
+          scheduled_time: m.scheduled_time,
+          match_date: m.match_date,
+          tournament_id: tournament?.id,
+        }))
+        const { error: sErr } = await supabase.from('matches').insert(rows)
+        if (sErr) throw sErr
+        showToast(`Rozpis sezóny vygenerován — ${rows.length} zápasů v ${new Set(season.map(m => m.roundNo)).size} kolech`)
+        refetchGroups(); refetchMatches()
+        return
+      }
 
       const schedule = generateLeagueSchedule(
         leagueTeamIds, leagueStart,
@@ -255,11 +298,12 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
 
       {isLeague && (
         <>
-          <div className="sub-title">Liga — generovat rozpis</div>
+          <div className="sub-title">{isSeason ? 'Sezóna — generovat rozpis kol' : 'Liga — generovat rozpis'}</div>
           <div className="info-box" style={{ marginBottom: '.75rem' }}>
             <div style={{ fontSize: '.76rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-              Circle-method: každý tým hraje s každým 1×. Vždy 2 souběžné zápasy,
-              algoritmus minimalizuje hrání dvakrát za sebou. Délka zápasu a přestávka se přebírají z Nastavení nebo je lze přepsat níže.
+              {isSeason
+                ? 'Každý s každým po kolech v různé dny. Dvoukolově = doma i venku. Domácí zápasy jsou rozložené rovnoměrně, každý tým hraje v kole nejvýš jednou.'
+                : 'Circle-method: každý tým hraje s každým 1×. Vždy 2 souběžné zápasy, algoritmus minimalizuje hrání dvakrát za sebou. Délka zápasu a přestávka se přebírají z Nastavení nebo je lze přepsat níže.'}
             </div>
           </div>
 
@@ -288,6 +332,38 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
             )}
           </div>
 
+          {isSeason && (
+            <>
+              <div className="field-row">
+                <div className="field-group">
+                  <label className="field-label">Datum 1. kola</label>
+                  <input className="field-input" type="date" value={seasonFirstDate} onChange={e => setSeasonFirstDate(e.target.value)} />
+                </div>
+                <div className="field-group">
+                  <label className="field-label">Rozestup kol (dní)</label>
+                  <input className="field-input" type="number" min="1" value={seasonInterval} onChange={e => setSeasonInterval(e.target.value)} />
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field-group">
+                  <label className="field-label">Čas zápasů</label>
+                  <input className="field-input" type="time" value={seasonKickoff} onChange={e => setSeasonKickoff(e.target.value)} />
+                </div>
+                <div className="field-group">
+                  <label className="field-label">Systém</label>
+                  <select className="field-input field-select" value={seasonTwice ? 'twice' : 'once'} onChange={e => setSeasonTwice(e.target.value === 'twice')}>
+                    <option value="twice">Dvoukolově (doma i venku)</option>
+                    <option value="once">Jednokolově</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.9rem' }}>
+                Datum a čas jednotlivých zápasů lze po vygenerování upravit v záložce Zápasy.
+              </div>
+            </>
+          )}
+
+          {!isSeason && <>
           <div className="field-group">
             <label className="field-label">Začátek (čas)</label>
             <input className="field-input" type="time" value={leagueStart}
@@ -333,9 +409,10 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
               </div>
             )}
           </div>
+          </>}
 
           <button type="button" className="btn btn-p" onClick={generateLeague} style={{ opacity: leagueGenerating ? 0.6 : 1 }}>
-            {leagueGenerating ? 'Generuji…' : 'Generovat ligový rozpis'}
+            {leagueGenerating ? 'Generuji…' : isSeason ? 'Generovat rozpis sezóny' : 'Generovat ligový rozpis'}
           </button>
 
           <hr className="divider" />
