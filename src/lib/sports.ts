@@ -1,9 +1,13 @@
+import { FootballIcon, HockeyIcon, type SportIconComponent } from '../components/ui/icons/SportIcons'
+
 export type SportId = 'football' | 'hockey'
 
 export interface SportDef {
   id: SportId
   label: string
+  /** Emoji — jen pro zpětnou kompatibilitu, v UI používej `Icon`. */
   icon: string
+  Icon: SportIconComponent
   terms: {
     scorersLabel: string
     pitchLabel: string
@@ -25,6 +29,7 @@ const football: SportDef = {
   id: 'football',
   label: 'Fotbal',
   icon: '⚽',
+  Icon: FootballIcon,
   terms: {
     scorersLabel: 'Střelci',
     pitchLabel: 'Hřiště',
@@ -47,6 +52,7 @@ const hockey: SportDef = {
   id: 'hockey',
   label: 'Hokej',
   icon: '🏒',
+  Icon: HockeyIcon,
   terms: {
     scorersLabel: 'Střelci',
     pitchLabel: 'Kluziště',

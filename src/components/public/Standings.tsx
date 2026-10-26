@@ -66,7 +66,7 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
               background: 'linear-gradient(135deg, #eff6ff 0%, #fff 100%)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '.08em' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', letterSpacing: '.08em' }}>
                   {group.name}
                 </span>
                 <span style={{ fontSize: 'var(--fs-small)', color: 'var(--muted)' }}>
@@ -163,7 +163,7 @@ export default function Standings({ groups, matches, teams, tournament }: Props)
                         {row.gd > 0 ? '+' : ''}{row.gd}
                       </td>
                       <td style={{ textAlign: 'center', padding: 'var(--pad-cell)' }}>
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'var(--fs-pts)', color: rs.badgeColor || 'var(--accent)' }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-pts)', color: rs.badgeColor || 'var(--accent)' }}>
                           {row.pts}
                         </span>
                       </td>

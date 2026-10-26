@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { QRCodeSVG } from 'qrcode.react'
+import { BRAND } from '../../lib/brand'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Group } from '../../hooks/useGroups'
 
@@ -54,7 +55,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
     return () => { document.body.style.overflow = prev }
   }, [])
 
-  const tname = tournament?.name || 'Turnajník'
+  const tname = tournament?.name || BRAND.name
   const tmeta = [tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
   const isLeague = tournament?.format === 'league'
   const nonLigaGroups = groups.filter(g => g.name !== 'Liga')
@@ -119,7 +120,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
             flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: '.75rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>
+          <span style={{ fontSize: '.75rem', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap', fontFamily: 'var(--font-body)' }}>
             URL:
           </span>
           <input
@@ -138,7 +139,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
               padding: '.38rem .85rem',
               background: '#2563eb', color: '#fff',
               border: 'none', borderRadius: 6, cursor: 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: 'var(--font-body)',
               fontSize: '.75rem', fontWeight: 700,
               whiteSpace: 'nowrap', flexShrink: 0,
             }}
@@ -162,11 +163,11 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
         {/* A3 content */}
         <div
           className="tg-body"
-          style={{ padding: '2.2rem 2.5rem', fontFamily: "'DM Sans', sans-serif", color: '#0f172a' }}
+          style={{ padding: '2.2rem 2.5rem', fontFamily: 'var(--font-body)', color: '#0f172a' }}
         >
           {/* Header */}
           <div style={{ borderBottom: '4px solid #2563eb', paddingBottom: '.8rem', marginBottom: '1.5rem' }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.6rem', letterSpacing: '.06em', lineHeight: 1.05 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.6rem', letterSpacing: '.06em', lineHeight: 1.05 }}>
               {tname}
             </div>
             {tmeta && (
@@ -176,7 +177,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
 
           {/* Title */}
           <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.1rem', letterSpacing: '.14em', color: '#2563eb' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '2.1rem', letterSpacing: '.14em', color: '#2563eb' }}>
               TIPOVAČKA — JAK HRÁT
             </div>
             <div style={{ fontSize: '.95rem', color: '#64748b', marginTop: '.2rem' }}>
@@ -227,7 +228,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
                       width: 28, height: 28, borderRadius: '50%',
                       background: '#2563eb', color: '#fff',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem',
+                      fontFamily: 'var(--font-display)', fontSize: '1rem',
                       flexShrink: 0, marginTop: 1,
                     }}
                   >
@@ -251,7 +252,7 @@ export default function TipsGuideModal({ tournament, groups, onClose }: Props) {
               border: '1px solid rgba(37,99,235,.15)',
             }}
           >
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '.1em', color: '#2563eb', marginBottom: '.75rem' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', letterSpacing: '.1em', color: '#2563eb', marginBottom: '.75rem' }}>
               BODOVÉ OHODNOCENÍ
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>

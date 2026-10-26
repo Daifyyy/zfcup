@@ -39,7 +39,7 @@ const segmentBtn = (active: boolean) => ({
 } as React.CSSProperties)
 
 const groupHeader = {
-  fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.05rem',
+  fontFamily: 'var(--font-display)', fontSize: '1.05rem',
   letterSpacing: '.15em', textTransform: 'uppercase' as const, fontWeight: 700,
   color: 'var(--text)' as const, padding: '.45rem 1rem', marginBottom: '.6rem',
   borderLeft: '5px solid var(--accent)', background: 'rgba(37,99,235,.04)',
@@ -164,7 +164,7 @@ function Leaderboard({ tipsters, myId }: { tipsters: ReturnType<typeof useTipste
               <span style={{ fontWeight: isMe ? 700 : 500, fontSize: '.88rem', color: isMe ? 'var(--accent)' : 'var(--text)' }}>{t.name}</span>
               {isMe && <span style={{ fontSize: '.65rem', color: 'var(--accent)', marginLeft: 6, fontWeight: 600 }}>← ty</span>}
             </div>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.4rem', color: i === 0 ? 'var(--gold)' : 'var(--accent)', lineHeight: 1 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: i === 0 ? 'var(--gold)' : 'var(--accent)', lineHeight: 1 }}>
               {t.total_points}
             </div>
           </div>
@@ -613,7 +613,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
                   <div style={{ textAlign: 'center', flexShrink: 0 }}>
                     {m.played ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '.06em' }}>{m.home_score}:{m.away_score}</span>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', letterSpacing: '.06em' }}>{m.home_score}:{m.away_score}</span>
                         {tip && <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>tip: {tip.predicted_home}:{tip.predicted_away}</span>}
                         {tip && (tip.evaluated ? (
                           <span style={{
@@ -644,7 +644,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
                               value={inp[side]}
                               onChange={e => setInput(m.id, side, e.target.value)}
                               style={{
-                                width: 32, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem',
+                                width: 32, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.1rem',
                                 border: '1px solid var(--border)', borderRadius: 6, padding: '3px 4px',
                                 background: inp[side] !== '' ? 'rgba(37,99,235,.06)' : '#fff', outline: 'none',
                               }}
@@ -805,7 +805,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                     <div style={{ textAlign: 'center', flexShrink: 0 }}>
                       {s.played ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1rem', letterSpacing: '.06em', color: isFinal ? 'var(--gold)' : 'var(--text)' }}>{s.home_score}:{s.away_score}</span>
+                          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', letterSpacing: '.06em', color: isFinal ? 'var(--gold)' : 'var(--text)' }}>{s.home_score}:{s.away_score}</span>
                           {tip && <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>tip: {tip.predicted_home}:{tip.predicted_away}</span>}
                           {tip && (tip.evaluated ? (
                             <span style={{
@@ -835,7 +835,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                                 value={inp[side]}
                                 onChange={e => setInput(s.id, side, e.target.value)}
                                 style={{
-                                  width: 32, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem',
+                                  width: 32, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.1rem',
                                   border: '1px solid var(--border)', borderRadius: 6, padding: '3px 4px',
                                   background: inp[side] !== '' ? 'rgba(37,99,235,.06)' : '#fff', outline: 'none',
                                 }}

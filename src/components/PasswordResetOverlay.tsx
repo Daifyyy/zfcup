@@ -40,16 +40,16 @@ export default function PasswordResetOverlay({ onDone }: Props) {
         {done ? (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '.5rem' }}>✅</div>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: '#111' }}>
+            <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, color: '#111' }}>
               Heslo bylo změněno
             </p>
-            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', color: '#6b7280' }}>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '.85rem', color: '#6b7280' }}>
               Přesměrovávám…
             </p>
           </div>
         ) : (
           <>
-            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '.05em', color: '#111', margin: 0 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', letterSpacing: '.05em', color: '#111', margin: 0 }}>
               Nastavit nové heslo
             </h2>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
@@ -62,7 +62,7 @@ export default function PasswordResetOverlay({ onDone }: Props) {
                 style={{
                   width: '100%', padding: '10px 12px',
                   border: '1px solid #d1d5db', borderRadius: 8,
-                  fontFamily: "'DM Sans', sans-serif", fontSize: '0.95rem',
+                  fontFamily: 'var(--font-body)', fontSize: '0.95rem',
                   outline: 'none', boxSizing: 'border-box',
                 }}
               />
@@ -74,14 +74,14 @@ export default function PasswordResetOverlay({ onDone }: Props) {
                 style={{
                   width: '100%', padding: '10px 12px',
                   border: '1px solid #d1d5db', borderRadius: 8,
-                  fontFamily: "'DM Sans', sans-serif", fontSize: '0.95rem',
+                  fontFamily: 'var(--font-body)', fontSize: '0.95rem',
                   outline: 'none', boxSizing: 'border-box',
                 }}
               />
-              {err && <p style={{ color: '#b91c1c', fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', margin: 0 }}>{err}</p>}
+              {err && <p style={{ color: '#b91c1c', fontFamily: 'var(--font-body)', fontSize: '.85rem', margin: 0 }}>{err}</p>}
               <button type="submit" style={{
                 background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8,
-                padding: '10px 20px', fontFamily: "'DM Sans', sans-serif",
+                padding: '10px 20px', fontFamily: 'var(--font-body)',
                 fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer',
                 opacity: saving ? 0.6 : 1,
               }}>

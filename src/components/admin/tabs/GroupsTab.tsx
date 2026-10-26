@@ -333,7 +333,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
           ) : (
             <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem 1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.4rem' }}>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.95rem', letterSpacing: '.06em', flex: 1 }}>Liga</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '.95rem', letterSpacing: '.06em', flex: 1 }}>Liga</span>
                 <button type="button" className="btn btn-d btn-sm" onClick={() => removeGroup(leagueGroup)}>Smazat</button>
               </div>
               <div style={{ fontSize: '.71rem', color: 'var(--muted)' }}>
@@ -459,7 +459,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
         return (
           <div key={g.id} style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem 1rem', marginBottom: '.6rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.7rem', marginBottom: '.4rem' }}>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '.95rem', letterSpacing: '.06em', flex: 1 }}>{g.name}</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '.95rem', letterSpacing: '.06em', flex: 1 }}>{g.name}</span>
               <button type="button" className="btn btn-s btn-sm" onClick={() => {
                 setEditingTiebreakerGroupId(editingTiebreakerGroupId === g.id ? null : g.id)
                 setTiebreakerDraft(g.tiebreaker as typeof tiebreakerDraft)

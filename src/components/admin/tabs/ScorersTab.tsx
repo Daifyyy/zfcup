@@ -52,7 +52,7 @@ export default function ScorersTab({ goals, bracketGoals, players, teams, tourna
                   <span className="team-dot" style={{ background: s.teamColor }} />{s.teamName}
                 </div>
               </div>
-              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', color: 'var(--accent)' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--accent)' }}>
                 {sportDef.icon} {s.goals}
               </span>
             </div>

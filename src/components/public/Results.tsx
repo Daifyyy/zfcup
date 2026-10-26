@@ -39,7 +39,7 @@ function MatchRow({ m, teams, refereeName }: { m: Match; teams: Team[]; refereeN
         </span>
       </div>
       <div className="match-col-score">
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'var(--fs-score)', letterSpacing: '.1em', lineHeight: 1, color: m.played ? 'var(--text)' : 'var(--muted)' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-score)', letterSpacing: '.1em', lineHeight: 1, color: m.played ? 'var(--text)' : 'var(--muted)' }}>
           {m.played ? `${m.home_score} : ${m.away_score}` : 'VS'}
         </div>
         {m.played && decidedBadge && (
@@ -80,7 +80,7 @@ function MatchRow({ m, teams, refereeName }: { m: Match; teams: Team[]; refereeN
 }
 
 const SECTION_HEADER = {
-  fontFamily: "'Bebas Neue', sans-serif",
+  fontFamily: 'var(--font-display)',
   fontSize: '1.1rem',
   letterSpacing: '.15em',
   color: 'var(--text)',
@@ -154,7 +154,7 @@ export default function Results({ matches, teams, tournament, referees = [] }: P
             <div style={SECTION_HEADER}>
               🕐 {time}
               {multiPitch && (
-                <span style={{ fontSize: '.65rem', fontWeight: 400, letterSpacing: '.06em', marginLeft: '.6rem', color: 'var(--muted)', fontFamily: "'DM Sans', sans-serif" }}>
+                <span style={{ fontSize: '.65rem', fontWeight: 400, letterSpacing: '.06em', marginLeft: '.6rem', color: 'var(--muted)', fontFamily: 'var(--font-body)' }}>
                   {pitchNames.join(' & ')}
                 </span>
               )}

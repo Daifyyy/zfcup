@@ -105,7 +105,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                 {/* Header */}
                 <div style={{ marginBottom: '.25rem', paddingBottom: '.18rem', borderBottom: `1px solid ${C.border}` }}>
                   <div style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontFamily: 'var(--font-display)',
                     fontSize: S.section,
                     letterSpacing: '.1em',
                     color: C.accent,
@@ -113,7 +113,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                   }}>
                     {group.name}
                     {isLeague && (
-                      <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: S.label, fontWeight: 400, color: C.muted, letterSpacing: 0, marginLeft: '.4em' }}>
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: S.label, fontWeight: 400, color: C.muted, letterSpacing: 0, marginLeft: '.4em' }}>
                         {group.tiebreaker === 'h2h_first'
                           ? '(shoda: vzáj. zápas → gól. rozdíl → vstřelené)'
                           : group.tiebreaker === 'score_then_h2h'
@@ -155,7 +155,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                       return (
                         <tr key={row.id} style={{ background: rowBg }}>
                           <td style={{ padding: '.12rem .22rem', paddingLeft: ls ? 0 : '.22rem', textAlign: 'center', fontSize: S.label, borderLeft: ls?.borderLeft }}>
-                            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: numColor, lineHeight: 1 }}>{i + 1}</span>
+                            <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: numColor, lineHeight: 1 }}>{i + 1}</span>
                           </td>
                           <td style={{ padding: '.12rem .22rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -170,7 +170,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                           ))}
                           <td style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{row.gf}:{row.ga}</td>
                           <td style={{ textAlign: 'center', padding: '.12rem .22rem' }}>
-                            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: numColor !== C.muted ? numColor : i === 0 ? C.accent : C.text }}>
+                            <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: numColor !== C.muted ? numColor : i === 0 ? C.accent : C.text }}>
                               {row.pts}
                             </span>
                           </td>
@@ -190,7 +190,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
       {scorers.length > 0 && (
         <div style={{ flexShrink: 0, padding: '.3rem .8rem .4rem', borderTop: `2px solid ${C.border}` }}>
           <div style={{
-            fontFamily: "'Bebas Neue', sans-serif",
+            fontFamily: 'var(--font-display)',
             fontSize: S.body,
             letterSpacing: '.1em',
             color: C.gold,
@@ -201,7 +201,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
           <div style={{ display: 'flex', flexDirection: 'column', gap: '.08rem' }}>
             {scorers.map((s, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.3rem', padding: '.08rem .05rem' }}>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.label, color: i === 0 ? C.gold : C.muted, width: 14, textAlign: 'center', flexShrink: 0 }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.label, color: i === 0 ? C.gold : C.muted, width: 14, textAlign: 'center', flexShrink: 0 }}>
                   {i + 1}
                 </span>
                 {s.team && <TeamLogo team={s.team} size={26} />}
@@ -209,7 +209,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                   {s.name}
                   {s.team && <span style={{ color: C.muted, fontWeight: 400 }}> · {s.team.name}</span>}
                 </span>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.body, color: i === 0 ? C.gold : C.accent, flexShrink: 0 }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.body, color: i === 0 ? C.gold : C.accent, flexShrink: 0 }}>
                   {s.total}
                 </span>
               </div>
@@ -229,7 +229,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
   return (
     <div style={{ padding: '.4rem .5rem', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden', gap: '.18rem' }}>
       <div style={{
-        fontFamily: "'Bebas Neue', sans-serif",
+        fontFamily: 'var(--font-display)',
         fontSize: S.section,
         letterSpacing: '.12em',
         color: C.accent,
@@ -270,11 +270,11 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
             {/* Skóre */}
             <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, 3.5vw, 5rem)' }}>
               {m.played ? (
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>
                   {m.home_score}:{m.away_score}
                 </span>
               ) : (
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.muted, letterSpacing: '.06em' }}>VS</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.muted, letterSpacing: '.06em' }}>VS</span>
               )}
             </div>
             {/* Away */}
@@ -317,7 +317,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
         return (
           <div key={round.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             <div style={{
-              fontFamily: "'Bebas Neue', sans-serif",
+              fontFamily: 'var(--font-display)',
               fontSize: S.label,
               letterSpacing: '.16em',
               color: accentColor,
@@ -363,11 +363,11 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
                       {s.played ? (
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: accentColor, letterSpacing: '.06em', lineHeight: 1 }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: accentColor, letterSpacing: '.06em', lineHeight: 1 }}>
                           {s.home_score}:{s.away_score}
                         </span>
                       ) : (
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.muted }}>VS</span>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.muted }}>VS</span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
@@ -404,11 +404,11 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
       </div>
       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
         {match.played ? (
-          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>
             {match.home_score}:{match.away_score}
           </span>
         ) : (
-          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.small, color: C.muted }}>VS</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: S.small, color: C.muted }}>VS</span>
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
@@ -587,7 +587,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
         return (
           <div key={round.id}>
             <div style={{
-              fontFamily: "'Bebas Neue', sans-serif",
+              fontFamily: 'var(--font-display)',
               fontSize: S.section,
               letterSpacing: '.13em',
               color: accentColor,
@@ -632,7 +632,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                         </span>
                       </div>
                       {slot.played && (
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>
                           {slot.home_score}
                         </span>
                       )}
@@ -656,7 +656,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                         </span>
                       </div>
                       {slot.played && (
-                        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>
                           {slot.away_score}
                         </span>
                       )}
@@ -693,7 +693,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
       position: 'fixed', inset: 0, zIndex: 200,
       background: C.bg,
       display: 'flex', flexDirection: 'column',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: 'var(--font-body)',
       color: C.text,
     }}>
       {/* ── top header bar ── */}
@@ -707,7 +707,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
       }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <span style={{
-            fontFamily: "'Bebas Neue', sans-serif",
+            fontFamily: 'var(--font-display)',
             fontSize: S.title,
             letterSpacing: '.1em',
             color: '#ffffff',
@@ -729,7 +729,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
         </div>
 
         <span style={{
-          fontFamily: "'Bebas Neue', sans-serif",
+          fontFamily: 'var(--font-display)',
           fontSize: S.title,
           color: '#bfdbfe',
           letterSpacing: '.1em',
@@ -779,7 +779,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
       }}>
         {cols.map(({ icon, label }, i) => (
           <div key={i} style={{
-            fontFamily: "'Bebas Neue', sans-serif",
+            fontFamily: 'var(--font-display)',
             fontSize: S.label,
             letterSpacing: '.16em',
             color: C.accent,

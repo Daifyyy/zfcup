@@ -36,7 +36,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
           <div key={round.id} style={{ marginBottom: '2rem' }}>
             {/* Round header */}
             <div style={{
-              fontFamily: "'Bebas Neue', sans-serif",
+              fontFamily: 'var(--font-display)',
               fontSize: '1.25rem',
               letterSpacing: '.12em',
               textTransform: 'uppercase',
@@ -93,7 +93,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
                       </span>
                       {slot.played && (
                         <span style={{
-                          fontFamily: "'Bebas Neue', sans-serif",
+                          fontFamily: 'var(--font-display)',
                           fontSize: 'var(--fs-score)',
                           color: hw ? winnerColor : 'var(--muted)',
                           flexShrink: 0, marginLeft: '.3rem',
@@ -122,7 +122,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
                       </span>
                       {slot.played && (
                         <span style={{
-                          fontFamily: "'Bebas Neue', sans-serif",
+                          fontFamily: 'var(--font-display)',
                           fontSize: 'var(--fs-score)',
                           color: aw ? winnerColor : 'var(--muted)',
                           flexShrink: 0, marginLeft: '.3rem',

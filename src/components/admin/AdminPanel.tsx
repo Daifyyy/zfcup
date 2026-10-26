@@ -176,7 +176,7 @@ export default function AdminPanel(props: Props) {
           flexShrink: 0,
         }}>
           <span style={{ fontSize: '1.1rem' }}>{getSportDef(props.tournament?.sport).icon}</span>
-          <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '.06em', flex: 1 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', letterSpacing: '.06em', flex: 1 }}>
             Admin panel
           </h2>
           <span style={{
@@ -197,7 +197,7 @@ export default function AdminPanel(props: Props) {
         {!session ? (
           /* Login form */
           <div style={{ padding: '1.7rem', display: 'flex', flexDirection: 'column', gap: '.9rem' }}>
-            <h3 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', letterSpacing: '.06em' }}>Přihlášení</h3>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', letterSpacing: '.06em' }}>Přihlášení</h3>
             <div className="field-group">
               <label className="field-label">Email</label>
               <input
@@ -228,21 +228,21 @@ export default function AdminPanel(props: Props) {
             {!resetMode ? (
               <button type="button" onClick={() => { setResetMode(true); setErr('') }} style={{
                 background: 'none', border: 'none', color: 'var(--accent)',
-                fontFamily: "'DM Sans', sans-serif", fontSize: '.82rem',
+                fontFamily: 'var(--font-body)', fontSize: '.82rem',
                 cursor: 'pointer', padding: 0, textDecoration: 'underline', alignSelf: 'flex-start',
               }}>
                 Zapomenuté heslo?
               </button>
             ) : resetSent ? (
-              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '.75rem', fontSize: '.82rem', fontFamily: "'DM Sans', sans-serif", color: '#166534' }}>
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '.75rem', fontSize: '.82rem', fontFamily: 'var(--font-body)', color: '#166534' }}>
                 ✅ E-mail s odkazem pro reset hesla byl odeslán. Zkontroluj schránku (včetně spamu).
-                <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setResetEmail('') }} style={{ display: 'block', marginTop: '.5rem', background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: '.82rem', padding: 0, textDecoration: 'underline' }}>
+                <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setResetEmail('') }} style={{ display: 'block', marginTop: '.5rem', background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '.82rem', padding: 0, textDecoration: 'underline' }}>
                   ← Zpět na přihlášení
                 </button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', background: '#f8fafc', borderRadius: 8, padding: '.85rem', border: '1px solid var(--border)' }}>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.82rem', margin: 0, color: '#374151' }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '.82rem', margin: 0, color: '#374151' }}>
                   Zadej svůj e-mail a pošleme ti odkaz pro reset hesla.
                 </p>
                 <input
@@ -285,7 +285,7 @@ export default function AdminPanel(props: Props) {
                       border: 'none',
                       background: isActive ? 'none' : isAction ? 'rgba(22,163,74,.08)' : 'none',
                       color: isActive ? 'var(--accent)' : isAction ? '#15803d' : 'var(--muted)',
-                      fontFamily: "'DM Sans', sans-serif",
+                      fontFamily: 'var(--font-body)',
                       fontSize: '.67rem', fontWeight: isAction ? 700 : 600,
                       textTransform: 'uppercase', letterSpacing: '.09em',
                       padding: '.62rem .6rem', cursor: 'pointer',

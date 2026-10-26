@@ -46,7 +46,7 @@ function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
   const img = sponsor.logo_url ? (
     <img src={sponsor.logo_url} alt={sponsor.name} title={sponsor.name} style={{ width: 120, height: 90, objectFit: 'contain' }} />
   ) : (
-    <div style={{ width: 120, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 6, textAlign: 'center', padding: '.25rem', fontFamily: 'DM Sans, sans-serif' }}>
+    <div style={{ width: 120, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.65rem', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', borderRadius: 6, textAlign: 'center', padding: '.25rem', fontFamily: 'var(--font-body)' }}>
       {sponsor.name}
     </div>
   )
@@ -196,7 +196,7 @@ export default function App() {
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', color: 'var(--muted)' }}>
           <div className="spinner" />
-          <p style={{ fontFamily: 'DM Sans, sans-serif', marginTop: '.75rem', fontSize: '.9rem' }}>Načítám…</p>
+          <p style={{ fontFamily: 'var(--font-body)', marginTop: '.75rem', fontSize: '.9rem' }}>Načítám…</p>
         </div>
       </div>
     )

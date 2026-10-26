@@ -31,7 +31,7 @@ const inputStyle: React.CSSProperties = {
   padding: '10px 12px',
   border: '1px solid #d1d5db',
   borderRadius: 8,
-  fontFamily: "'DM Sans', sans-serif",
+  fontFamily: 'var(--font-body)',
   fontSize: '0.95rem',
   outline: 'none',
   boxSizing: 'border-box',
@@ -43,7 +43,7 @@ const btnPrimary: React.CSSProperties = {
   border: 'none',
   borderRadius: 8,
   padding: '10px 20px',
-  fontFamily: "'DM Sans', sans-serif",
+  fontFamily: 'var(--font-body)',
   fontSize: '0.95rem',
   fontWeight: 600,
   cursor: 'pointer',
@@ -56,7 +56,7 @@ const btnSecondary: React.CSSProperties = {
   border: '1px solid #d1d5db',
   borderRadius: 8,
   padding: '10px 20px',
-  fontFamily: "'DM Sans', sans-serif",
+  fontFamily: 'var(--font-body)',
   fontSize: '0.95rem',
   cursor: 'pointer',
   width: '100%',
@@ -205,7 +205,7 @@ export default function TournamentLanding({ onSelect }: Props) {
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '2.5rem', width: '100%', maxWidth: 520 }}>
         <h1 style={{
-          fontFamily: "'Bebas Neue', sans-serif",
+          fontFamily: 'var(--font-display)',
           fontSize: 'clamp(2.2rem, 7vw, 3.2rem)',
           letterSpacing: '.06em',
           color: '#2563eb',
@@ -213,7 +213,7 @@ export default function TournamentLanding({ onSelect }: Props) {
         }}>
           ⚽ Turnajník
         </h1>
-        <p style={{ fontFamily: "'DM Sans', sans-serif", color: '#6b7280', fontSize: '.95rem', margin: 0 }}>
+        <p style={{ fontFamily: 'var(--font-body)', color: '#6b7280', fontSize: '.95rem', margin: 0 }}>
           Vyberte turnaj nebo vytvořte nový
         </p>
       </div>
@@ -222,19 +222,19 @@ export default function TournamentLanding({ onSelect }: Props) {
       <div style={{ width: '100%', maxWidth: 520, display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem', gap: '.75rem', alignItems: 'center' }}>
         {session ? (
           <>
-            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.82rem', color: '#6b7280' }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '.82rem', color: '#6b7280' }}>
               {session.user.email}
             </span>
             <button type="button" onClick={() => { setShowCreate(true); setCreateError('') }} style={{
               background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8,
-              padding: '9px 18px', fontFamily: "'DM Sans', sans-serif", fontSize: '.9rem',
+              padding: '9px 18px', fontFamily: 'var(--font-body)', fontSize: '.9rem',
               fontWeight: 600, cursor: 'pointer',
             }}>
               ＋ Nový turnaj
             </button>
             <button type="button" onClick={handleLogout} style={{
               background: 'transparent', color: '#6b7280', border: '1px solid #d1d5db',
-              borderRadius: 8, padding: '8px 14px', fontFamily: "'DM Sans', sans-serif",
+              borderRadius: 8, padding: '8px 14px', fontFamily: 'var(--font-body)',
               fontSize: '.85rem', cursor: 'pointer',
             }}>
               Odhlásit
@@ -243,7 +243,7 @@ export default function TournamentLanding({ onSelect }: Props) {
         ) : (
           <button type="button" onClick={() => { setShowLogin(true); setLoginError('') }} style={{
             background: 'transparent', color: '#2563eb', border: '1.5px solid #2563eb',
-            borderRadius: 8, padding: '8px 18px', fontFamily: "'DM Sans', sans-serif",
+            borderRadius: 8, padding: '8px 18px', fontFamily: 'var(--font-body)',
             fontSize: '.9rem', fontWeight: 600, cursor: 'pointer',
           }}>
             🔑 Přihlásit se
@@ -256,7 +256,7 @@ export default function TournamentLanding({ onSelect }: Props) {
         {loading && (
           <div style={{ textAlign: 'center', color: '#6b7280', padding: '2rem 0' }}>
             <div className="spinner" />
-            <p style={{ fontFamily: 'DM Sans, sans-serif', marginTop: '.75rem', fontSize: '.9rem' }}>Načítám…</p>
+            <p style={{ fontFamily: 'var(--font-body)', marginTop: '.75rem', fontSize: '.9rem' }}>Načítám…</p>
           </div>
         )}
 
@@ -264,7 +264,7 @@ export default function TournamentLanding({ onSelect }: Props) {
           <div style={{
             background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 10,
             padding: '1rem 1.25rem', color: '#b91c1c',
-            fontFamily: "'DM Sans', sans-serif", fontSize: '.9rem', textAlign: 'center',
+            fontFamily: 'var(--font-body)', fontSize: '.9rem', textAlign: 'center',
           }}>
             {error}
           </div>
@@ -274,7 +274,7 @@ export default function TournamentLanding({ onSelect }: Props) {
           <div style={{
             background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12,
             padding: '2rem', textAlign: 'center', color: '#6b7280',
-            fontFamily: "'DM Sans', sans-serif",
+            fontFamily: 'var(--font-body)',
           }}>
             Žádné turnaje nejsou k dispozici.
           </div>
@@ -305,17 +305,17 @@ export default function TournamentLanding({ onSelect }: Props) {
                   ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'
                 }}
               >
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.25rem', letterSpacing: '.05em', color: '#2563eb' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', letterSpacing: '.05em', color: '#2563eb' }}>
                   {getSportDef(t.sport).icon} {t.name || '(bez názvu)'}
                 </span>
                 {t.subtitle && (
-                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', color: '#6b7280', fontWeight: 500 }}>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '.85rem', color: '#6b7280', fontWeight: 500 }}>
                     {t.subtitle}
                   </span>
                 )}
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '.1rem' }}>
-                  {t.date && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.78rem', color: '#9ca3af' }}>📅 {t.date}</span>}
-                  {t.venue && <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.78rem', color: '#9ca3af' }}>📍 {t.venue}</span>}
+                  {t.date && <span style={{ fontFamily: 'var(--font-body)', fontSize: '.78rem', color: '#9ca3af' }}>📅 {t.date}</span>}
+                  {t.venue && <span style={{ fontFamily: 'var(--font-body)', fontSize: '.78rem', color: '#9ca3af' }}>📍 {t.venue}</span>}
                 </div>
               </button>
             ))}
@@ -327,13 +327,13 @@ export default function TournamentLanding({ onSelect }: Props) {
       {showLogin && (
         <div style={overlayStyle} onClick={() => { setShowLogin(false); setResetMode(false); setResetSent(false); setLoginError('') }}>
           <div style={modalStyle} onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '.05em', color: '#111', margin: 0 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', letterSpacing: '.05em', color: '#111', margin: 0 }}>
               {resetMode ? 'Reset hesla' : 'Přihlášení admina'}
             </h2>
 
             {resetSent ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '.9rem', fontFamily: "'DM Sans', sans-serif", fontSize: '.9rem', color: '#166534' }}>
+                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '.9rem', fontFamily: 'var(--font-body)', fontSize: '.9rem', color: '#166534' }}>
                   ✅ E-mail s odkazem pro reset hesla byl odeslán na <strong>{email}</strong>. Zkontroluj schránku (včetně spamu).
                 </div>
                 <button type="button" onClick={() => { setResetMode(false); setResetSent(false); setLoginError('') }} style={btnSecondary}>
@@ -342,7 +342,7 @@ export default function TournamentLanding({ onSelect }: Props) {
               </div>
             ) : resetMode ? (
               <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.9rem', color: '#374151', margin: 0 }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '.9rem', color: '#374151', margin: 0 }}>
                   Zadej svůj e-mail a pošleme ti odkaz pro nastavení nového hesla.
                 </p>
                 <input
@@ -354,7 +354,7 @@ export default function TournamentLanding({ onSelect }: Props) {
                   required
                   autoFocus
                 />
-                {loginError && <p style={{ color: '#b91c1c', fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', margin: 0 }}>{loginError}</p>}
+                {loginError && <p style={{ color: '#b91c1c', fontFamily: 'var(--font-body)', fontSize: '.85rem', margin: 0 }}>{loginError}</p>}
                 <button type="submit" style={{ ...btnPrimary, opacity: resetLoading ? 0.6 : 1 }}>
                   {resetLoading ? 'Odesílám…' : 'Odeslat odkaz'}
                 </button>
@@ -381,13 +381,13 @@ export default function TournamentLanding({ onSelect }: Props) {
                   style={inputStyle}
                   required
                 />
-                {loginError && <p style={{ color: '#b91c1c', fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', margin: 0 }}>{loginError}</p>}
+                {loginError && <p style={{ color: '#b91c1c', fontFamily: 'var(--font-body)', fontSize: '.85rem', margin: 0 }}>{loginError}</p>}
                 <button type="submit" style={{ ...btnPrimary, opacity: loggingIn ? 0.6 : 1 }}>
                   {loggingIn ? 'Přihlašuji…' : 'Přihlásit se'}
                 </button>
                 <button type="button" onClick={() => { setResetMode(true); setLoginError('') }} style={{
                   background: 'none', border: 'none', color: '#2563eb',
-                  fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem',
+                  fontFamily: 'var(--font-body)', fontSize: '.85rem',
                   cursor: 'pointer', padding: 0, textDecoration: 'underline', textAlign: 'center',
                 }}>
                   Zapomenuté heslo?
@@ -405,12 +405,12 @@ export default function TournamentLanding({ onSelect }: Props) {
       {showCreate && (
         <div style={overlayStyle} onClick={() => setShowCreate(false)}>
           <div style={modalStyle} onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', letterSpacing: '.05em', color: '#111', margin: 0 }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', letterSpacing: '.05em', color: '#111', margin: 0 }}>
               Nový turnaj
             </h2>
             <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
               <div>
-                <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', color: '#374151', display: 'block', marginBottom: '.3rem' }}>
+                <label style={{ fontFamily: 'var(--font-body)', fontSize: '.85rem', color: '#374151', display: 'block', marginBottom: '.3rem' }}>
                   Název turnaje
                 </label>
                 <input
@@ -424,7 +424,7 @@ export default function TournamentLanding({ onSelect }: Props) {
                 />
               </div>
               <div>
-                <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', color: '#374151', display: 'block', marginBottom: '.3rem' }}>
+                <label style={{ fontFamily: 'var(--font-body)', fontSize: '.85rem', color: '#374151', display: 'block', marginBottom: '.3rem' }}>
                   Slug (URL adresa)
                 </label>
                 <input
@@ -435,12 +435,12 @@ export default function TournamentLanding({ onSelect }: Props) {
                   style={inputStyle}
                   required
                 />
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.75rem', color: '#9ca3af', margin: '.3rem 0 0' }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '.75rem', color: '#9ca3af', margin: '.3rem 0 0' }}>
                   Přístup: app.vercel.app/{newSlug || 'zf-cup-2027'}
                 </p>
               </div>
               <div>
-                <label style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', color: '#374151', display: 'block', marginBottom: '.3rem' }}>
+                <label style={{ fontFamily: 'var(--font-body)', fontSize: '.85rem', color: '#374151', display: 'block', marginBottom: '.3rem' }}>
                   Sport
                 </label>
                 <select
@@ -452,12 +452,12 @@ export default function TournamentLanding({ onSelect }: Props) {
                     <option key={s.id} value={s.id}>{s.icon} {s.label}</option>
                   ))}
                 </select>
-                <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: '.75rem', color: '#9ca3af', margin: '.3rem 0 0' }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '.75rem', color: '#9ca3af', margin: '.3rem 0 0' }}>
                   Sport nelze po založení turnaje změnit.
                 </p>
               </div>
               {createError && (
-                <p style={{ color: '#b91c1c', fontFamily: "'DM Sans', sans-serif", fontSize: '.85rem', margin: 0 }}>
+                <p style={{ color: '#b91c1c', fontFamily: 'var(--font-body)', fontSize: '.85rem', margin: 0 }}>
                   {createError}
                 </p>
               )}

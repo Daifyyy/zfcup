@@ -78,7 +78,7 @@ export default function Scorers({ goals, bracketGoals, assists, bracketAssists, 
               <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                 <span style={{ fontSize: 'var(--fs-body)', opacity: .5 }}>{sportDef.icon}</span>
                 <span style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
+                  fontFamily: 'var(--font-display)',
                   fontSize: 'var(--fs-goal)',
                   color: isFirst ? 'var(--gold)' : 'var(--accent)',
                   lineHeight: 1,

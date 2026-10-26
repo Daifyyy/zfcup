@@ -70,7 +70,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
   const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#94a3b8', logo_url: null }
   return (
     <div style={{ padding: '.4rem .5rem', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden', gap: '.18rem' }}>
-      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.12em', color: C.accent, paddingBottom: '.15rem', borderBottom: `2px solid ${C.border}`, flexShrink: 0 }}>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: S.section, letterSpacing: '.12em', color: C.accent, paddingBottom: '.15rem', borderBottom: `2px solid ${C.border}`, flexShrink: 0 }}>
         {groupName}
       </div>
       {matches.map(m => {
@@ -87,8 +87,8 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
             </div>
             <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, 3.5vw, 5rem)' }}>
               {m.played
-                ? <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>{m.home_score}:{m.away_score}</span>
-                : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.muted, letterSpacing: '.06em' }}>VS</span>
+                ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>{m.home_score}:{m.away_score}</span>
+                : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.muted, letterSpacing: '.06em' }}>VS</span>
               }
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
@@ -115,8 +115,8 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
       </div>
       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
         {match.played
-          ? <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>{match.home_score}:{match.away_score}</span>
-          : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.small, color: C.muted }}>VS</span>
+          ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>{match.home_score}:{match.away_score}</span>
+          : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.small, color: C.muted }}>VS</span>
         }
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
@@ -185,7 +185,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
         const accentColor = isFinal ? C.gold : isThird ? C.bronze : isFifth ? '#6366f1' : isSeventh ? '#64748b' : isNinth ? '#94a3b8' : C.accent
         return (
           <div key={round.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.label, letterSpacing: '.16em', color: accentColor, textTransform: 'uppercase', marginBottom: '.2rem', paddingBottom: '.14rem', borderBottom: `1px solid ${accentColor}` }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: S.label, letterSpacing: '.16em', color: accentColor, textTransform: 'uppercase', marginBottom: '.2rem', paddingBottom: '.14rem', borderBottom: `1px solid ${accentColor}` }}>
               {isFinal ? '🏆' : isThird ? '🥉' : isFifth ? '5️⃣' : isSeventh ? '7️⃣' : isNinth ? '9️⃣' : '⚔️'} {round.name}
             </div>
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '.15rem', overflow: 'hidden' }}>
@@ -205,8 +205,8 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                       </div>
                       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
                         {s.played
-                          ? <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: accentColor, letterSpacing: '.06em', lineHeight: 1 }}>{s.home_score}:{s.away_score}</span>
-                          : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: C.muted }}>VS</span>
+                          ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: accentColor, letterSpacing: '.06em', lineHeight: 1 }}>{s.home_score}:{s.away_score}</span>
+                          : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.muted }}>VS</span>
                         }
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
@@ -316,7 +316,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
               return (
                 <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ marginBottom: '.25rem', paddingBottom: '.18rem', borderBottom: `1px solid ${C.border}` }}>
-                    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.1em', color: C.accent, lineHeight: 1.15 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: S.section, letterSpacing: '.1em', color: C.accent, lineHeight: 1.15 }}>
                       {group.name}
                     </div>
                     {isLeague && (
@@ -345,7 +345,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
                           return (
                             <tr key={row.id} style={{ background: rowBg }}>
                               <td style={{ padding: '.12rem .22rem', paddingLeft: ls ? 0 : '.22rem', textAlign: 'center', fontSize: S.label, borderLeft: ls?.borderLeft }}>
-                                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: numColor, lineHeight: 1 }}>{i + 1}</span>
+                                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: numColor, lineHeight: 1 }}>{i + 1}</span>
                               </td>
                               <td style={{ padding: '.12rem .22rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -360,7 +360,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
                               ))}
                               <td style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{row.gf}:{row.ga}</td>
                               <td style={{ textAlign: 'center', padding: '.12rem .22rem' }}>
-                                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: numColor !== C.muted ? numColor : i === 0 ? C.accent : C.text }}>
+                                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: numColor !== C.muted ? numColor : i === 0 ? C.accent : C.text }}>
                                   {row.pts}
                                 </span>
                               </td>
@@ -379,7 +379,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
 
       {/* Right: Scorers */}
       <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '.6rem .8rem .4rem' }}>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.1em', color: C.gold, marginBottom: '.3rem', flexShrink: 0 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: S.section, letterSpacing: '.1em', color: C.gold, marginBottom: '.3rem', flexShrink: 0 }}>
           {sportDef.icon} {sportDef.terms.scorersLabel}
         </div>
         {scorers.length === 0 ? (
@@ -391,7 +391,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
                 <div style={{ width: '2em', textAlign: 'center', flexShrink: 0 }}>
                   {i < 3
                     ? <span style={{ fontSize: S.body }}>{medals[i]}</span>
-                    : <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.pts, color: C.muted, lineHeight: 1 }}>{i + 1}</span>
+                    : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: C.muted, lineHeight: 1 }}>{i + 1}</span>
                   }
                 </div>
                 {sc.team && <TeamLogo team={sc.team} size={18} />}
@@ -399,7 +399,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
                   <div style={{ fontSize: S.body, fontWeight: i < 3 ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sc.name}</div>
                   {sc.team && <div style={{ fontSize: S.label, color: C.muted }}>{sc.team.name}</div>}
                 </div>
-                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: i === 0 ? C.gold : C.accent, flexShrink: 0, lineHeight: 1 }}>{sc.total}</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: i === 0 ? C.gold : C.accent, flexShrink: 0, lineHeight: 1 }}>{sc.total}</span>
               </div>
             ))}
           </div>
@@ -435,7 +435,7 @@ function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots:
 
         return (
           <div key={round.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.section, letterSpacing: '.13em', color: accentColor, marginBottom: '.3rem', paddingBottom: '.2rem', borderBottom: `2px solid ${accentColor}`, display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: S.section, letterSpacing: '.13em', color: accentColor, marginBottom: '.3rem', paddingBottom: '.2rem', borderBottom: `2px solid ${accentColor}`, display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
               {isFinal ? '🏆' : isThird ? '🥉' : isFifth ? '5️⃣' : isSeventh ? '7️⃣' : isNinth ? '9️⃣' : '⚔️'} {round.name}
             </div>
             <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: '.5rem', overflow: 'hidden' }}>
@@ -454,7 +454,7 @@ function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots:
                         {hT && <TeamLogo team={hT} size={18} />}
                         <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hT ? (hw ? accentColor : C.text) : C.muted, fontStyle: hT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hT?.name ?? 'TBD'}</span>
                       </div>
-                      {slot.played && <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.home_score}</span>}
+                      {slot.played && <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.home_score}</span>}
                     </div>
                     {/* Away row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.4rem .7rem', background: aw ? (isFinal ? 'rgba(217,119,6,.1)' : 'rgba(37,99,235,.08)') : 'transparent' }}>
@@ -462,7 +462,7 @@ function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots:
                         {aT && <TeamLogo team={aT} size={18} />}
                         <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aT ? (aw ? accentColor : C.text) : C.muted, fontStyle: aT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aT?.name ?? 'TBD'}</span>
                       </div>
-                      {slot.played && <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.score, color: aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.away_score}</span>}
+                      {slot.played && <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.away_score}</span>}
                     </div>
                   </div>
                 )
@@ -547,7 +547,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
   const subhdr = getSubheaders(sportIcon)[currentView.key]
 
   return (
-    <div onClick={handleClick} style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', flexDirection: 'column', background: C.bg, cursor: paused ? 'pointer' : 'default', userSelect: 'none', fontFamily: "'DM Sans', sans-serif", color: C.text }}>
+    <div onClick={handleClick} style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', flexDirection: 'column', background: C.bg, cursor: paused ? 'pointer' : 'default', userSelect: 'none', fontFamily: 'var(--font-body)', color: C.text }}>
       <style>{`@keyframes kioskBar { from { width:0% } to { width:100% } }`}</style>
 
       {/* ── Progress bar ── */}
@@ -562,7 +562,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
       {/* ── Header ── */}
       <div style={{ background: C.hdr, flexShrink: 0, padding: '.6rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.title, letterSpacing: '.08em', color: '#fff', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: S.title, letterSpacing: '.08em', color: '#fff', lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {tournament?.name || 'Turnaj'}
           </div>
           {tournament?.subtitle && (
@@ -589,7 +589,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
         </div>
 
         {/* Clock */}
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.title, color: '#bfdbfe', letterSpacing: '.08em', flexShrink: 0 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: S.title, color: '#bfdbfe', letterSpacing: '.08em', flexShrink: 0 }}>
           {clock}
         </div>
 
@@ -613,7 +613,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
 
       {/* ── Sub-header ── */}
       <div style={{ background: '#eff6ff', borderBottom: `2px solid ${C.border}`, padding: '.32rem 1.5rem', flexShrink: 0 }}>
-        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.label, letterSpacing: '.16em', color: C.accent, textTransform: 'uppercase' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.label, letterSpacing: '.16em', color: C.accent, textTransform: 'uppercase' }}>
           {subhdr.icon} {subhdr.label}
         </span>
       </div>
@@ -638,7 +638,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
           {effectiveViews.map((v, i) => (
             <div key={v.key} onClick={e => { e.stopPropagation(); goTo(i) }} style={{ width: i === idx ? '2.5rem' : '.8rem', height: '.8rem', minWidth: i === idx ? 28 : 10, minHeight: 10, maxWidth: i === idx ? 44 : 16, maxHeight: 16, borderRadius: 10, background: i === idx ? '#60a5fa' : 'rgba(255,255,255,.25)', transition: 'all .35s', cursor: 'pointer' }} />
           ))}
-          <span style={{ fontSize: S.label, color: 'rgba(255,255,255,.5)', marginLeft: '.4rem', fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '.1em' }}>
+          <span style={{ fontSize: S.label, color: 'rgba(255,255,255,.5)', marginLeft: '.4rem', fontFamily: 'var(--font-display)', letterSpacing: '.1em' }}>
             {currentView.label}
           </span>
         </div>
@@ -650,7 +650,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
         {/* QR */}
         <div data-kiosk-ctrl style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: S.body, color: '#fff', letterSpacing: '.1em' }}>Sdílet</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: S.body, color: '#fff', letterSpacing: '.1em' }}>Sdílet</div>
             <div style={{ fontSize: S.label, color: 'rgba(255,255,255,.5)' }}>Naskenuj QR kód</div>
           </div>
           <QRCode size={52} />

@@ -1,13 +1,18 @@
+import type { ReactNode } from 'react'
+import { Inbox } from 'lucide-react'
+
 interface Props {
-  icon: string
+  /** Ikona. Řetězec (dříve emoji) se ignoruje a nahradí se neutrální ikonou. */
+  icon?: ReactNode | string
   text: string
 }
 
 export default function Empty({ icon, text }: Props) {
+  const iconNode = typeof icon === 'string' || icon == null ? <Inbox size={28} strokeWidth={1.5} /> : icon
   return (
-    <div style={{ textAlign: 'center', padding: '3rem 2rem', color: 'var(--muted)' }}>
-      <div style={{ fontSize: '2.2rem', opacity: .35, marginBottom: '.65rem' }}>{icon}</div>
-      <div style={{ fontSize: '.83rem' }}>{text}</div>
+    <div className="ui-empty">
+      <div className="ui-empty__icon">{iconNode}</div>
+      <div className="ui-empty__text">{text}</div>
     </div>
   )
 }

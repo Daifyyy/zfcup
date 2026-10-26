@@ -245,7 +245,7 @@ function SlotEditor({
     <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
       <button type="button" onClick={onMinus}
         style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
-      <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: val > 0 ? (accent ? '#059669' : 'var(--accent)') : 'var(--muted)' }}>
+      <span style={{ width: 28, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: val > 0 ? (accent ? '#059669' : 'var(--accent)') : 'var(--muted)' }}>
         {val}
       </span>
       <button type="button" onClick={onPlus}
@@ -328,7 +328,7 @@ function SlotEditor({
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button type="button" style={scoreBtn('minus')} onClick={() => changeScore('home_score', -1)}>−</button>
-          <span style={{ width: 38, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>{s.home_score}</span>
+          <span style={{ width: 38, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>{s.home_score}</span>
           <button type="button" style={scoreBtn('plus')} onClick={() => changeScore('home_score', +1)}>+</button>
         </div>
       </div>
@@ -339,7 +339,7 @@ function SlotEditor({
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button type="button" style={scoreBtn('minus')} onClick={() => changeScore('away_score', -1)}>−</button>
-          <span style={{ width: 38, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>{s.away_score}</span>
+          <span style={{ width: 38, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>{s.away_score}</span>
           <button type="button" style={scoreBtn('plus')} onClick={() => changeScore('away_score', +1)}>+</button>
         </div>
       </div>
@@ -463,7 +463,7 @@ function RoundCard({
   return (
     <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.85rem .95rem', marginBottom: '.65rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.65rem', marginBottom: '.55rem' }}>
-        <span style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '.06em', flex: 1 }}>{round.name}</span>
+        <span style={{ fontFamily: 'var(--font-display)', letterSpacing: '.06em', flex: 1 }}>{round.name}</span>
         <span style={{ fontSize: '.68rem', color: 'var(--muted)' }}>{rSlots.length} zápasů</span>
         <button type="button" className="btn btn-d btn-sm" onClick={() => onRemove(round.id)}>Smazat kolo</button>
       </div>
@@ -504,7 +504,7 @@ function RoundCard({
                 <span style={{ flex: 1, fontSize: '.82rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {ht?.name ?? 'TBD'}
                   {' '}
-                  <span style={{ fontFamily: "'Bebas Neue', sans-serif", color: slot.played ? 'var(--accent)' : 'var(--muted)', fontSize: '.9rem' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', color: slot.played ? 'var(--accent)' : 'var(--muted)', fontSize: '.9rem' }}>
                     {slot.played ? `${slot.home_score}:${slot.away_score}` : 'vs'}
                   </span>
                   {' '}

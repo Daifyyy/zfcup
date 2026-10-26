@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { BRAND } from '../../lib/brand'
 import { calcGroupStandings } from '../../lib/standings'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Team } from '../../hooks/useTeams'
@@ -172,7 +173,7 @@ export default function PrintBulletin({ tournament, teams, groups, matches, brac
       )}
 
       <div style={{ fontSize: 10, color: '#999', textAlign: 'center', marginTop: 20 }}>
-        Generováno aplikací Turnajník
+        Generováno aplikací {BRAND.name}
       </div>
     </div>
   )

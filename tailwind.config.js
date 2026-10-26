@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+// Barvy odkazují na CSS tokeny v src/index.css — jediný zdroj pravdy.
 export default {
   content: [
     "./index.html",
@@ -7,24 +8,65 @@ export default {
   theme: {
     extend: {
       colors: {
-        accent:      '#2563eb',
-        'accent-hov':'#1d4ed8',
-        muted:       '#64748b',
-        border:      '#e2e8f0',
-        success:     '#16a34a',
-        danger:      '#dc2626',
-        gold:        '#d97706',
+        surface: {
+          0: 'var(--surface-0)',
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+        },
+        ink: {
+          DEFAULT: 'var(--ink)',
+          muted:   'var(--ink-muted)',
+          faint:   'var(--ink-faint)',
+        },
+        line: {
+          DEFAULT: 'var(--line)',
+          strong:  'var(--line-strong)',
+        },
+        chrome: {
+          DEFAULT: 'var(--chrome)',
+          2:       'var(--chrome-2)',
+          ink:     'var(--chrome-ink)',
+          muted:   'var(--chrome-muted)',
+        },
+        brand: {
+          DEFAULT: 'var(--brand)',
+          hov:     'var(--brand-hov)',
+          ink:     'var(--brand-ink)',
+          soft:    'var(--brand-soft)',
+          2:       'var(--brand-2)',
+        },
+        live: 'var(--live)',
+        win:  'var(--win)',
+        loss: 'var(--loss)',
+        draw: 'var(--draw)',
+        // starší názvy
+        accent:      'var(--accent)',
+        'accent-hov':'var(--accent-hov)',
+        muted:       'var(--muted)',
+        border:      'var(--border)',
+        success:     'var(--success)',
+        danger:      'var(--danger)',
+        gold:        'var(--gold)',
       },
       fontFamily: {
-        bebas:  ['"Bebas Neue"', 'sans-serif'],
-        dmsans: ['"DM Sans"', 'sans-serif'],
+        display: ['var(--font-display)'],
+        body:    ['var(--font-body)'],
+        // starší názvy
+        bebas:   ['var(--font-display)'],
+        dmsans:  ['var(--font-body)'],
+      },
+      borderRadius: {
+        sm: 'var(--radius-sm)',
+        DEFAULT: 'var(--radius)',
+        lg: 'var(--radius-lg)',
       },
       boxShadow: {
-        card:  '0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04)',
-        panel: '0 20px 60px rgba(0,0,0,.15)',
+        card:  'var(--shadow-card)',
+        lg:    'var(--shadow-lg)',
+        panel: 'var(--shadow-panel)',
       },
       backgroundColor: {
-        page: '#f8fafc',
+        page: 'var(--surface-0)',
       },
     },
   },

@@ -557,7 +557,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
               <span style={{ fontSize: '.72rem', color: 'var(--muted)', width: 20, flexShrink: 0, textAlign: 'center' }}>{i + 1}</span>
               <span className="a-item-main" style={{ fontSize: '.85rem' }}>{t.name}</span>
               <span style={{
-                fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem',
+                fontFamily: 'var(--font-display)', fontSize: '1.1rem',
                 color: 'var(--accent)', flexShrink: 0, marginRight: '.2rem',
               }}>{t.total_points} b.</span>
               <button type="button" className="btn btn-d btn-sm" onClick={() => deleteTipster(t.id, t.name)}>✕</button>

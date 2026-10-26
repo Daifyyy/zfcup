@@ -281,7 +281,7 @@ function InlineMatchEditor({
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <button type="button" onClick={() => changeGoal(p.id, -1)}
           style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
-        <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: counts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
+        <span style={{ width: 28, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: counts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
           {counts[p.id] ?? 0}
         </span>
         <button type="button" onClick={() => changeGoal(p.id, +1)}
@@ -314,7 +314,7 @@ function InlineMatchEditor({
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button type="button" style={scoreBtn('minus')} onClick={() => changeScore('home', -1)}>−</button>
-          <span style={{ width: 38, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>
+          <span style={{ width: 38, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>
             {homeScore}
           </span>
           <button type="button" style={scoreBtn('plus')} onClick={() => changeScore('home', +1)}>+</button>
@@ -329,7 +329,7 @@ function InlineMatchEditor({
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
           <button type="button" style={scoreBtn('minus')} onClick={() => changeScore('away', -1)}>−</button>
-          <span style={{ width: 38, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>
+          <span style={{ width: 38, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.6rem', color: 'var(--accent)', lineHeight: 1 }}>
             {awayScore}
           </span>
           <button type="button" style={scoreBtn('plus')} onClick={() => changeScore('away', +1)}>+</button>
@@ -427,7 +427,7 @@ function InlineMatchEditor({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <button type="button" onClick={() => changeAssist(p.id, -1)}
                     style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
-                  <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: assistCounts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
+                  <span style={{ width: 28, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: assistCounts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
                     {assistCounts[p.id] ?? 0}
                   </span>
                   <button type="button" onClick={() => changeAssist(p.id, +1)}
@@ -447,7 +447,7 @@ function InlineMatchEditor({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <button type="button" onClick={() => changeAssist(p.id, -1)}
                     style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '.95rem', fontWeight: 700, color: 'var(--muted)' }}>−</button>
-                  <span style={{ width: 28, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', color: assistCounts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
+                  <span style={{ width: 28, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: assistCounts[p.id] > 0 ? 'var(--accent)' : 'var(--muted)' }}>
                     {assistCounts[p.id] ?? 0}
                   </span>
                   <button type="button" onClick={() => changeAssist(p.id, +1)}
@@ -757,7 +757,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
               <button type="button" onClick={() => changeScore('home_score', -1)}
                 style={{ width: 34, height: 34, borderRadius: 7, border: '1px solid var(--border)', background: '#f8fafc', fontSize: '1.1rem', fontWeight: 700, color: 'var(--muted)', cursor: 'pointer' }}>−</button>
               <input className="field-input" type="number" min="0" value={form.home_score} onChange={handleScore('home_score')}
-                style={{ width: 56, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem' }} />
+                style={{ width: 56, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.3rem' }} />
               <button type="button" onClick={() => changeScore('home_score', +1)}
                 style={{ width: 34, height: 34, borderRadius: 7, border: '1px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)', cursor: 'pointer' }}>+</button>
             </div>
@@ -769,7 +769,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
               <button type="button" onClick={() => changeScore('away_score', -1)}
                 style={{ width: 34, height: 34, borderRadius: 7, border: '1px solid var(--border)', background: '#f8fafc', fontSize: '1.1rem', fontWeight: 700, color: 'var(--muted)', cursor: 'pointer' }}>−</button>
               <input className="field-input" type="number" min="0" value={form.away_score} onChange={handleScore('away_score')}
-                style={{ width: 56, textAlign: 'center', fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem' }} />
+                style={{ width: 56, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.3rem' }} />
               <button type="button" onClick={() => changeScore('away_score', +1)}
                 style={{ width: 34, height: 34, borderRadius: 7, border: '1px solid var(--accent)', background: 'var(--accent-dim)', fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)', cursor: 'pointer' }}>+</button>
             </div>

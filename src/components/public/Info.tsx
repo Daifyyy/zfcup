@@ -79,7 +79,7 @@ export default function Info({ tournament, announcements, onTab }: Props) {
 
       {/* Tournament details card */}
       <div className="card" style={{ padding: 'var(--pad-card)', marginBottom: '1rem' }}>
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'var(--fs-sec)', lineHeight: 1.1, marginBottom: '.5rem' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-sec)', lineHeight: 1.1, marginBottom: '.5rem' }}>
           {tournament?.name || 'Turnaj'}
         </div>
         {tournament?.subtitle && (

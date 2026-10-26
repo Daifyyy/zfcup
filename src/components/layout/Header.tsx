@@ -107,7 +107,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
         {/* Tournament name */}
         <div style={{ flex: 1, minWidth: 130 }}>
           <h1 style={{
-            fontFamily: "'Bebas Neue', sans-serif",
+            fontFamily: 'var(--font-display)',
             fontSize: 'clamp(1.1rem, 2.8vw, 1.5rem)', letterSpacing: '.05em',
             lineHeight: 1.1,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
@@ -231,7 +231,7 @@ export default function Header({ tournament, tab, onTab, onAdmin, onKiosk, onSco
               style={{
                 background: 'none', border: 'none',
                 color: tab === key ? 'var(--accent)' : 'var(--muted)',
-                fontFamily: "'DM Sans', sans-serif",
+                fontFamily: 'var(--font-body)',
                 fontSize: '.74rem', fontWeight: 700,
                 textTransform: 'uppercase', letterSpacing: '.09em',
                 padding: '0 .85rem', height: 64,

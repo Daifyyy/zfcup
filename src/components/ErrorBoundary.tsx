@@ -12,9 +12,9 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: '3rem 1.5rem', textAlign: 'center', fontFamily: 'DM Sans, sans-serif' }}>
+        <div style={{ padding: '3rem 1.5rem', textAlign: 'center', fontFamily: 'var(--font-body)' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
-          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: '1.8rem', marginBottom: '.5rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.8rem', marginBottom: '.5rem' }}>
             Aplikace narazila na chybu
           </h2>
           <p style={{ color: '#64748b', marginBottom: '1.5rem', fontSize: '.9rem' }}>

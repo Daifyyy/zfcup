@@ -182,7 +182,7 @@ export default function ImportTeamsModal({ open, existingTeams, tournamentId, on
     >
       <div style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 520, maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,.18)' }}>
         <div style={{ padding: '1rem 1.2rem .75rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '.06em' }}>Import týmů z CSV/Excel</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', letterSpacing: '.06em' }}>Import týmů z CSV/Excel</span>
           <button type="button" className="btn btn-d btn-sm" onClick={onClose}>✕</button>
         </div>
 

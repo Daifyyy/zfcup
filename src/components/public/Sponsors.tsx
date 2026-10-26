@@ -7,7 +7,7 @@ interface Props {
 export default function Sponsors({ sponsors }: Props) {
   if (!sponsors.length) {
     return (
-      <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '3rem 1rem', fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '3rem 1rem', fontFamily: 'var(--font-body)' }}>
         Žádní sponzoři zatím nebyli přidáni.
       </div>
     )
@@ -63,14 +63,14 @@ function SponsorCard({ sponsor }: { sponsor: Sponsor }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'var(--accent-dim)', borderRadius: 8,
           fontSize: '.8rem', fontWeight: 600, color: 'var(--accent)',
-          fontFamily: 'DM Sans, sans-serif', textAlign: 'center', padding: '.25rem',
+          fontFamily: 'var(--font-body)', textAlign: 'center', padding: '.25rem',
         }}>
           {sponsor.name}
         </div>
       )}
       {sponsor.name && (
         <div style={{
-          fontFamily: 'DM Sans, sans-serif',
+          fontFamily: 'var(--font-body)',
           fontSize: '.78rem',
           color: 'var(--muted)',
           textAlign: 'center',

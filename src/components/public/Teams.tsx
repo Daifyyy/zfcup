@@ -110,7 +110,7 @@ export default function Teams({ teams, players, goals, bracketGoals = [], assist
                   <div style={{
                     width: 52, height: 52, borderRadius: 11, flexShrink: 0,
                     background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.2rem', color: '#fff', fontWeight: 700,
+                    fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: '#fff', fontWeight: 700,
                   }}>
                     {t.name.substring(0, 2).toUpperCase()}
                   </div>
