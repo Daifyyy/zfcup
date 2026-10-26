@@ -24,14 +24,14 @@ async function generate(tournamentId: string): Promise<void> {
   await createRound('Finále',              1, 6, tournamentId)
 }
 
-async function seed({ groups, matches, bracketRounds, bracketSlots, advancingPerGroup }: SeedParams): Promise<void> {
+async function seed({ groups, matches, bracketRounds, bracketSlots, advancingPerGroup, sportDef }: SeedParams): Promise<void> {
   const firstRound = bracketRounds.find(r => r.position === 0)
   if (!firstRound) throw new Error('Struktura playoff nenalezena')
   const firstSlots = slotsOf(bracketSlots, firstRound.id)
 
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
   const grouped = sortedGroups.map(g =>
-    calcGroupStandings(g, matches).slice(0, advancingPerGroup).map(r => r.id)
+    calcGroupStandings(g, matches, sportDef).slice(0, advancingPerGroup).map(r => r.id)
   )
 
   const qfPairs: { home: string | null; away: string | null }[] = []

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BRAND } from '../../lib/brand'
 import { calcGroupStandings } from '../../lib/standings'
+import { getSportDef } from '../../lib/sports'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Team } from '../../hooks/useTeams'
 import type { Group } from '../../hooks/useGroups'
@@ -67,7 +68,7 @@ export default function PrintBulletin({ tournament, teams, groups, matches, brac
       {/* Groups schedule + standings */}
       {sortedGroups.map(g => {
         const gMatches = groupMatches(g.id)
-        const standings = calcGroupStandings(g, gMatches)
+        const standings = calcGroupStandings(g, gMatches, getSportDef(tournament.sport))
         return (
           <div key={g.id} className="bulletin-section">
             <div className="bulletin-section-title">Skupina {g.name}</div>

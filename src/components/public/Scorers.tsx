@@ -39,7 +39,7 @@ export default function Scorers({ goals, bracketGoals, assists, bracketAssists, 
     .filter(s => s.goals > 0 || (showAssists && s.assists > 0))
     .sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists) || b.goals - a.goals)
 
-  if (!scorers.length) return <Empty icon={sportDef.icon} text="Žádní střelci." />
+  if (!scorers.length) return <Empty text="Žádní střelci." />
 
   return (
     <div>
@@ -76,7 +76,6 @@ export default function Scorers({ goals, bracketGoals, assists, bracketAssists, 
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                <span style={{ fontSize: 'var(--fs-body)', opacity: .5 }}>{sportDef.icon}</span>
                 <span style={{
                   fontFamily: 'var(--font-display)',
                   fontSize: 'var(--fs-goal)',

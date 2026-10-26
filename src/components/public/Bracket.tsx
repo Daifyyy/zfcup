@@ -13,6 +13,11 @@ interface Props {
 
 const DECIDED_IN_BADGE: Record<string, string> = { ot: 'PP', so: 'SN' }
 
+/** Kola o umístění (O 3. místo, O 5-6. místo, Útěšné QF…) — mimo hlavní pavouk. */
+export function isPlacementRound(name: string): boolean {
+  return /^o\s*\d/i.test(name.trim()) || /^útěš/i.test(name.trim())
+}
+
 function SlotCard({ slot, teams, isFinal }: { slot: BracketSlot; teams: Map<string, Team>; isFinal: boolean }) {
   const hT = slot.home_id ? teams.get(slot.home_id) : undefined
   const aT = slot.away_id ? teams.get(slot.away_id) : undefined
@@ -48,6 +53,8 @@ export default function Bracket({ rounds, slots, teams }: Props) {
   const sorted = [...rounds].sort((a, b) => a.position - b.position)
   const maxPos = Math.max(...sorted.map(r => r.position))
   const finalRound = sorted.find(r => r.position === maxPos)
+  const mainRounds = sorted.filter(r => r.position === maxPos || !isPlacementRound(r.name))
+  const placementRounds = sorted.filter(r => r.position !== maxPos && isPlacementRound(r.name))
   const finalSlot = finalRound ? slots.find(s => s.round_id === finalRound.id) : undefined
   const champion = finalSlot?.played
     ? teamById.get((finalSlot.home_score > finalSlot.away_score ? finalSlot.home_id : finalSlot.away_id) ?? '')
@@ -69,7 +76,7 @@ export default function Bracket({ rounds, slots, teams }: Props) {
       )}
 
       <div className="brk">
-        {sorted.map(round => {
+        {mainRounds.map(round => {
           const roundSlots = slots.filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
           const isFinal = round.position === maxPos
           return (
@@ -82,6 +89,25 @@ export default function Bracket({ rounds, slots, teams }: Props) {
           )
         })}
       </div>
+
+      {placementRounds.length > 0 && (
+        <div className="brk-placement">
+          <h3 className="brk-placement__title">Zápasy o umístění</h3>
+          <div className="brk-placement__grid">
+            {placementRounds.map(round => {
+              const roundSlots = slots.filter(s => s.round_id === round.id).sort((a, b) => a.position - b.position)
+              return (
+                <section key={round.id} className="brk-col">
+                  <h3 className="brk-col__title">{round.name}</h3>
+                  <div className="brk-col__slots" style={{ justifyContent: 'flex-start' }}>
+                    {roundSlots.map(slot => <SlotCard key={slot.id} slot={slot} teams={teamById} isFinal={false} />)}
+                  </div>
+                </section>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

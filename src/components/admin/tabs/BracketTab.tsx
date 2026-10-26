@@ -397,7 +397,7 @@ function SlotEditor({
       {(homePlayers.length > 0 || awayPlayers.length > 0) && (
         <div style={{ marginBottom: '.75rem' }}>
           <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.45rem' }}>
-            {sportDef.icon} Góly{assistsEnabled ? ' + Asistence' : ''}{cardsEnabled ? ' + Kartičky' : ''}{penaltiesEnabled ? ' + Trestné minuty' : ''}
+            Góly{assistsEnabled ? ' + Asistence' : ''}{cardsEnabled ? ' + Kartičky' : ''}{penaltiesEnabled ? ' + Trestné minuty' : ''}
           </div>
           {ht && homePlayers.length > 0 && (
             <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginBottom: '.2rem', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -612,6 +612,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
         bracketRounds,
         bracketSlots,
         advancingPerGroup,
+        sportDef,
       })
       await refetchBracket()
       showToast('Týmy nasazeny do playoff ✓')

@@ -30,12 +30,12 @@ async function generate(tournamentId: string): Promise<void> {
   await createRound('Finále',            1, 9, tournamentId)
 }
 
-async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams): Promise<void> {
+async function seed({ groups, matches, bracketRounds, bracketSlots, sportDef }: SeedParams): Promise<void> {
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
   if (sortedGroups.length < 2) throw new Error('Plný pavouk vyžaduje alespoň 2 skupiny')
 
-  const grpA = calcGroupStandings(sortedGroups[0], matches).map(r => r.id)
-  const grpB = calcGroupStandings(sortedGroups[1], matches).map(r => r.id)
+  const grpA = calcGroupStandings(sortedGroups[0], matches, sportDef).map(r => r.id)
+  const grpB = calcGroupStandings(sortedGroups[1], matches, sportDef).map(r => r.id)
 
   const roundAt = (pos: number) => bracketRounds.find(r => r.position === pos)
   const slotsAt = (pos: number) => {

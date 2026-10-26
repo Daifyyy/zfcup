@@ -11,7 +11,7 @@ async function generate(tournamentId: string): Promise<void> {
   await createRound('Finále',     1, 2, tournamentId)
 }
 
-async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams): Promise<void> {
+async function seed({ groups, matches, bracketRounds, bracketSlots, sportDef }: SeedParams): Promise<void> {
   const firstRound = bracketRounds.find(r => r.position === 0)
   if (!firstRound) throw new Error('Struktura playoff nenalezena')
   const firstSlots = slotsOf(bracketSlots, firstRound.id)
@@ -19,7 +19,7 @@ async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams
   const group = groups[0]
   if (!group) throw new Error('Skupina nenalezena')
 
-  const standings = calcGroupStandings(group, matches).slice(0, 4).map(r => r.id)
+  const standings = calcGroupStandings(group, matches, sportDef).slice(0, 4).map(r => r.id)
   const pairs = [
     { home: fill(standings, 0), away: fill(standings, 3) },
     { home: fill(standings, 1), away: fill(standings, 2) },

@@ -10,7 +10,7 @@ async function generate(tournamentId: string): Promise<void> {
   await createRound('Finále',      1, 3, tournamentId)
 }
 
-async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams): Promise<void> {
+async function seed({ groups, matches, bracketRounds, bracketSlots, sportDef }: SeedParams): Promise<void> {
   const ligaGroup = groups.find(g => g.name === 'Liga')
   if (!ligaGroup) throw new Error('Skupinu "Liga" nenalezena — nejprve vygeneruj ligový rozpis')
 
@@ -18,7 +18,7 @@ async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams
   if (!firstRound) throw new Error('Struktura playoff nenalezena')
   const firstSlots = slotsOf(bracketSlots, firstRound.id)
 
-  const standings = calcGroupStandings(ligaGroup, matches).slice(0, 6).map(r => r.id)
+  const standings = calcGroupStandings(ligaGroup, matches, sportDef).slice(0, 6).map(r => r.id)
   // QF: slot 0 = 3.vs6., slot 1 = 4.vs5.
   const qfPairs = [
     { home: fill(standings, 2), away: fill(standings, 5) },

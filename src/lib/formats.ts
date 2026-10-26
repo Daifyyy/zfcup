@@ -2,6 +2,7 @@ import type { BracketRound, BracketSlot } from '../hooks/useBracket'
 import type { Group } from '../hooks/useGroups'
 import type { Match } from '../hooks/useMatches'
 import type { Tournament } from '../hooks/useTournament'
+import type { SportDef } from './sports'
 
 // ── Shared param types ─────────────────────────────────────────────────────────
 
@@ -11,6 +12,8 @@ export interface SeedParams {
   bracketRounds: BracketRound[]
   bracketSlots: BracketSlot[]
   advancingPerGroup: number
+  /** Pravidla sportu — nutná pro správné pořadí v tabulce (hokej: OT/SO body) */
+  sportDef: SportDef
 }
 
 export interface AutoAdvanceParams {

@@ -9,7 +9,7 @@ async function generate(tournamentId: string): Promise<void> {
   await createRound('Finále',     1, 2, tournamentId)
 }
 
-async function seed({ groups, matches, bracketRounds, bracketSlots, advancingPerGroup }: SeedParams): Promise<void> {
+async function seed({ groups, matches, bracketRounds, bracketSlots, advancingPerGroup, sportDef }: SeedParams): Promise<void> {
   const firstRound = bracketRounds.find(r => r.position === 0)
   if (!firstRound) throw new Error('Struktura playoff nenalezena')
   const firstSlots = slotsOf(bracketSlots, firstRound.id)
@@ -18,7 +18,7 @@ async function seed({ groups, matches, bracketRounds, bracketSlots, advancingPer
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
 
   if (isSingleGroup) {
-    const standings = calcGroupStandings(groups[0], matches).slice(0, 4).map(r => r.id)
+    const standings = calcGroupStandings(groups[0], matches, sportDef).slice(0, 4).map(r => r.id)
     const pairs = [
       { home: fill(standings, 0), away: fill(standings, 3) },
       { home: fill(standings, 1), away: fill(standings, 2) },
@@ -31,8 +31,8 @@ async function seed({ groups, matches, bracketRounds, bracketSlots, advancingPer
     }
   } else {
     // 2 groups × top-2: A1 vs B2, B1 vs A2
-    const grpA = calcGroupStandings(sortedGroups[0], matches).slice(0, advancingPerGroup).map(r => r.id)
-    const grpB = calcGroupStandings(sortedGroups[1], matches).slice(0, advancingPerGroup).map(r => r.id)
+    const grpA = calcGroupStandings(sortedGroups[0], matches, sportDef).slice(0, advancingPerGroup).map(r => r.id)
+    const grpB = calcGroupStandings(sortedGroups[1], matches, sportDef).slice(0, advancingPerGroup).map(r => r.id)
     const pairs = [
       { home: fill(grpA, 0), away: fill(grpB, 1) },
       { home: fill(grpB, 0), away: fill(grpA, 1) },

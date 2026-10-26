@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
 import type { Group } from '../../../hooks/useGroups'
@@ -76,6 +76,17 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
 
   const leagueGroup = groups.find(g => g.name === 'Liga')
   const isLeague = tournament?.format === 'league'
+
+  // Předvyplnit výběr týmů: existující liga → její týmy, jinak všechny týmy turnaje.
+  // Čas začátku převzít z existující ligy.
+  useEffect(() => {
+    setLeagueTeamIds(ids => {
+      if (ids.length > 0) return ids
+      if (leagueGroup) return leagueGroup.team_ids
+      return teams.map(t => t.id)
+    })
+    if (leagueGroup?.start_time) setLeagueStart(cur => cur || leagueGroup.start_time)
+  }, [teams, leagueGroup?.id])
   const formatDef = getFormatDef(tournament?.format_id ?? '')
 
   const toggleLeagueTeam = (id: string) =>
@@ -95,6 +106,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   const generateLeague = async () => {
     if (leagueGenerating) return
     if (leagueTeamIds.length < 3) { showToast('Vyber alespoň 3 týmy'); return }
+    if (!/^\d{1,2}:\d{2}$/.test(leagueStart)) { showToast('Zadej čas začátku prvního zápasu'); return }
     if (!confirm(leagueGroup
       ? `Smazat stávající ligový rozpis a vygenerovat nový pro ${leagueTeamIds.length} týmů?`
       : `Vygenerovat ligový rozpis pro ${leagueTeamIds.length} týmů?`)) return

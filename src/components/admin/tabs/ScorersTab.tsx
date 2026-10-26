@@ -32,7 +32,7 @@ export default function ScorersTab({ goals, bracketGoals, players, teams, tourna
   return (
     <div>
       <div className="info-box">
-        {sportDef.terms.scorersLabel} se generují automaticky z gólů zadaných v záložce <strong>Zápasy → {sportDef.icon} Góly</strong>.
+        {sportDef.terms.scorersLabel} se generují automaticky z gólů zadaných v záložce <strong>Zápasy → Góly</strong>.
       </div>
       {!scorers.length ? (
         <p style={{ fontSize: '.76rem', color: 'var(--muted)' }}>Zatím žádní {sportDef.terms.scorersLabel.toLowerCase()}.</p>
@@ -53,7 +53,7 @@ export default function ScorersTab({ goals, bracketGoals, players, teams, tourna
                 </div>
               </div>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: 'var(--accent)' }}>
-                {sportDef.icon} {s.goals}
+                {s.goals}
               </span>
             </div>
           ))}

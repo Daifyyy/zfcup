@@ -320,7 +320,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
           continue
         }
 
-        const rows = calcGroupStandings(group, matches)
+        const rows = calcGroupStandings(group, matches, sportDef)
         if (rows.length < 2) {
           setGroupStatus(s => ({ ...s, [group.id]: 'incomplete' }))
           continue
@@ -469,7 +469,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
         />
         <EvalRow
           tipType="most_goals_team"
-          label={`${sportDef.icon} Tým s nejvíce góly`}
+          label="Tým s nejvíce góly"
           teamPool={teams}
           showToast={showToast}
           tournamentId={tournament.id}

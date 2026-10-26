@@ -1,3 +1,4 @@
+import type { SportDef } from './sports'
 import { supabase } from './supabase'
 import { calcGroupStandings } from './standings'
 import type { Group } from '../hooks/useGroups'
@@ -69,13 +70,13 @@ export async function recalcTipsterPoints(tournamentId: string): Promise<void> {
 
 // Zkontroluje zda je skupina dokončena a vyhodnotí group_winner + group_last special tipy.
 // Fetches fresh matches from DB to avoid stale data after save.
-export async function checkGroupSpecialTips(groupId: string, group: Group, tournamentId: string): Promise<boolean> {
+export async function checkGroupSpecialTips(groupId: string, group: Group, sportDef: SportDef, tournamentId: string): Promise<boolean> {
   const { data: groupMatches } = await supabase
     .from('matches').select('*').eq('group_id', groupId)
 
   if (!groupMatches?.length || !groupMatches.every(m => m.played)) return false
 
-  const rows = calcGroupStandings(group, groupMatches)
+  const rows = calcGroupStandings(group, groupMatches, sportDef)
   if (rows.length < 2) return false
 
   const winnerId = rows[0].id
@@ -90,12 +91,12 @@ export async function checkGroupSpecialTips(groupId: string, group: Group, tourn
 }
 
 // Liga bez playoff: zkontroluje zda jsou odehrány všechny liga zápasy a vyhodnotí tournament_winner dle tabulky.
-export async function checkLeagueTournamentWinner(ligaGroup: Group, tournamentId: string): Promise<boolean> {
+export async function checkLeagueTournamentWinner(ligaGroup: Group, sportDef: SportDef, tournamentId: string): Promise<boolean> {
   const { data: allMatches } = await supabase
     .from('matches').select('*').eq('group_id', ligaGroup.id)
   if (!allMatches?.length || !(allMatches as Match[]).every(m => m.played)) return false
 
-  const rows = calcGroupStandings(ligaGroup, allMatches as Match[])
+  const rows = calcGroupStandings(ligaGroup, allMatches as Match[], sportDef)
   if (!rows.length) return false
 
   const changed = await evaluateSpecialTip('tournament_winner', rows[0].id, tournamentId)

@@ -11,7 +11,7 @@ import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
 import { Card, SectionHeader } from '../ui/Card'
 import { getAdvancingCutoffs } from '../../lib/formats'
-import { getSportDef } from '../../lib/sports'
+import { getSportDef, sportHasOvertime } from '../../lib/sports'
 
 interface Props {
   groups: Group[]
@@ -67,6 +67,8 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
   const teamById = new Map(teams.map(t => [t.id, t]))
   const sportDef = getSportDef(tournament?.sport)
   const allowDraws = sportDef.standings.allowDraws
+  // Hokej: výhry/prohry po prodloužení zvlášť (V / VP / PP / P)
+  const showOt = sportHasOvertime(sportDef)
 
   const cutoffs = tournament
     ? getAdvancingCutoffs(tournament.format_id ?? '', tournament)
@@ -87,9 +89,11 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
     if (consolation > 0) legend.push({ color: ZONE_B, text: 'Útěšná část' })
   }
 
-  const headers = allowDraws
-    ? ['Z', 'V', 'R', 'P', 'Skóre', '+/−', 'B']
-    : ['Z', 'V', 'P', 'Skóre', '+/−', 'B']
+  const headers = showOt
+    ? ['Z', 'V', 'VP', 'PP', 'P', 'Skóre', '+/−', 'B']
+    : allowDraws
+      ? ['Z', 'V', 'R', 'P', 'Skóre', '+/−', 'B']
+      : ['Z', 'V', 'P', 'Skóre', '+/−', 'B']
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -129,7 +133,9 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
                     const team = teamById.get(row.id)
                     const zone = zoneFor(i, advancing, consolation, sfCutoff, qfCutoff)
                     const gdColor = row.gd > 0 ? 'var(--win)' : row.gd < 0 ? 'var(--loss)' : 'var(--ink-muted)'
-                    const cells = allowDraws ? [row.played, row.w, row.d, row.l] : [row.played, row.w, row.l]
+                    const cells = showOt
+                      ? [row.played, row.w - row.otw, row.otw, row.otl, row.l - row.otl]
+                      : allowDraws ? [row.played, row.w, row.d, row.l] : [row.played, row.w, row.l]
                     const form = teamForm(row.id, groupMatches)
                     return (
                       <tr key={row.id}>
@@ -166,6 +172,9 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
               {rows.length > 1 && legend.map(l => (
                 <span key={l.text}><i style={{ background: l.color }} />{l.text}</span>
               ))}
+              {showOt && (
+                <span>V výhra · VP výhra po prodl./nájezdech · PP prohra po prodl./nájezdech · P prohra ({sportDef.standings.winPts}-{sportDef.standings.otWinPts}-{sportDef.standings.otLossPts}-{sportDef.standings.lossPts} b.)</span>
+              )}
               <span className="std-foot__tb">Shoda bodů: {tiebreakerText(group.tiebreaker)}</span>
             </div>
           </Card>

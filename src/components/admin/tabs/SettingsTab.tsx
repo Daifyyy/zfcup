@@ -176,7 +176,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       {/* ── Sport (needitovatelné po založení) ───────────────────────────── */}
       <div className="sub-title">Sport</div>
       <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .95rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-        <span style={{ fontSize: '1.3rem' }}>{sportDef.icon}</span>
+        <sportDef.Icon size={20} />
         <div>
           <div style={{ fontWeight: 600, fontSize: '.85rem' }}>{sportDef.label}</div>
           <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: 2 }}>

@@ -1,13 +1,19 @@
 import type { Group } from '../hooks/useGroups'
 import type { Match } from '../hooks/useMatches'
-import { getSportDef, type SportDef } from './sports'
+import type { SportDef } from './sports'
 
 export interface StandingRow {
   id: string
   played: number
+  /** Všechny výhry (vč. po prodloužení/nájezdech) */
   w: number
   d: number
+  /** Všechny prohry (vč. po prodloužení/nájezdech) */
   l: number
+  /** Z toho výhry po prodloužení/nájezdech (jen sporty s OT/SO) */
+  otw: number
+  /** Z toho prohry po prodloužení/nájezdech (jen sporty s OT/SO) */
+  otl: number
   gf: number
   ga: number
   gd: number
@@ -23,13 +29,18 @@ function resultPts(sportDef: SportDef, decidedIn: Match['decided_in']): { win: n
   return { win: winPts, loss: lossPts }
 }
 
-export function calcGroupStandings(group: Group, matches: Match[], sportDef: SportDef = getSportDef('football')): StandingRow[] {
+function isExtraTime(sportDef: SportDef, decidedIn: Match['decided_in']): boolean {
+  return !!decidedIn && decidedIn !== 'regulation' && sportDef.standings.otWinPts !== undefined
+}
+
+// sportDef je povinný — bodování (OT/SO, remízy) se liší podle sportu.
+export function calcGroupStandings(group: Group, matches: Match[], sportDef: SportDef): StandingRow[] {
   const { lossPts } = sportDef.standings
   const tiePts = sportDef.standings.drawPts ?? lossPts
 
   const rows: Record<string, StandingRow> = {}
   for (const id of group.team_ids) {
-    rows[id] = { id, played: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 }
+    rows[id] = { id, played: 0, w: 0, d: 0, l: 0, otw: 0, otl: 0, gf: 0, ga: 0, gd: 0, pts: 0 }
   }
 
   const groupMatches = matches.filter(m => m.group_id === group.id && m.played)
@@ -40,8 +51,9 @@ export function calcGroupStandings(group: Group, matches: Match[], sportDef: Spo
     a.gf += m.away_score; a.ga += m.home_score
     h.played++; a.played++
     const { win, loss } = resultPts(sportDef, m.decided_in)
-    if (m.home_score > m.away_score) { h.w++; h.pts += win; a.l++; a.pts += loss }
-    else if (m.home_score < m.away_score) { a.w++; a.pts += win; h.l++; h.pts += loss }
+    const extra = isExtraTime(sportDef, m.decided_in)
+    if (m.home_score > m.away_score) { h.w++; h.pts += win; a.l++; a.pts += loss; if (extra) { h.otw++; a.otl++ } }
+    else if (m.home_score < m.away_score) { a.w++; a.pts += win; h.l++; h.pts += loss; if (extra) { a.otw++; h.otl++ } }
     else { h.d++; h.pts += tiePts; a.d++; a.pts += tiePts }
   }
 
@@ -54,16 +66,12 @@ export function calcGroupStandings(group: Group, matches: Match[], sportDef: Spo
     )
     let aPts = 0, bPts = 0
     for (const m of h2h) {
-      const { win } = resultPts(sportDef, m.decided_in)
-      if (m.home_id === a.id) {
-        if (m.home_score > m.away_score) aPts += win
-        else if (m.home_score === m.away_score) { aPts += tiePts; bPts += tiePts }
-        else bPts += win
-      } else {
-        if (m.away_score > m.home_score) aPts += win
-        else if (m.away_score === m.home_score) { aPts += tiePts; bPts += tiePts }
-        else bPts += win
-      }
+      const { win, loss } = resultPts(sportDef, m.decided_in)
+      const aScore = m.home_id === a.id ? m.home_score : m.away_score
+      const bScore = m.home_id === a.id ? m.away_score : m.home_score
+      if (aScore > bScore) { aPts += win; bPts += loss }
+      else if (aScore < bScore) { bPts += win; aPts += loss }
+      else { aPts += tiePts; bPts += tiePts }
     }
     return bPts - aPts
   }

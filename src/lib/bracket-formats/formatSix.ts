@@ -10,14 +10,14 @@ async function generate(tournamentId: string): Promise<void> {
   await createRound('Finále',      1, 3, tournamentId)
 }
 
-async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams): Promise<void> {
+async function seed({ groups, matches, bracketRounds, bracketSlots, sportDef }: SeedParams): Promise<void> {
   const firstRound = bracketRounds.find(r => r.position === 0)
   if (!firstRound) throw new Error('Struktura playoff nenalezena')
   const firstSlots = slotsOf(bracketSlots, firstRound.id)
 
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
-  const winners   = sortedGroups.map(g => calcGroupStandings(g, matches)[0]).filter(Boolean)
-  const runnerUps = sortedGroups.map(g => calcGroupStandings(g, matches)[1]).filter(Boolean)
+  const winners   = sortedGroups.map(g => calcGroupStandings(g, matches, sportDef)[0]).filter(Boolean)
+  const runnerUps = sortedGroups.map(g => calcGroupStandings(g, matches, sportDef)[1]).filter(Boolean)
   const rankRows = (rows: ReturnType<typeof calcGroupStandings>) =>
     [...rows].sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf)
   const ranked = [...rankRows(winners), ...rankRows(runnerUps)].map(r => r.id)

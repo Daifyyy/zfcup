@@ -18,13 +18,13 @@ async function generate(tournamentId: string): Promise<void> {
   await createRound('Finále',      1, 4, tournamentId)
 }
 
-async function seed({ groups, matches, bracketRounds, bracketSlots }: SeedParams): Promise<void> {
+async function seed({ groups, matches, bracketRounds, bracketSlots, sportDef }: SeedParams): Promise<void> {
   const sortedGroups = [...groups].sort((a, b) => a.name.localeCompare(b.name))
   if (sortedGroups.length < 2) throw new Error('R16 vyžaduje alespoň 2 skupiny')
 
   // top-2 from each group
   const grouped = sortedGroups.map(g =>
-    calcGroupStandings(g, matches).slice(0, 2).map(r => r.id)
+    calcGroupStandings(g, matches, sportDef).slice(0, 2).map(r => r.id)
   )
 
   const r16Round = bracketRounds.find(r => r.position === 0)

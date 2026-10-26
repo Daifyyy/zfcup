@@ -254,12 +254,12 @@ function InlineMatchEditor({
     refetchGoals()
     try {
       if (autoPlayed && match.group_id && group && tournament?.id)
-        await checkGroupSpecialTips(match.group_id, group, tournament.id)
+        await checkGroupSpecialTips(match.group_id, group, sportDef, tournament.id)
       const isLeagueNoPlayoff = tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true)
       if (isLeagueNoPlayoff && autoPlayed && tournament?.id) {
         const ligaGroup = groups.find(g => g.name === 'Liga')
         if (ligaGroup) {
-          const evaluated = await checkLeagueTournamentWinner(ligaGroup, tournament.id)
+          const evaluated = await checkLeagueTournamentWinner(ligaGroup, sportDef, tournament.id)
           if (evaluated) { showToast('Uloženo ✓ · Vítěz ligy vyhodnocen'); return }
         }
       }
@@ -387,7 +387,7 @@ function InlineMatchEditor({
 
       {/* Góly hráčů */}
       <div style={{ fontSize: '.67rem', textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 600, marginBottom: '.5rem' }}>
-        {sportDef.icon} Góly hráčů
+        Góly hráčů
       </div>
       {allPlayers.length === 0 ? (
         <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.65rem' }}>
@@ -689,7 +689,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
                             <span style={{ color: 'var(--success)' }}>✓ {m.home_score}:{m.away_score}</span>
                           ) : 'Plánováno'}
                           {m.scheduled_time && <> · {m.scheduled_time}</>}
-                          {totalGoals > 0 && <> · {sportDef.icon} {totalGoals} gólů</>}
+                          {totalGoals > 0 && <> · {totalGoals} gólů</>}
                         </div>
                       </div>
                       <button type="button" className={`btn btn-sm ${isOpen ? 'btn-p' : 'btn-d'}`}

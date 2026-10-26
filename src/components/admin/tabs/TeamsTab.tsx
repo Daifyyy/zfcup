@@ -105,17 +105,26 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
   const roster = players.filter(p => p.team_id === team.id).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
 
   const addPlayer = async () => {
-    if (!name.trim()) { showToast('Zadej jméno'); return }
+    // Pole se vyprázdní hned — při rychlém zadávání se tak nepřepíše
+    // rozepsané jméno dalšího hráče po dokončení předchozího uložení.
+    const submittedName = name.trim()
+    const submittedRole = role
+    if (!submittedName) { showToast('Zadej jméno'); return }
+    setName(''); setRole('')
     const { error } = await supabase.from('players').insert({
       team_id: team.id,
-      name: name.trim(),
+      name: submittedName,
       number: null,
-      role: role || null,
+      role: submittedRole || null,
       tournament_id: tournament?.id,
     })
-    if (error) { showToast('Chyba: ' + error.message); return }
-    setName(''); setRole('')
-    showToast('Hráč přidán ✓')
+    if (error) {
+      setName(cur => cur || submittedName)
+      setRole(cur => cur || submittedRole)
+      showToast('Chyba: ' + error.message)
+      return
+    }
+    showToast(`Hráč ${submittedName} přidán`)
     refetchPlayers()
   }
 
@@ -271,11 +280,25 @@ export default function TeamsTab({ teams, players, tournament, refetchTeams, ref
   const [showImport, setShowImport] = useState(false)
 
   const addTeam = async () => {
-    if (!name.trim()) { showToast('Zadej název'); return }
-    const { error } = await supabase.from('teams').insert({ name: name.trim(), color, tournament_id: tournament?.id })
-    if (error) { showToast('Chyba: ' + error.message); return }
+    // Pole se vyprázdní hned — při rychlém zadávání se tak nepřepíše
+    // rozepsaný název dalšího týmu po dokončení předchozího uložení.
+    const submittedName = name.trim()
+    const submittedColor = color
+    if (!submittedName) { showToast('Zadej název'); return }
     setName('')
-    showToast('Tým přidán ✓')
+    // Další tým dostane další nepoužitou barvu v pořadí palety (postup po paletě
+    // funguje i při rychlém zadávání, kdy seznam týmů ještě není obnovený)
+    const used = new Set([...teams.map(t => t.color), submittedColor])
+    const start = Math.max(0, TEAM_COLORS.indexOf(submittedColor))
+    const ordered = [...TEAM_COLORS.slice(start + 1), ...TEAM_COLORS.slice(0, start + 1)]
+    setColor(ordered.find(c => !used.has(c)) ?? ordered[0])
+    const { error } = await supabase.from('teams').insert({ name: submittedName, color: submittedColor, tournament_id: tournament?.id })
+    if (error) {
+      setName(cur => cur || submittedName)
+      showToast('Chyba: ' + error.message)
+      return
+    }
+    showToast(`Tým ${submittedName} přidán`)
     refetchTeams()
   }
 
