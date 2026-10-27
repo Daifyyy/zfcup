@@ -32,10 +32,10 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - **Přepínání turnajů**: 18 hooků při změně `tournamentId` hned vyprázdní stav a zahodí opožděné odpovědi (`cancelled`); `useTournament` resetuje na `null` a vrací `notFound` (PGRST116 / neplatné UUID → „Turnaj nenalezen“). `App.tsx`: načítací obrazovka `TournamentSkeleton` (dokud `tournament.id !== tournamentId` nebo se načítají týmy/skupiny/zápasy), jeden `popstate` handler (turnaj+soutěž z URL, záložka ze state), `openTournament()` začíná na Přehledu, při přepnutí se zavře admin/bulletin/tabule.
 - **Přehled**: mini tabulka v hlavním sloupci hned pod KPI (po „Právě se hraje“), nad „Další zápasy“; pravý sloupec jen když jsou střelci.
 - Ověřeno v prohlížeči (dev): přepnutí A→B bez míchání dat (starý → skeleton → nový), Zpět/Vpřed, úvodní stránka ↔ turnaj, neplatný odkaz, bulletin hokej/sezóna i fotbal/skupiny+play-off, simulace tiskového CSS. Typová kontrola 63 = baseline, build OK.
-- Neověřeno: skutečný tisk do PDF (dialog tisku nejde automatizovat) a vzhled na mobilu (okno nešlo zmenšit; pořadí je dané DOM, jeden sloupec).
+- Uživatel ověřil na produkci: tisk bulletinu do PDF a Přehled na mobilu — OK.
 
 ### Kde navázat
-1. Uživatel ověří na produkci: Bulletin → Tisk do PDF, Přehled na mobilu.
+1. Fáze 2 kompletně ověřena (i uživatelem na produkci).
 2. Fáze 3 — datová vrstva (TanStack Query, migrace indexů, realtime filtr, Vitest). Hooky teď mají vzor `cancelled` + reset; při převodu na Query ho nahradí cache.
 3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 
