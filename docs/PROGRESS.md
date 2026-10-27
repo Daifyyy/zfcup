@@ -10,7 +10,7 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); Fáze 6 nasazená (57898b6); Fáze 7 nasazená; **další: Fáze 8 (právní rámec)**, pak Fáze 9 (registrace + obchodní model — čeká na rozhodnutí)
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); Fáze 6 nasazená (57898b6); Fáze 7 nasazená (fd3ef25); **další: Fáze 8 (právní rámec)**, pak Fáze 9 (registrace + obchodní model — čeká na rozhodnutí)
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
 **DB migrace:** 01–14 spuštěné (14 = brand_style, spuštěná 2026-10-27); 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
