@@ -29,7 +29,7 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 
 ### Kde navázat
 1. Fáze 2 — bulletin (portál + `#root` skrýt v tisku), přepínání turnajů (reset stavu hooků, zahazování opožděných odpovědí, načítací obrazovka), tabulka na Přehledu nad „Další zápasy“.
-2. (dříve) Fáze 1 — bezpečnost a role. Pozn.: čísla migrací v plánu se posouvají o 1 (role = 11, indexy = 12, kluby = 13).
+2. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 
 ### Otevřené body / nápady
 - Prázdný turnaj na Přehledu ukazuje jen hero — doplnit přívětivý prázdný stav („Turnaj se připravuje“).
