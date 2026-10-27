@@ -10,9 +10,9 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); **Fáze 6 hotová a ověřená (čeká na commit + migraci 14)**
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); Fáze 6 nasazená (57898b6); **další: Fáze 7 (demo na úvodní stránce)**
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
-**DB migrace:** 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
+**DB migrace:** 01–13 spuštěné, **14 (brand_style) čeká na spuštění uživatelem**; 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
 
 ### Fáze 0 — výsledek E2E testu (2026-10-27)
@@ -96,6 +96,12 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 ---
 
 ## Historie
+
+### 2026-10-27 — Fáze 4, 5, 6 (večer)
+- Fáze 4 (dfe8a45): detail týmu a zápasu, sdílený kontext, odkazy `?zapas=` / `?tym=`, prázdný stav Přehledu.
+- Fáze 5 (160c637): knihovna klubů organizátora (migrace 13 spuštěná), stránka klubu `/k/{slug}`, navigace mezi ročníky.
+- Fáze 6 (57898b6): vlastní potvrzovací dialogy, ikony oznámení, sdílené TV komponenty (Full HD i 4K, přizpůsobení písma), branding Jemná/Výrazná (migrace 14 napsaná), audit zobrazení na zátěžovém turnaji.
+- Uživatel si přeje: v Chromu a v PC pracovat jen se záložkami aplikace (uloženo v paměti).
 
 ### 2026-10-27 — Fáze 2 a 3 (konec dne)
 - Fáze 2 (9aaf0b2) a Fáze 3 cílená (80dfef6) nasazené; migrace 12 spuštěná; realtime filtr ověřen naostro; 74 testů; opravena chyba `groups_qf_full`.
