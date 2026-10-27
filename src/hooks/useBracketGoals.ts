@@ -14,9 +14,13 @@ export function useBracketGoals(tournamentId: string) {
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
+    let cancelled = false
+    setBracketGoals([])
     async function fetch() {
       if (!tournamentId) return
       const { data, error } = await supabase.from('bracket_goals').select('*').eq('tournament_id', tournamentId)
+      if (cancelled) return
       if (!error) setBracketGoals(data ?? [])
     }
     fetchRef.current = fetch
@@ -33,6 +37,7 @@ export function useBracketGoals(tournamentId: string) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      cancelled = true
       unsub()
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)

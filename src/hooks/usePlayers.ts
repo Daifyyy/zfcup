@@ -19,11 +19,16 @@ export function usePlayers(tournamentId: string, teamId?: string) {
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
+    let cancelled = false
+    setPlayers([])
+    setLoading(true)
     async function fetch() {
       if (!tournamentId) { setLoading(false); return }
       let q = supabase.from('players').select('*').eq('tournament_id', tournamentId).order('number')
       if (teamId) q = q.eq('team_id', teamId)
       const { data, error } = await q
+      if (cancelled) return
       if (!error) setPlayers(data ?? [])
       setLoading(false)
     }
@@ -41,6 +46,7 @@ export function usePlayers(tournamentId: string, teamId?: string) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      cancelled = true
       unsub()
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)

@@ -33,12 +33,18 @@ export function useBracket(tournamentId: string) {
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
+    let cancelled = false
+    setRounds([])
+    setSlots([])
+    setLoading(true)
     async function fetch() {
       if (!tournamentId) { setLoading(false); return }
       const [{ data: r, error: rErr }, { data: s, error: sErr }] = await Promise.all([
         supabase.from('bracket_rounds').select('*').eq('tournament_id', tournamentId).order('position'),
         supabase.from('bracket_slots').select('*').eq('tournament_id', tournamentId).order('position'),
       ])
+      if (cancelled) return
       if (!rErr) setRounds(r ?? [])
       if (!sErr) setSlots(s ?? [])
       setLoading(false)
@@ -58,6 +64,7 @@ export function useBracket(tournamentId: string) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      cancelled = true
       unsubR()
       unsubS()
       stopPoll()

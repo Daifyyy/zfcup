@@ -268,3 +268,30 @@
 
 /* Aktivní záložka: zkosená linka */
 .ui-tab::after { clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%); }
+
+/* ── Načítací obrazovka turnaje (TournamentSkeleton) ───────────── */
+.tsk { min-height: 100vh; background: var(--surface-0); }
+.tsk--center { display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+.tsk__hdr { background: var(--chrome); border-bottom: 1px solid var(--chrome-line); }
+.tsk__hdr-inner { max-width: 1400px; margin: 0 auto; min-height: 64px; padding: .5rem 1.5rem; display: flex; align-items: center; gap: .85rem; }
+.tsk__main { max-width: 1180px; margin: 0 auto; padding: 2rem 1.5rem 4rem; display: flex; flex-direction: column; gap: 1rem; }
+.tsk__kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+.tsk__cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+@media (max-width: 768px) {
+  .tsk__main { padding: 1rem .75rem 5rem; }
+  .tsk__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tsk__cols { grid-template-columns: minmax(0, 1fr); }
+}
+.tsk__bone {
+  display: block; border-radius: var(--radius-lg);
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-1) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: tsk-shimmer 1.3s ease-in-out infinite;
+  border: 1px solid var(--line);
+}
+.tsk__bone--dark { background: var(--chrome-2); border-color: var(--chrome-line); animation: none; }
+@keyframes tsk-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .tsk__bone { animation: none; } }
+.tsk__msg { text-align: center; max-width: 360px; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 2rem 1.5rem; }
+.tsk__msg-title { font-size: 1.6rem; color: var(--ink); }
+.tsk__msg p { color: var(--ink-muted); margin: .5rem 0 1.25rem; font-size: .92rem; }

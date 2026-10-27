@@ -39,6 +39,7 @@ import Tips from './components/public/Tips'
 import Sponsors from './components/public/Sponsors'
 import Media from './components/public/Media'
 import Toast from './components/ui/Toast'
+import { TournamentSkeleton } from './components/ui/TournamentSkeleton'
 import TournamentLanding from './components/TournamentLanding'
 import PasswordResetOverlay from './components/PasswordResetOverlay'
 import type { Session } from '@supabase/supabase-js'
@@ -97,11 +98,11 @@ export default function App() {
   const toastTimer = useRef<ReturnType<typeof setTimeout>>()
 
   // When no tournamentId, pass empty string so hooks skip fetching
-  const { tournament, refetch: refetchTournament } = useTournament(tournamentId)
-  const { teams, refetch: refetchTeams } = useTeams(tournamentId)
+  const { tournament, notFound: tournamentNotFound, refetch: refetchTournament } = useTournament(tournamentId)
+  const { teams, loading: teamsLoading, refetch: refetchTeams } = useTeams(tournamentId)
   const { players, refetch: refetchPlayers } = usePlayers(tournamentId)
-  const { groups, refetch: refetchGroups } = useGroups(tournamentId)
-  const { matches, refetch: refetchMatches } = useMatches(tournamentId)
+  const { groups, loading: groupsLoading, refetch: refetchGroups } = useGroups(tournamentId)
+  const { matches, loading: matchesLoading, refetch: refetchMatches } = useMatches(tournamentId)
   const { goals, refetch: refetchGoals } = useGoals(tournamentId)
   const { assists, refetch: refetchAssists } = useAssists(tournamentId)
   const { bracketAssists, refetch: refetchBracketAssists } = useBracketAssists(tournamentId)
@@ -132,17 +133,6 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // ── Popstate: handle browser back from tournament → landing ───
-  useEffect(() => {
-    const handlePopstate = () => {
-      const id = detectTournamentIdFromUrl()
-      setTournamentId(id)
-      setCompetitionSlug(detectCompetitionSlugFromUrl())
-    }
-    window.addEventListener('popstate', handlePopstate)
-    return () => window.removeEventListener('popstate', handlePopstate)
-  }, [])
-
   // ── Keyboard shortcuts ────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -161,19 +151,22 @@ export default function App() {
     window.history.replaceState({ tab }, '', url.toString())
   }, [kiosk, tab])
 
-  // ── History navigation (Android back button) ──────────
-  // Push initial state on mount
+  // ── Přepnutí turnaje: zavřít překryvy předchozího (admin, tisk, tabule) ──
+  useEffect(() => {
+    setAdminOpen(false)
+    setPrintOpen(false)
+    setScoreboard(false)
+  }, [tournamentId])
+
+  // ── Historie prohlížeče (tlačítko Zpět, i na Androidu) ──
+  // Jediný handler: turnaj / soutěž podle URL, záložka podle history state.
   useEffect(() => {
     window.history.replaceState({ tab: 'overview' }, '')
     const handlePopstate = (e: PopStateEvent) => {
+      setTournamentId(detectTournamentIdFromUrl())
+      setCompetitionSlug(detectCompetitionSlugFromUrl())
       const prev = e.state?.tab as Tab | undefined
-      if (prev && VALID_TABS.includes(prev)) {
-        setTab(prev)
-      } else {
-        // Bottom of history stack — stay in app, go to overview
-        window.history.pushState({ tab: 'overview' }, '')
-        setTab('overview')
-      }
+      setTab(prev && VALID_TABS.includes(prev) ? prev : 'overview')
     }
     window.addEventListener('popstate', handlePopstate)
     return () => window.removeEventListener('popstate', handlePopstate)
@@ -214,11 +207,17 @@ export default function App() {
   const leftSponsors = sortedSponsors.filter((_, i) => i % 2 === 0)
   const rightSponsors = sortedSponsors.filter((_, i) => i % 2 !== 0)
 
-  const goHome = useCallback(() => {
-    setTournamentId('')
+  // Otevření turnaje (z úvodní stránky / soutěže): vždy začít na Přehledu
+  const openTournament = useCallback((id: string) => {
+    setTab('overview')
     setCompetitionSlug('')
-    window.history.pushState({}, '', '/')
+    setTournamentId(id)
   }, [])
+
+  const goHome = useCallback(() => {
+    window.history.pushState({}, '', '/')
+    openTournament('')
+  }, [openTournament])
 
   // ── Landing page: no tournamentId in URL ─────────────
   const openCompetition = (slug: string) => {
@@ -235,8 +234,7 @@ export default function App() {
           onHome={goHome}
           onOpenTournament={id => {
             window.history.pushState({ tournamentId: id }, '', `/${id}`)
-            setCompetitionSlug('')
-            setTournamentId(id)
+            openTournament(id)
           }}
         />
       </TournamentProvider>
@@ -246,22 +244,16 @@ export default function App() {
   if (!tournamentId) {
     return (
       <TournamentProvider tournamentId="">
-        <TournamentLanding onSelect={id => setTournamentId(id)} onSelectCompetition={openCompetition} />
+        <TournamentLanding onSelect={openTournament} onSelectCompetition={openCompetition} />
         {passwordRecovery && <PasswordResetOverlay onDone={() => setPasswordRecovery(false)} />}
       </TournamentProvider>
     )
   }
 
-  // ── Loading spinner while fetching tournament ─────────
-  if (!tournament) {
-    return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: 'var(--muted)' }}>
-          <div className="spinner" />
-          <p style={{ fontFamily: 'var(--font-body)', marginTop: '.75rem', fontSize: '.9rem' }}>Načítám…</p>
-        </div>
-      </div>
-    )
+  // ── Načítání turnaje (i při přepnutí na jiný) ─────────
+  // Čeká na turnaj a základní data, ať se nikdy neukáže směs starého a nového turnaje.
+  if (!tournament || tournament.id !== tournamentId || teamsLoading || groupsLoading || matchesLoading) {
+    return <TournamentSkeleton notFound={tournamentNotFound} onHome={goHome} />
   }
 
   if (kiosk) {

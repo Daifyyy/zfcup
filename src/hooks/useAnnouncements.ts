@@ -18,9 +18,14 @@ export function useAnnouncements(tournamentId: string) {
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
+    let cancelled = false
+    setAnnouncements([])
+    setLoading(true)
     async function fetch() {
       if (!tournamentId) { setLoading(false); return }
       const { data, error } = await supabase.from('announcements').select('*').eq('tournament_id', tournamentId).order('position')
+      if (cancelled) return
       if (!error) setAnnouncements(data ?? [])
       setLoading(false)
     }
@@ -38,6 +43,7 @@ export function useAnnouncements(tournamentId: string) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      cancelled = true
       unsub()
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)

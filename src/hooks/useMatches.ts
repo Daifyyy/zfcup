@@ -24,12 +24,17 @@ export function useMatches(tournamentId: string) {
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
+    let cancelled = false
+    setMatches([])
+    setLoading(true)
     async function fetch() {
       if (!tournamentId) { setLoading(false); return }
       const { data, error } = await supabase.from('matches').select('*')
         .eq('tournament_id', tournamentId)
         .order('scheduled_time', { nullsFirst: false })
         .order('id')
+      if (cancelled) return
       if (!error) setMatches(data ?? [])
       setLoading(false)
     }
@@ -47,6 +52,7 @@ export function useMatches(tournamentId: string) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      cancelled = true
       unsub()
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)

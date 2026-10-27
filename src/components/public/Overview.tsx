@@ -107,6 +107,7 @@ export default function Overview({
 
   const tournamentUrl = tournament?.id ? `${window.location.origin}/${tournament.id}` : undefined
   const hasBoard = fixtures.length > 0
+  const hasAside = hasBoard && scorers.length > 0
 
   return (
     <div className="ov">
@@ -151,11 +152,44 @@ export default function Overview({
         </div>
       )}
 
-      <div className={hasBoard ? 'ov-grid' : ''}>
+      <div className={hasAside ? 'ov-grid' : ''}>
         <div className="ov-col">
           {live.length > 0 && (
             <Card padded={false} title="Právě se hraje" icon={<Radio size={16} style={{ color: 'var(--live)' }} />}>
               {live.map(renderRow)}
+            </Card>
+          )}
+          {/* Tabulka hned po živých zápasech — na mobilu tak není až pod celým programem */}
+          {miniTable.length > 0 && (
+            <Card
+              padded={false}
+              title={groups.length > 1 ? `Tabulka · ${firstGroup.name}` : 'Tabulka'}
+              actions={<MoreLink onClick={onTab && (() => onTab('standings'))}>Celá</MoreLink>}
+            >
+              <table className="ui-table">
+                <thead>
+                  <tr><th>#</th><th className="is-left">Tým</th><th>Z</th><th>Skóre</th><th>B</th></tr>
+                </thead>
+                <tbody>
+                  {miniTable.map((r, i) => {
+                    const t = teamById.get(r.id)
+                    return (
+                      <tr key={r.id}>
+                        <td className="is-muted">{i + 1}</td>
+                        <td className="is-left">
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '.5rem', fontWeight: 600 }}>
+                            {t && <TeamLogo team={t} size={22} />}
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t?.name}</span>
+                          </span>
+                        </td>
+                        <td className="is-muted">{r.played}</td>
+                        <td className="is-muted">{r.gf}:{r.ga}</td>
+                        <td className="is-strong">{r.pts}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </Card>
           )}
           {upcoming.length > 0 && (
@@ -183,41 +217,8 @@ export default function Overview({
           )}
         </div>
 
-        {hasBoard && (
+        {hasAside && (
           <aside className="ov-col">
-            {miniTable.length > 0 && (
-              <Card
-                padded={false}
-                title={groups.length > 1 ? `Tabulka · ${firstGroup.name}` : 'Tabulka'}
-                actions={<MoreLink onClick={onTab && (() => onTab('standings'))}>Celá</MoreLink>}
-              >
-                <table className="ui-table">
-                  <thead>
-                    <tr><th>#</th><th className="is-left">Tým</th><th>Z</th><th>Skóre</th><th>B</th></tr>
-                  </thead>
-                  <tbody>
-                    {miniTable.map((r, i) => {
-                      const t = teamById.get(r.id)
-                      return (
-                        <tr key={r.id}>
-                          <td className="is-muted">{i + 1}</td>
-                          <td className="is-left">
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '.5rem', fontWeight: 600 }}>
-                              {t && <TeamLogo team={t} size={22} />}
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t?.name}</span>
-                            </span>
-                          </td>
-                          <td className="is-muted">{r.played}</td>
-                          <td className="is-muted">{r.gf}:{r.ga}</td>
-                          <td className="is-strong">{r.pts}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </Card>
-            )}
-
             {scorers.length > 0 && (
               <Card padded={false} title={sport.terms.scorersLabel} actions={<MoreLink onClick={onTab && (() => onTab('statistics'))}>Statistiky</MoreLink>}>
                 <ol className="ov-scorers">

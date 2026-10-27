@@ -15,9 +15,13 @@ export function useBracketPenalties(tournamentId: string) {
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
+    let cancelled = false
+    setBracketPenalties([])
     async function fetch() {
       if (!tournamentId) return
       const { data, error } = await supabase.from('bracket_penalties').select('*').eq('tournament_id', tournamentId)
+      if (cancelled) return
       if (!error) setBracketPenalties(data ?? [])
     }
     fetchRef.current = fetch
@@ -34,6 +38,7 @@ export function useBracketPenalties(tournamentId: string) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      cancelled = true
       unsub()
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)

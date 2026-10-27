@@ -51,21 +51,32 @@ export interface Tournament {
 export function useTournament(tournamentId?: string) {
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [loading, setLoading] = useState(true)
+  // Pro které ID turnaj prokazatelně neexistuje (žádný řádek / neplatné UUID).
+  // Vázané na ID, aby při přepnutí neproblikla hláška „nenalezen“ dřív, než se začne načítat.
+  const [notFoundId, setNotFoundId] = useState<string | null>(null)
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
-    // Skip fetch when no tournamentId provided (e.g. on landing page)
+    // Přepnutí turnaje: hned zahodit starý turnaj a ignorovat opožděné odpovědi
+    let cancelled = false
+    setTournament(null)
+    setNotFoundId(null)
+    // Bez tournamentId (úvodní stránka) se nic nenačítá
     if (tournamentId === '') {
       setLoading(false)
       return
     }
+    setLoading(true)
 
     async function fetch() {
       const query = tournamentId
         ? supabase.from('tournament').select('*').eq('id', tournamentId).single()
         : supabase.from('tournament').select('*').single()
       const { data, error } = await query
+      if (cancelled) return
       if (!error) setTournament(data)
+      // PGRST116 = žádný řádek, 22P02 = neplatné UUID; jiné chyby (síť) zkusí znovu polling
+      else if (tournamentId && (error.code === 'PGRST116' || error.code === '22P02')) setNotFoundId(tournamentId)
       setLoading(false)
     }
     fetchRef.current = fetch
@@ -81,11 +92,13 @@ export function useTournament(tournamentId?: string) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      cancelled = true
       unsub()
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [tournamentId])
 
-  return { tournament, loading, refetch: () => fetchRef.current() }
+  const notFound = !!tournamentId && notFoundId === tournamentId && !tournament
+  return { tournament, loading, notFound, refetch: () => fetchRef.current() }
 }

@@ -10,7 +10,7 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0)
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová lokálně, necommitnutá
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
 **DB migrace:** 01–11 spuštěné (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
@@ -27,9 +27,17 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - CSP a hlavičky ověřeny lokálně na produkčním buildu (úvodní stránka, turnaj s logy, sdílecí grafika — bez porušení CSP).
 - Neověřeno: organizátor zakládá a spravuje **vlastní** turnaj (test přerušen odhlášením) · produkce po nasazení (adresa není v repu — ověří uživatel).
 
+### Fáze 2 — rychlé opravy (2026-10-27, necommitnuto)
+- **Bulletin** (`PrintBulletin.tsx`): portál do `<body>`, v tisku se skryje `#root` (dřív se tiskla prázdná stránka — `body > *` skrylo i bulletin uvnitř `#root`); auto-tisk jen jednou a jen když je co tisknout; prázdné skupiny vynechány, prázdný turnaj = hláška; hokej V/VP/PP/P bez R, PP/SN u skóre; sloupec Datum v sezónním režimu, řazení kol číselně; Esc zavře; opraveno „Skupina Skupina A“.
+- **Přepínání turnajů**: 18 hooků při změně `tournamentId` hned vyprázdní stav a zahodí opožděné odpovědi (`cancelled`); `useTournament` resetuje na `null` a vrací `notFound` (PGRST116 / neplatné UUID → „Turnaj nenalezen“). `App.tsx`: načítací obrazovka `TournamentSkeleton` (dokud `tournament.id !== tournamentId` nebo se načítají týmy/skupiny/zápasy), jeden `popstate` handler (turnaj+soutěž z URL, záložka ze state), `openTournament()` začíná na Přehledu, při přepnutí se zavře admin/bulletin/tabule.
+- **Přehled**: mini tabulka v hlavním sloupci hned pod KPI (po „Právě se hraje“), nad „Další zápasy“; pravý sloupec jen když jsou střelci.
+- Ověřeno v prohlížeči (dev): přepnutí A→B bez míchání dat (starý → skeleton → nový), Zpět/Vpřed, úvodní stránka ↔ turnaj, neplatný odkaz, bulletin hokej/sezóna i fotbal/skupiny+play-off, simulace tiskového CSS. Typová kontrola 63 = baseline, build OK.
+- Neověřeno: skutečný tisk do PDF (dialog tisku nejde automatizovat) a vzhled na mobilu (okno nešlo zmenšit; pořadí je dané DOM, jeden sloupec).
+
 ### Kde navázat
-1. Fáze 2 — bulletin (portál + `#root` skrýt v tisku), přepínání turnajů (reset stavu hooků, zahazování opožděných odpovědí, načítací obrazovka), tabulka na Přehledu nad „Další zápasy“.
-2. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
+1. Commit + nasazení Fáze 2 (po kontrole uživatelem: Bulletin → Tisk do PDF, mobil).
+2. Fáze 3 — datová vrstva (TanStack Query, migrace indexů, realtime filtr, Vitest). Hooky teď mají vzor `cancelled` + reset; při převodu na Query ho nahradí cache.
+3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 
 ### Otevřené body / nápady
 - Prázdný turnaj na Přehledu ukazuje jen hero — doplnit přívětivý prázdný stav („Turnaj se připravuje“).

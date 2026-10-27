@@ -11,9 +11,13 @@ export function useReferees(tournamentId: string) {
   const fetchRef = useRef<() => void>(() => {})
 
   useEffect(() => {
+    // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
+    let cancelled = false
+    setReferees([])
     async function fetch() {
       if (!tournamentId) return
       const { data, error } = await supabase.from('referees').select('*').eq('tournament_id', tournamentId).order('name')
+      if (cancelled) return
       if (!error) setReferees(data ?? [])
     }
     fetchRef.current = fetch
@@ -28,6 +32,7 @@ export function useReferees(tournamentId: string) {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      cancelled = true
       stopPoll()
       document.removeEventListener('visibilitychange', onVisibility)
     }
