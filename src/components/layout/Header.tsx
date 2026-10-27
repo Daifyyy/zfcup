@@ -1,4 +1,4 @@
-import { ChevronLeft, Lock, LockOpen, MonitorPlay, Printer, Tv } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Lock, LockOpen, MonitorPlay, Printer, Tv } from 'lucide-react'
 import type { Tab } from '../../App'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Sponsor } from '../../hooks/useSponsors'
@@ -25,6 +25,9 @@ interface Props {
   mediaEnabled?: boolean
   /** Soutěž, do které ročník patří (migrace 09) */
   competition?: { name: string; slug: string } | null
+  /** Předchozí / další ročník soutěže */
+  editionNav?: { prev?: { id: string; label: string }; next?: { id: string; label: string } }
+  onOpenTournament?: (id: string) => void
   onOpenCompetition?: (slug: string) => void
 }
 
@@ -59,7 +62,7 @@ function HeaderAction({ icon, label, title, onClick }: { icon: React.ReactNode; 
 
 export default function Header({
   tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin,
-  tipsEnabled, showBracket = true, sponsorsEnabled, presentedBy, mediaEnabled, competition, onOpenCompetition,
+  tipsEnabled, showBracket = true, sponsorsEnabled, presentedBy, mediaEnabled, competition, onOpenCompetition, editionNav, onOpenTournament,
 }: Props) {
   const tabs = buildPublicTabs({ showBracket, tipsEnabled, sponsorsEnabled, mediaEnabled })
   const meta = [tournament?.subtitle, tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
@@ -87,10 +90,22 @@ export default function Header({
           <div className="hdr__title">
             <h1 className="hdr__name">{tournament?.name || BRAND.name}</h1>
             {competition ? (
-              <button type="button" className="hdr__comp" onClick={() => onOpenCompetition?.(competition.slug)} title="Historie soutěže">
-                {tournament?.edition ? `${tournament.edition}. ročník · ` : ''}{competition.name}
-                {tournament?.season_label ? ` · ${tournament.season_label}` : ''}
-              </button>
+              <div className="hdr__comp-row">
+                {editionNav?.prev && (
+                  <button type="button" className="hdr__ed" onClick={() => onOpenTournament?.(editionNav.prev!.id)} title={`Předchozí ročník: ${editionNav.prev.label}`} aria-label="Předchozí ročník">
+                    <ChevronLeft size={14} />
+                  </button>
+                )}
+                <button type="button" className="hdr__comp" onClick={() => onOpenCompetition?.(competition.slug)} title="Historie soutěže">
+                  {tournament?.edition ? `${tournament.edition}. ročník · ` : ''}{competition.name}
+                  {tournament?.season_label ? ` · ${tournament.season_label}` : ''}
+                </button>
+                {editionNav?.next && (
+                  <button type="button" className="hdr__ed" onClick={() => onOpenTournament?.(editionNav.next!.id)} title={`Další ročník: ${editionNav.next.label}`} aria-label="Další ročník">
+                    <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
             ) : meta && <div className="hdr__meta">{meta}</div>}
           </div>
 

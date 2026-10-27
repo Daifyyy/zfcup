@@ -11,6 +11,11 @@ export function tournamentAssetPath(tournamentId: string, kind: 'teams' | 'spons
   return `tournaments/${tournamentId}/${kind}/${id}.${ext}`
 }
 
+/** Logo klubu z knihovny: `clubs/{clubId}/logo.{ext}` (RLS: vlastník klubu, migrace 13). */
+export function clubAssetPath(clubId: string, ext: 'png' | 'jpg'): string {
+  return `clubs/${clubId}/logo.${ext}`
+}
+
 /** Z veřejné URL souboru (…/team-logos/{cesta}?v=…) vrátí cestu v bucketu, jinak null. */
 export function storagePathFromUrl(url: string | null | undefined): string | null {
   if (!url) return null

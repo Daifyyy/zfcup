@@ -6,11 +6,12 @@ import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import { TEAM_COLORS } from '../../../lib/constants'
 import ImportTeamsModal from '../ImportTeamsModal'
+import { LibraryPicker, SaveToLibraryButton, useOwnerLibrary } from './TeamsLibrary'
 
 interface Props {
   teams: Team[]
   players: Player[]
-  tournament: { id: string } | null
+  tournament: { id: string; owner_id?: string | null } | null
   refetchTeams: () => void
   refetchPlayers: () => void
   showToast: (msg: string) => void
@@ -284,6 +285,7 @@ export default function TeamsTab({ teams, players, tournament, refetchTeams, ref
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const lib = useOwnerLibrary(tournament?.owner_id)
 
   const addTeam = async () => {
     // Pole se vyprázdní hned — při rychlém zadávání se tak nepřepíše
@@ -353,6 +355,7 @@ export default function TeamsTab({ teams, players, tournament, refetchTeams, ref
         <div className="sub-title" style={{ margin: 0 }}>Týmy ({teams.length})</div>
         <button type="button" className="btn btn-s btn-sm" onClick={() => setShowImport(true)}>Import CSV/Excel</button>
       </div>
+      <LibraryPicker lib={lib} tournamentId={tournament?.id ?? ''} teams={teams} onAdded={() => { refetchTeams(); refetchPlayers() }} showToast={showToast} />
       <ImportTeamsModal
         open={showImport}
         existingTeams={teams}
@@ -411,6 +414,9 @@ export default function TeamsTab({ teams, players, tournament, refetchTeams, ref
                   <div style={{ padding: '0 .9rem .75rem' }}>
                     <LogoSection team={t} tournamentId={tournament?.id ?? ''} showToast={showToast} refetchTeams={refetchTeams} />
                     <RosterSection team={t} players={players} tournament={tournament} showToast={showToast} refetchPlayers={refetchPlayers} />
+                    {tournament?.owner_id && (
+                      <SaveToLibraryButton lib={lib} ownerId={tournament.owner_id} team={t} players={players} onSaved={() => { refetchTeams(); refetchPlayers() }} showToast={showToast} />
+                    )}
                   </div>
                 )}
               </div>

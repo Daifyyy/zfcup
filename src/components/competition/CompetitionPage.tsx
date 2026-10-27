@@ -183,14 +183,24 @@ export default function CompetitionPage({ slug, onOpenTournament, onHome }: Prop
                       </tr>
                     </thead>
                     <tbody>
-                      {table.map((r, i) => (
+                      {table.map((r, i) => {
+                        // Profil klubu (migrace 13: klub má slug)
+                        const clubSlug = r.key.startsWith('club:') ? (h.clubs.find(c => c.id === r.key.slice(5)) as { slug?: string | null } | undefined)?.slug : null
+                        const name = (
+                          <>
+                            <TeamLogo team={{ name: r.name, color: r.color, logo_url: r.logo_url }} size={28} />
+                            <span className="standings-name" style={{ fontWeight: 600 }}>{r.name}</span>
+                          </>
+                        )
+                        return (
                         <tr key={r.key}>
                           <td className="is-muted" style={{ fontWeight: 700 }}>{i + 1}</td>
                           <td className="is-left">
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '.55rem' }}>
-                              <TeamLogo team={{ name: r.name, color: r.color, logo_url: r.logo_url }} size={28} />
-                              <span className="standings-name" style={{ fontWeight: 600 }}>{r.name}</span>
-                            </span>
+                            {clubSlug ? (
+                              <a className="ui-teamlink" href={`/k/${clubSlug}`} title="Profil klubu" style={{ gap: '.55rem' }}>{name}</a>
+                            ) : (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '.55rem' }}>{name}</span>
+                            )}
                           </td>
                           <td className="is-muted">{r.editions}</td>
                           <td style={{ fontWeight: 700, color: r.titles ? 'var(--gold)' : 'var(--ink-faint)' }}>{r.titles || '–'}</td>
@@ -203,7 +213,8 @@ export default function CompetitionPage({ slug, onOpenTournament, onHome }: Prop
                           <td className="is-muted">{r.gf}:{r.ga}</td>
                           <td><span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--fs-pts)', fontWeight: 800 }}>{r.pts}</span></td>
                         </tr>
-                      ))}
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>

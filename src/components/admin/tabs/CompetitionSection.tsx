@@ -7,6 +7,7 @@ import { useCompetitions, useCompetitionEditions, type Club } from '../../../hoo
 import { useAuthRole } from '../../../hooks/useAuthRole'
 import { carryOverTeams, ensureIdentities, nextEditionNumber, slugify } from '../../../lib/editions'
 import { normalizeName } from '../../../lib/history'
+import { libraryAvailable } from '../../../lib/clubs'
 
 interface Props {
   tournament: Tournament | null
@@ -62,10 +63,15 @@ export default function CompetitionSection({ tournament, teams, refetchTournamen
 
   async function loadClubs() {
     if (!competitionId) { setClubs([]); return }
-    const { data, error } = await supabase.from('clubs').select('*').eq('competition_id', competitionId).order('name')
+    // S knihovnou (migrace 13) i kluby organizátora, jinak jen kluby soutěže
+    const ownerId = tournament?.owner_id
+    const q = supabase.from('clubs').select('*')
+    const { data, error } = ownerId && await libraryAvailable()
+      ? await q.or(`competition_id.eq.${competitionId},owner_id.eq.${ownerId}`).order('name')
+      : await q.eq('competition_id', competitionId).order('name')
     if (!error) setClubs((data ?? []) as Club[])
   }
-  useEffect(() => { loadClubs() }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadClubs() }, [competitionId, tournament?.owner_id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setPairing(Object.fromEntries(teams.map(t => [t.id, t.club_id ?? ''])))
@@ -142,10 +148,13 @@ export default function CompetitionSection({ tournament, teams, refetchTournamen
 
   const savePairing = () => run('pair', async () => {
     const changed = teams.filter(t => (pairing[t.id] ?? '') !== (t.club_id ?? '') && pairing[t.id])
-    for (const t of changed) {
-      const { error } = await supabase.from('teams').update({ club_id: pairing[t.id] }).eq('id', t.id)
+    // Jeden UPDATE na klub místo jednoho na tým
+    const byClub = new Map<string, string[]>()
+    for (const t of changed) byClub.set(pairing[t.id], [...(byClub.get(pairing[t.id]) ?? []), t.id])
+    await Promise.all([...byClub].map(async ([clubId, ids]) => {
+      const { error } = await supabase.from('teams').update({ club_id: clubId }).in('id', ids)
       if (error) throw new Error(error.message)
-    }
+    }))
     refetchTeams(); showToast(changed.length ? `Spárováno ${changed.length} týmů` : 'Beze změn')
   })
 

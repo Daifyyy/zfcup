@@ -19,6 +19,7 @@ Spouštět v pořadí v **Supabase SQL Editoru**:
 10. `10_realtime_publication.sql` — Tabulky do publikace `supabase_realtime` (bez toho nechodí živé změny)
 11. `11_roles_security.sql` — Správce platformy, organizátoři (owner_id), RLS podle vlastníka, platform_settings
 12. `12_tournament_indexes.sql` — Indexy `tournament_id` na všech tabulkách + chybějící indexy cizích klíčů
+13. `13_clubs_library.sql` — Knihovna klubů organizátora: `clubs`/`persons` s `owner_id`, `clubs.slug` (stránka `/k/{slug}`), soupiska v knihovně (`persons.club_id/number/role`), RLS podle vlastníka, Storage `clubs/{id}/…`
 
 ## Použití (existující DB — upgrade)
 

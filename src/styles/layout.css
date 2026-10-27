@@ -259,3 +259,24 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .hdr__comp:hover { color: #fff; text-decoration: underline; }
+
+/* Admin → Týmy: knihovna klubů */
+.tl-lib { margin-bottom: .75rem; }
+.tl-lib__box { margin-top: .5rem; padding: .75rem; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.tl-lib__hint { font-size: .76rem; color: var(--ink-muted); margin: 0; }
+.tl-lib__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; max-height: 320px; overflow-y: auto; }
+.tl-lib__list li { display: flex; align-items: center; gap: .55rem; padding: .35rem .5rem; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius); }
+.tl-lib__name { font-weight: 600; font-size: .85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-lib__meta { flex: 1; font-size: .7rem; color: var(--ink-muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-save { display: flex; align-items: center; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; margin-top: .6rem; }
+.tl-save__ok { display: inline-flex; align-items: center; gap: .25rem; font-size: .72rem; font-weight: 600; color: var(--win); }
+
+/* Navigace mezi ročníky soutěže v hlavičce */
+.hdr__comp-row { display: flex; align-items: center; gap: .15rem; min-width: 0; margin-top: 2px; }
+.hdr__comp-row .hdr__comp { margin-top: 0; min-width: 0; }
+.hdr__ed {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 18px; padding: 0;
+  background: var(--chrome-line); border: none; border-radius: var(--radius-sm); color: #7aa7ff; cursor: pointer;
+}
+.hdr__ed:hover { color: #fff; background: rgba(255,255,255,.16); }
+.hdr__ed:focus-visible { outline: 2px solid #7aa7ff; outline-offset: 1px; }

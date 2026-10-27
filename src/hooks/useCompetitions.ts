@@ -70,6 +70,8 @@ export function useCompetitionEditions(competitionId: string) {
     }
     fetchRef.current = fetch
     fetch()
+    // Bez soutěže žádný odběr (prázdný filtr by poslouchal nesmysl)
+    if (!competitionId) return
     const unsub = subscribeTable('tournament', () => fetchRef.current(), `competition_id=eq.${competitionId}`)
     return () => unsub()
   }, [competitionId])

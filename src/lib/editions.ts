@@ -2,6 +2,7 @@
 // Vyžaduje migraci 09 (tabulky clubs, persons; sloupce teams.club_id, players.person_id).
 import { supabase } from './supabase'
 import { normalizeName } from './history'
+import { libraryAvailable, uniqueClubSlug } from './clubs'
 
 interface TeamRow { id: string; name: string; color: string; logo_url: string | null; club_id: string | null }
 interface PlayerRow { id: string; team_id: string; name: string; number: number | null; role: string | null; avatar_url: string | null; person_id: string | null }
@@ -20,15 +21,27 @@ async function inChunks<T>(items: T[], fn: (item: T) => PromiseLike<{ error: { m
 
 /**
  * Zajistí, že všechny týmy a hráči turnaje mají identitu v soutěži.
+ * S migrací 13 se kluby hledají v knihovně organizátora (vlastník turnaje), nové kluby a osoby
+ * se zakládají rovnou do knihovny; bez ní jen v rámci soutěže.
  * Tým bez club_id → existující klub se stejným (normalizovaným) jménem, jinak nový klub.
  * Hráč bez person_id → osoba se stejným jménem, která už hrála za tentýž klub, jinak nová osoba.
  * Vrací počty nově založených klubů/osob.
  */
 export async function ensureIdentities(tournamentId: string, competitionId: string): Promise<{ clubs: number; persons: number }> {
+  const library = await libraryAvailable()
+  let ownerId: string | null = null
+  if (library) {
+    const { data: t } = await supabase.from('tournament').select('owner_id').eq('id', tournamentId).maybeSingle()
+    ownerId = (t?.owner_id as string | null) ?? null
+  }
+  const byOwner = library && !!ownerId
+  const clubsQuery = byOwner
+    ? supabase.from('clubs').select('id,name').eq('owner_id', ownerId!)
+    : supabase.from('clubs').select('id,name').eq('competition_id', competitionId)
   const [{ data: teams, error: tErr }, { data: players, error: pErr }, { data: clubs, error: cErr }] = await Promise.all([
     supabase.from('teams').select('id,name,color,logo_url,club_id').eq('tournament_id', tournamentId),
     supabase.from('players').select('id,team_id,name,number,role,avatar_url,person_id').eq('tournament_id', tournamentId),
-    supabase.from('clubs').select('id,name').eq('competition_id', competitionId),
+    clubsQuery,
   ])
   if (tErr) throw new Error(tErr.message)
   if (pErr) throw new Error(pErr.message)
@@ -43,7 +56,10 @@ export async function ensureIdentities(tournamentId: string, competitionId: stri
     let clubId = clubByName.get(normalizeName(t.name))
     if (!clubId) {
       const { data: c, error } = await supabase.from('clubs')
-        .insert({ competition_id: competitionId, name: t.name, color: t.color, logo_url: t.logo_url })
+        .insert({
+          competition_id: competitionId, name: t.name, color: t.color, logo_url: t.logo_url,
+          ...(byOwner ? { owner_id: ownerId, slug: await uniqueClubSlug(t.name) } : {}),
+        })
         .select('id').single()
       if (error) throw new Error(error.message)
       clubId = c.id as string
@@ -58,6 +74,11 @@ export async function ensureIdentities(tournamentId: string, competitionId: stri
   // Osoby, které už v soutěži hrály, indexované podle klubu + jména
   const clubIds = [...new Set(teamClub.values())]
   const personByClubName = new Map<string, string>()
+  if (clubIds.length && byOwner) {
+    // Knihovna: osoby klubu (soupiska klubu)
+    const { data: libPersons } = await supabase.from('persons').select('id,name,club_id').in('club_id', clubIds)
+    for (const p of libPersons ?? []) personByClubName.set(`${p.club_id}|${normalizeName(p.name)}`, p.id as string)
+  }
   if (clubIds.length) {
     const { data: linkedTeams } = await supabase.from('teams').select('id,club_id').in('club_id', clubIds)
     const linkedTeamIds = (linkedTeams ?? []).map(t => t.id)
@@ -65,7 +86,8 @@ export async function ensureIdentities(tournamentId: string, competitionId: stri
     if (linkedTeamIds.length) {
       const { data: linkedPlayers } = await supabase.from('players').select('team_id,name,person_id').in('team_id', linkedTeamIds).not('person_id', 'is', null)
       for (const p of linkedPlayers ?? []) {
-        personByClubName.set(`${clubOfTeam.get(p.team_id)}|${normalizeName(p.name)}`, p.person_id as string)
+        const k = `${clubOfTeam.get(p.team_id)}|${normalizeName(p.name)}`
+        if (!personByClubName.has(k)) personByClubName.set(k, p.person_id as string)
       }
     }
   }
@@ -79,7 +101,10 @@ export async function ensureIdentities(tournamentId: string, competitionId: stri
     let personId = personByClubName.get(k)
     if (!personId) {
       const { data: person, error } = await supabase.from('persons')
-        .insert({ competition_id: competitionId, name: p.name, avatar_url: p.avatar_url })
+        .insert({
+          competition_id: competitionId, name: p.name, avatar_url: p.avatar_url,
+          ...(byOwner ? { owner_id: ownerId, club_id: club ?? null, number: p.number, role: p.role } : {}),
+        })
         .select('id').single()
       if (error) throw new Error(error.message)
       personId = (person as PersonRow).id

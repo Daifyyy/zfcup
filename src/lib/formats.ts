@@ -88,6 +88,12 @@ export const TOURNAMENT_FORMATS: TournamentFormatDef[] = [
   formatRO16Def,
 ]
 
+/** Formáty, které dávají smysl pro režim rozpisu. Sezóna (kola v různé dny) = jen ligové formáty. */
+export function formatsForScheduleMode(mode: string | null | undefined): TournamentFormatDef[] {
+  if (mode === 'season') return TOURNAMENT_FORMATS.filter(f => f.groupConfig.tournamentFormat === 'league')
+  return TOURNAMENT_FORMATS
+}
+
 export function getFormatDef(formatId: string): TournamentFormatDef | undefined {
   if (!formatId) return undefined
   return TOURNAMENT_FORMATS.find(f => f.id === formatId)

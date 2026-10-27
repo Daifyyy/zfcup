@@ -18,7 +18,7 @@ import { useAnnouncements } from './hooks/useAnnouncements'
 import { useRuleItems } from './hooks/useRuleItems'
 import { useReferees } from './hooks/useReferees'
 import { useSponsors } from './hooks/useSponsors'
-import { useCompetitions } from './hooks/useCompetitions'
+import { useCompetitions, useCompetitionEditions } from './hooks/useCompetitions'
 import { useAuthRole } from './hooks/useAuthRole'
 import { usePlatformSettings } from './hooks/usePlatformSettings'
 import { TournamentProvider } from './lib/TournamentContext'
@@ -54,6 +54,7 @@ const AdminPanel = lazyComponent(() => import('./components/admin/AdminPanel'))
 const KioskMode = lazyComponent(() => import('./components/kiosk/KioskMode'))
 const Scoreboard = lazyComponent(() => import('./components/public/Scoreboard'))
 const CompetitionPage = lazyComponent(() => import('./components/competition/CompetitionPage'))
+const ClubPage = lazyComponent(() => import('./components/club/ClubPage'))
 
 function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
   const img = sponsor.logo_url ? (
@@ -73,7 +74,7 @@ function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
 // E.g. /abc123 → 'abc123'; / → ''
 function detectTournamentIdFromUrl(): string {
   const segments = window.location.pathname.split('/').filter(Boolean)
-  if (segments[0] === 's') return ''
+  if (segments[0] === 's' || segments[0] === 'k') return ''
   return segments[0] ?? ''
 }
 
@@ -83,12 +84,19 @@ function detectCompetitionSlugFromUrl(): string {
   return segments[0] === 's' ? (segments[1] ?? '') : ''
 }
 
+// /k/{slug} → stránka klubu
+function detectClubSlugFromUrl(): string {
+  const segments = window.location.pathname.split('/').filter(Boolean)
+  return segments[0] === 'k' ? (segments[1] ?? '') : ''
+}
+
 export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'statistics' | 'bracket' | 'info' | 'rules' | 'tips' | 'sponsors' | 'media'
 const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'statistics', 'bracket', 'info', 'rules', 'tips', 'sponsors', 'media']
 
 export default function App() {
   const [tournamentId, setTournamentId] = useState<string>(() => detectTournamentIdFromUrl())
   const [competitionSlug, setCompetitionSlug] = useState<string>(() => detectCompetitionSlugFromUrl())
+  const [clubSlug, setClubSlug] = useState<string>(() => detectClubSlugFromUrl())
   const [tab, setTab] = useState<Tab>('overview')
   const [adminOpen, setAdminOpen] = useState(false)
   const [kiosk, setKiosk] = useState(() => new URLSearchParams(window.location.search).get('kiosk') === '1')
@@ -119,6 +127,7 @@ export default function App() {
   const { referees, refetch: refetchReferees } = useReferees(tournamentId)
   const { sponsors, refetch: refetchSponsors } = useSponsors(tournamentId)
   const { competitions } = useCompetitions()
+  const { editions: competitionEditions } = useCompetitionEditions(tournament?.id === tournamentId ? (tournament?.competition_id ?? '') : '')
   const { session, isPlatformAdmin, canEditTournament } = useAuthRole()
   const platform = usePlatformSettings()
   // Organizátor spravuje jen své turnaje, správce platformy všechny
@@ -167,6 +176,7 @@ export default function App() {
     const handlePopstate = (e: PopStateEvent) => {
       setTournamentId(detectTournamentIdFromUrl())
       setCompetitionSlug(detectCompetitionSlugFromUrl())
+      setClubSlug(detectClubSlugFromUrl())
       const prev = e.state?.tab as Tab | undefined
       setTab(prev && VALID_TABS.includes(prev) ? prev : 'overview')
     }
@@ -211,6 +221,17 @@ export default function App() {
   const sponsorsEnabled = tournament?.sponsors_enabled ?? false
   const mediaEnabled = tournament?.press_enabled ?? false
   const currentCompetition = competitions.find(c => c.id === tournament?.competition_id) ?? null
+  // Předchozí / další ročník soutěže (podle čísla ročníku)
+  const editionNav = (() => {
+    const eds = competitionEditions.filter(e => e.edition != null).sort((a, b) => (a.edition ?? 0) - (b.edition ?? 0))
+    const i = eds.findIndex(e => e.id === tournament?.id)
+    if (i < 0) return undefined
+    const label = (e: (typeof eds)[number]) => `${e.edition}. ročník · ${e.name}`
+    return {
+      prev: i > 0 ? { id: eds[i - 1].id, label: label(eds[i - 1]) } : undefined,
+      next: i < eds.length - 1 ? { id: eds[i + 1].id, label: label(eds[i + 1]) } : undefined,
+    }
+  })()
   // Partneři seřazení podle úrovně; generální partner = „presented by“
   const sortedSponsors = sortByTier(sponsors)
   const presentedBy = sponsorsEnabled ? getTitlePartner(sponsors) : null
@@ -221,6 +242,7 @@ export default function App() {
   const openTournament = useCallback((id: string) => {
     setTab('overview')
     setCompetitionSlug('')
+    setClubSlug('')
     setTournamentId(id)
   }, [])
 
@@ -233,7 +255,23 @@ export default function App() {
   const openCompetition = (slug: string) => {
     window.history.pushState({}, '', `/s/${slug}`)
     setTournamentId('')
+    setClubSlug('')
     setCompetitionSlug(slug)
+  }
+
+  if (clubSlug) {
+    return (
+      <TournamentProvider tournamentId="">
+        <ClubPage
+          slug={clubSlug}
+          onHome={goHome}
+          onOpenTournament={id => {
+            window.history.pushState({ tournamentId: id }, '', `/${id}`)
+            openTournament(id)
+          }}
+        />
+      </TournamentProvider>
+    )
   }
 
   if (competitionSlug) {
@@ -320,6 +358,11 @@ export default function App() {
         mediaEnabled={mediaEnabled}
         competition={currentCompetition}
         onOpenCompetition={openCompetition}
+        editionNav={editionNav}
+        onOpenTournament={id => {
+          window.history.pushState({ tournamentId: id }, '', `/${id}`)
+          openTournament(id)
+        }}
       />
       {sponsorsEnabled && sponsors.length > 0 && (
         <aside className="sponsor-sidebar" style={{ position: 'fixed', left: 0, top: HEADER_HEIGHT_DESKTOP + 8, bottom: 0, width: 130, flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem', overflowY: 'auto' }}>

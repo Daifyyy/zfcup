@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
-import { TOURNAMENT_FORMATS, getFormatDef, formatColumns } from '../../../lib/formats'
+import { formatsForScheduleMode, getFormatDef, formatColumns } from '../../../lib/formats'
 import { getSportDef } from '../../../lib/sports'
 import BrandingSection from './BrandingSection'
 import CompetitionSection from './CompetitionSection'
@@ -188,7 +188,10 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       {/* ── Format Picker ─────────────────────────────────────────────────── */}
       <div className="sub-title">Formát turnaje</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '.45rem', marginBottom: '1rem' }}>
-        {TOURNAMENT_FORMATS.map(def => {
+        {tournament?.schedule_mode === 'season' && (
+          <div style={{ fontSize: '.75rem', color: 'var(--ink-muted)' }}>Sezóna se hraje jako liga po kolech — nabízíme jen ligové formáty.</div>
+        )}
+        {formatsForScheduleMode(tournament?.schedule_mode).map(def => {
           const isSelected = tournament?.format_id === def.id ||
             (!tournament?.format_id && (() => {
               if (def.id === 'league' && tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true)) return true

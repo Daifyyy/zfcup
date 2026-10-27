@@ -7,10 +7,13 @@ import { useAuthRole } from '../hooks/useAuthRole'
 import { usePlatformSettings } from '../hooks/usePlatformSettings'
 import { carryOverTeams, lastEdition, nextEditionNumber } from '../lib/editions'
 import { formatColumns, getFormatDef } from '../lib/formats'
+import { lazyComponent } from '../lib/lazyComponent'
 import {
-  ArrowRight, CalendarDays, ChevronRight, GitBranch, Handshake, Lock, LogOut, MapPin, MonitorPlay,
+  ArrowRight, CalendarDays, Shield, ChevronRight, GitBranch, Handshake, Lock, LogOut, MapPin, MonitorPlay,
   Newspaper, Plus, Radio, Settings2, Share2, Smartphone, Target, Trophy,
 } from 'lucide-react'
+
+const ClubLibrary = lazyComponent(() => import('./clubs/ClubLibrary'))
 
 interface TournamentSummary {
   id: string
@@ -48,6 +51,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
   const { session, userId, isPlatformAdmin, canEditTournament } = useAuthRole()
   const platform = usePlatformSettings()
   const [showPlatform, setShowPlatform] = useState(false)
+  const [showClubs, setShowClubs] = useState(false)
   const [platformSaving, setPlatformSaving] = useState(false)
   const [platformError, setPlatformError] = useState('')
   // Do soutěže smí přidat ročník jen její vlastník (nebo správce platformy)
@@ -213,6 +217,9 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
                     <Settings2 size={15} /><span className="hide-mobile">Platforma</span>
                   </button>
                 )}
+                <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={() => setShowClubs(true)}>
+                  <Shield size={15} /><span className="hide-mobile">Moje kluby</span>
+                </button>
                 <button type="button" className="ui-btn ui-btn--primary ui-btn--sm" onClick={() => { setShowCreate(true); setCreateError('') }}>
                   <Plus size={15} />Nový turnaj
                 </button>
@@ -451,6 +458,9 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
           </div>
         </div>
       )}
+
+      {/* ── Knihovna klubů organizátora ─────────────── */}
+      {showClubs && session && <ClubLibrary ownerId={session.user.id} onClose={() => setShowClubs(false)} />}
 
       {/* ── Přihlášení ─────────────────────────────── */}
       {showLogin && (

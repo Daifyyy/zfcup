@@ -36,6 +36,12 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 - **Sezónní režim** `tournament.schedule_mode = 'season'` (volí se při založení, pak read-only): zápasy mají `match_date`; rozpis `generateSeasonSchedule()` (`src/lib/leagueSchedule.ts`: Berger + Eulerova orientace doma/venku, 1×/2×); `round = 'N. kolo'` (`roundNumber()` pro řazení). `match_date` posílat do DB **jen v sezónním režimu** (bez migrace sloupec chybí).
 - **Datum v logice**: `getMatchState`/`matchDay` (`src/lib/matchState.ts`), zámek tipů `isMatchTimePassed(time, lockFromDate, matchDate)`, TV tabule/kiosk ukazují aktuální kolo (`currentSeasonRound` v `src/lib/fixtures.ts`), formátování `src/lib/dates.ts`.
 
+## Knihovna klubů (migrace 13)
+- `clubs`/`persons` patří **organizátorovi** (`owner_id`), `competition_id` je nepovinné; `clubs.slug` globálně unikátní → veřejná stránka `/k/{slug}` (`ClubPage`, `useClubPage`, výpočty `src/lib/clubHistory.ts`). Soupiska klubu = `persons.club_id` (+ `number`, `role`).
+- `src/lib/clubs.ts`: `libraryAvailable()` (bez migrace → knihovna skrytá), `addClubToTournament`, `saveTeamToLibrary`, `mergeClubs`. `ensureIdentities` s migrací páruje kluby v knihovně vlastníka turnaje.
+- UI: úvodní stránka → „Moje kluby“ (`ClubLibrary`), Admin → Týmy → „Přidat z knihovny“ / „Uložit do knihovny“. Logo klubu ve Storage `clubs/{clubId}/logo.{png|jpg}`.
+- Sezónní režim nabízí jen ligové formáty (`formatsForScheduleMode`).
+
 ## Multi-tenant architektura
 Každá datová tabulka má `tournament_id UUID NOT NULL FK → tournament(id)`. Viz `db-backup/05_migrations.sql`.
 

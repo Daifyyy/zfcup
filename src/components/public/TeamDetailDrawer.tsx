@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ExternalLink, X } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 import { TeamLogo } from '../ui/TeamLogo'
 import { CardChip } from '../ui/CardChip'
 import { MatchRow } from '../ui/MatchRow'
@@ -49,6 +50,18 @@ export default function TeamDetailDrawer({ teamId, onClose }: { teamId: string; 
   const teamById = useMemo(() => new Map(teams.map(t => [t.id, t])), [teams])
   const stats = useMemo(() => playerStats(data, flags), [data, flags.assists, flags.cards, flags.penalties])
   const fixtures = useMemo(() => teamFixtures(data, teamId), [data, teamId])
+  const clubId = teams.find(t => t.id === teamId)?.club_id ?? null
+  const [clubSlug, setClubSlug] = useState<string | null>(null)
+  // Profil klubu /k/{slug} — jen pokud je tým propojený s klubem (slug až s migrací 13)
+  useEffect(() => {
+    setClubSlug(null)
+    if (!clubId) return
+    let cancelled = false
+    supabase.from('clubs').select('slug').eq('id', clubId).maybeSingle().then(({ data: c, error }) => {
+      if (!cancelled && !error) setClubSlug((c?.slug as string | null) ?? null)
+    })
+    return () => { cancelled = true }
+  }, [clubId])
 
   const team = teamById.get(teamId)
   if (!team) {
@@ -74,7 +87,10 @@ export default function TeamDetailDrawer({ teamId, onClose }: { teamId: string; 
           <TeamLogo team={team} size={64} radius={8} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="tm-drawer__name">{team.name}</div>
-            <div className="tm-drawer__meta">{playersLabel(roster.length)}</div>
+            <div className="tm-drawer__meta">
+              {playersLabel(roster.length)}
+              {clubSlug && <> · <a className="tm-drawer__club" href={`/k/${clubSlug}`}>Profil klubu<ExternalLink size={12} /></a></>}
+            </div>
           </div>
           <button type="button" className="tm-drawer__close" onClick={onClose} aria-label="Zavřít"><X size={20} /></button>
         </header>

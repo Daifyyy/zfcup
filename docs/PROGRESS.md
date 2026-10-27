@@ -10,7 +10,7 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; **Fáze 4 hotová a ověřená v prohlížeči (čeká na commit)**
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); **Fáze 5 hotová a ověřená (čeká na commit)**
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
 **DB migrace:** 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
@@ -58,8 +58,18 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Úpravy po ověření: prázdný průběh = jen hláška · u jednodenního turnaje datum turnaje · u odehraného zápasu bez času nic místo „Termín upřesníme“ · „1 hráč / 2 hráči / 5 hráčů“.
 - Neověřeno: tlačítko Zpět na fyzickém Androidu, kopírování odkazu do schránky (na http bez schránky se ukáže pole s odkazem).
 
+### Fáze 5 — knihovna klubů (2026-10-27)
+- **Migrace 13** `db-backup/13_clubs_library.sql` (**spuštěná uživatelem 2026-10-27**; 6 klubů QA soutěže dostalo slug a vlastníka): `clubs`/`persons` + `owner_id` (doplněno z vlastníka soutěže), `clubs.slug` (doplněn, unikátní), `persons.club_id/number/role` (doplněno z posledního ročníku), `competition_id` nepovinné, RLS `can_edit_library`, Storage `clubs/{id}/…`, realtime.
+- `src/lib/clubs.ts` (knihovna), `ensureIdentities` páruje v knihovně vlastníka turnaje, párování v soutěži nabízí i kluby organizátora, `savePairing` bez N+1.
+- UI: úvodní stránka → „Moje kluby“ (založit, upravit název/barvu/logo, soupiska, sloučit duplicity, smazat — potvrzení dvojklikem, ne `confirm()`); Admin → Týmy → „Přidat z knihovny“ (tým + soupiska jedním klikem) a „Uložit do knihovny“ u týmu; veřejná stránka klubu `/k/{slug}` (turnaje a umístění, vzájemné zápasy, nejlepší hráči, soupiska); odkazy z detailu týmu a věčné tabulky.
+- Sezónní režim nabízí jen ligové formáty (`formatsForScheduleMode`).
+- Ověřeno: 91 testů (+6 `clubHistory`, +1 formáty), typová kontrola 63, build; v prohlížeči bez migrace — knihovna hlásí migraci, `/k/…` „není aktivní“, zbytek beze změny.
+- Navigace mezi ročníky v hlavičce turnaje (‹ ›), `useCompetitionEditions` bez prázdného realtime odběru.
+- **Ověřeno v prohlížeči po migraci** (na dočasném „QA Klub (test)“, po testu smazán i s týmem v Testovacím turnaji): založení klubu, soupiska (číslo, role), sloučení duplicity (jmenovec spojen, druhý hráč přesunut), Admin → Týmy → Přidat z knihovny (tým + 3 hráči s person_id), Aktualizovat soupisku v knihovně (nový hráč, 4/4 propojeno), odkaz Profil klubu z detailu týmu i z věčné tabulky, `/k/hc-medvedi` (umístění, vzájemné zápasy — součty sedí), proklik na turnaj a Zpět, mobil 375 px, šipky ročníků.
+- **RLS ověřeno** jako nepřihlášený: úprava/smazání klubu a osob = 0 řádků, založení klubu odmítnuto, čtení veřejné. Neověřeno: druhý přihlášený organizátor (nemáme testovací účet s heslem) — stejný mechanismus `owner_id = auth.uid()` jako u turnajů (ověřeno ve Fázi 1).
+
 ### Kde navázat
-1. **Příště začít:** Fáze 5 — knihovna klubů (pokud Fáze 4 ještě není commitnutá/nasazená, nejdřív commit + push po souhlasu uživatele).
+1. **Příště začít:** Fáze 6 — design (TV, branding, oznámení; nahradit `confirm()`/`alert()` vlastními dialogy, Tabule u hokeje bez sloupce R a s VP).
 2. Před nasazením play-off v Cupu 2026 ověřit, že je nasazená oprava `groups_qf_full`.
 3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 

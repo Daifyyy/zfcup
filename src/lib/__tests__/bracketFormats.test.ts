@@ -175,3 +175,13 @@ describe.each(Object.entries(SETUP))('formát %s', (formatId, cfg) => {
     expect(champion).toBe('G0T0')
   })
 })
+
+describe('formatsForScheduleMode', () => {
+  it('sezóna nabízí jen ligové formáty, jednodenní turnaj všechny', async () => {
+    const { formatsForScheduleMode, TOURNAMENT_FORMATS: all } = await import('../formats')
+    const season = formatsForScheduleMode('season').map(f => f.id).sort()
+    expect(season).toEqual(['league', 'league_playoff', 'league_sf'])
+    expect(formatsForScheduleMode('day')).toHaveLength(all.length)
+    expect(formatsForScheduleMode(undefined)).toHaveLength(all.length)
+  })
+})
