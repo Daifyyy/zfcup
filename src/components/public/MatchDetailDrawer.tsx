@@ -81,7 +81,7 @@ function EventList({ side, align, scorersLabel }: { side: SideEvents; align: 'ho
 }
 
 /** Detail zápasu nebo play-off slotu: skóre, termín, hřiště, rozhodčí, střelci, asistence, karty, tresty. */
-export default function MatchDetailDrawer({ matchId, onClose }: { matchId: string; onClose: () => void }) {
+export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }: { matchId: string; onClose: () => void; /** Ukázka bez vlastní adresy → bez kopírování odkazu */ allowLink?: boolean }) {
   const data = useTournamentData()
   const { openTeam } = useDetail()
   const [copied, setCopied] = useState(false)
@@ -139,9 +139,11 @@ export default function MatchDetailDrawer({ matchId, onClose }: { matchId: strin
       <aside className="tm-drawer__panel" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <header className="tm-drawer__head md-head">
           <div className="md-head__label">{md.label || (md.kind === 'playoff' ? 'Play-off' : 'Zápas')}</div>
-          <button type="button" className="tm-drawer__close" onClick={copyLink} title="Zkopírovat odkaz na zápas" aria-label="Zkopírovat odkaz">
-            {copied ? <Check size={20} /> : <Link2 size={20} />}
-          </button>
+          {allowLink && (
+            <button type="button" className="tm-drawer__close" onClick={copyLink} title="Zkopírovat odkaz na zápas" aria-label="Zkopírovat odkaz">
+              {copied ? <Check size={20} /> : <Link2 size={20} />}
+            </button>
+          )}
           <button type="button" className="tm-drawer__close" onClick={onClose} aria-label="Zavřít"><X size={20} /></button>
         </header>
 

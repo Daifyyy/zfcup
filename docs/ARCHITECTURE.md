@@ -129,6 +129,8 @@ Jeden časovač na interval; skrytá karta = nic; návrat na kartu = všechny re
 
 **Kluby (Fáze 5)**: `clubs/ClubLibrary` (úvodní stránka → „Moje kluby“, jen přihlášený; líně), `club/ClubPage` (`/k/{slug}`, hook `useClubPage`), admin Týmy → `tabs/TeamsLibrary` (`LibraryPicker` „Přidat z knihovny“, `SaveToLibraryButton`). Odkazy na profil klubu: detail týmu, věčná tabulka soutěže.
 
+**Demo (Fáze 7)**: `src/demo/features.ts` (dlaždice funkcí na úvodní stránce), `src/demo/mockTournament.ts` (ukázkový turnaj v paměti), `src/demo/DemoModal.tsx` (líně; skutečné komponenty nad ukázkovými daty, detail zápasu uvnitř ukázky bez změny URL, TV/grafiky zmenšené přes `--tv-vw`).
+
 **TV (Fáze 6)**: `tv/tvTheme.ts` (`TV`, `TV_SIZE`, `fit`, `tvLogo`, `TV_ZONE`), `tv/FitBox.tsx`, `tv/TvGroupTable.tsx` — sdílí `Scoreboard` i `KioskMode`. Potvrzovací dialog `ui/ConfirmDialog.tsx` (`confirmDialog()` + `ConfirmHost` v `main.tsx`).
 
 Další veřejné: `Scoreboard` (TV tabule, paleta `C` natvrdo), `KioskMode` (TV, `kiosk/`), `PrintBulletin` (tisk), `AnnouncementCard`, `CompetitionPage` (`competition/`), `share/*` (sdílecí grafiky 1080×1080 / 1080×1920, `html-to-image`).

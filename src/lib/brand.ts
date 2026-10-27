@@ -3,5 +3,5 @@
 export const BRAND = {
   name: 'Turnajník',
   tagline: 'Profesionální platforma pro sportovní turnaje',
-  supportEmail: '',
+  supportEmail: 'denis.honzejk@gmail.com',
 } as const

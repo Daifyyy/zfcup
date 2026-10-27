@@ -10,9 +10,9 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); Fáze 6 nasazená (57898b6); **další: Fáze 7 (demo na úvodní stránce)**
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); Fáze 6 nasazená (57898b6); Fáze 7 nasazená; **další: Fáze 8 (právní rámec)**, pak Fáze 9 (registrace + obchodní model — čeká na rozhodnutí)
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
-**DB migrace:** 01–13 spuštěné, **14 (brand_style) čeká na spuštění uživatelem**; 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
+**DB migrace:** 01–14 spuštěné (14 = brand_style, spuštěná 2026-10-27); 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
 
 ### Fáze 0 — výsledek E2E testu (2026-10-27)
@@ -78,8 +78,16 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Ověřeno: typy 63, 99 testů, build (+30 kB / +8 kB gzip — ikony oznámení).
 - Zbývá do budoucna: Tabule se 4+ skupinami na Full HD je hustá (písmo ~72 %) — zvážit širší sloupec tabulek nebo střídání skupin.
 
+### Fáze 7 — demo na úvodní stránce (2026-10-27)
+- Dlaždice funkcí (`src/demo/features.ts`) jsou tlačítka „Ukázka“ → `DemoModal` (líně) se skutečnými komponentami nad ukázkovým turnajem `buildDemoData()` (8 týmů, 2 skupiny, semifinále, o 3. místo, finále živě; střelci, asistence, karty, partneři s SVG logy). Žádné dotazy do DB.
+- Ukázky: Živé výsledky (živé finále, výsledky, tabulka; klik → detail zápasu/týmu uvnitř ukázky, URL se nemění) · TV tabule (skutečná `Scoreboard` zmenšená) · Partneři (Presented by, stránka partnerů, lišta) · Grafiky (výsledek + tabulka) · Formáty (pavouk + 12 formátů) · Mediální servis · Mobil (detail zápasu v rámečku telefonu) · Tipovačka jen při globálně zapnuté tipovačce. Navigace Předchozí/Další, šipky, Esc.
+- `--tv-vw` v TV velikostech (ostrá TV beze změny, v ukázce 1 % virtuální 1920px plochy). Opraveno „Jedenáct formátů“ → „Dvanáct“.
+- Ověřeno v prohlížeči: desktop i mobil 390 px (bez přetečení), typy 63, 99 testů, build (DemoModal 5 kB gzip).
+- Tlačítko „Chci turnaj“ v ukázkách → `mailto:` na `BRAND.supportEmail` (vyplněno, e-mail správce platformy). Do budoucna zvážit kontaktní formulář (spam, GDPR — Fáze 8).
+
 ### Kde navázat
-1. **Příště začít:** Fáze 7 — demo na úvodní stránce (ověřit, zda uživatel spustil migraci 14).
+1. **Příště začít:** Fáze 8 — právní rámec (GDPR, podmínky, cookies) — nutné před vypnutím maintenance režimu. Na začátku si od uživatele vyžádat identitu provozovatele (jméno/firma, IČO, adresa, e-mail).
+2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.
 2. Před nasazením play-off v Cupu 2026 ověřit, že je nasazená oprava `groups_qf_full`.
 3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 

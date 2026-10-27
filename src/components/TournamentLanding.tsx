@@ -8,12 +8,13 @@ import { usePlatformSettings } from '../hooks/usePlatformSettings'
 import { carryOverTeams, lastEdition, nextEditionNumber } from '../lib/editions'
 import { formatColumns, getFormatDef } from '../lib/formats'
 import { lazyComponent } from '../lib/lazyComponent'
+import { FEATURES, type DemoKey } from '../demo/features'
 import {
-  ArrowRight, CalendarDays, Shield, ChevronRight, GitBranch, Handshake, Lock, LogOut, MapPin, MonitorPlay,
-  Newspaper, Plus, Radio, Settings2, Share2, Smartphone, Target, Trophy,
+  ArrowRight, CalendarDays, Shield, ChevronRight, Lock, LogOut, MapPin, Plus, Settings2, Trophy,
 } from 'lucide-react'
 
 const ClubLibrary = lazyComponent(() => import('./clubs/ClubLibrary'))
+const DemoModal = lazyComponent(() => import('../demo/DemoModal'))
 
 interface TournamentSummary {
   id: string
@@ -52,6 +53,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
   const platform = usePlatformSettings()
   const [showPlatform, setShowPlatform] = useState(false)
   const [showClubs, setShowClubs] = useState(false)
+  const [demo, setDemo] = useState<DemoKey | null>(null)
   const [platformSaving, setPlatformSaving] = useState(false)
   const [platformError, setPlatformError] = useState('')
   // Do soutěže smí přidat ročník jen její vlastník (nebo správce platformy)
@@ -297,23 +299,15 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
             <p>Od rozlosování po vyhlášení vítěze — bez tabulek v Excelu a bez instalace.</p>
           </div>
           <div className="lp-features">
-            {[
-              { icon: Radio, title: 'Živé výsledky', text: 'Výsledky, tabulky a střelci se aktualizují okamžitě na všech zařízeních.' },
-              { icon: MonitorPlay, title: 'TV tabule a kiosk', text: 'Broadcast obrazovka pro projektor v hale s hodinami, QR kódem a partnery.' },
-              { icon: Handshake, title: 'Partneři a branding', text: 'Úrovně partnerů, „presented by“, vlastní barvy turnaje a loga všude, kde to má smysl.' },
-              { icon: Share2, title: 'Grafiky na sociální sítě', text: 'Jedním klikem výsledek, tabulka nebo střelci jako hotový obrázek pro Instagram a Facebook.' },
-              { icon: GitBranch, title: 'Skupiny, liga i play-off', text: 'Jedenáct formátů turnaje, automatický rozpis, postup v pavouku a vyhodnocení.' },
-              ...(platform.tipsEnabled ? [{ icon: Target, title: 'Tipovačka', text: 'Hráči a fanoušci tipují výsledky — body se počítají automaticky.' }] : []),
-              { icon: Newspaper, title: 'Mediální servis', text: 'Kontakt pro novináře, loga ke stažení a výsledky v Excelu i k tisku.' },
-              { icon: Smartphone, title: 'Mobil na prvním místě', text: 'Funguje v každém prohlížeči, bez aplikace a bez registrace diváků.' },
-            ].map(f => {
+            {FEATURES.filter(f => f.key !== 'tips' || platform.tipsEnabled).map(f => {
               const Icon = f.icon
               return (
-                <div key={f.title} className="lp-feature">
+                <button key={f.key} type="button" className="lp-feature lp-feature--demo" onClick={() => setDemo(f.key)}>
                   <span className="lp-feature__icon"><Icon size={20} /></span>
                   <h3>{f.title}</h3>
                   <p>{f.text}</p>
-                </div>
+                  <span className="lp-feature__more">Ukázka<ChevronRight size={14} /></span>
+                </button>
               )
             })}
           </div>
@@ -458,6 +452,9 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
           </div>
         </div>
       )}
+
+      {/* ── Ukázka funkce (demo) ─────────────────────── */}
+      {demo && <DemoModal initial={demo} tipsEnabled={platform.tipsEnabled} onClose={() => setDemo(null)} />}
 
       {/* ── Knihovna klubů organizátora ─────────────── */}
       {showClubs && session && <ClubLibrary ownerId={session.user.id} onClose={() => setShowClubs(false)} />}

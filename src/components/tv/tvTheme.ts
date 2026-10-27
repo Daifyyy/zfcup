@@ -28,15 +28,16 @@ export const TV = {
 /**
  * Plynulé velikosti — rostou s šířkou obrazovky (Full HD i 4K díky vw, horní mez až pro 4K+).
  * Navrženo pro 1920×1080; na 3840×2160 je vše 2× větší.
+ * --tv-vw = 1 % šířky obrazovky (v ukázce na úvodní stránce = 1 % virtuální 1920px plochy).
  */
 export const TV_SIZE = {
-  title:   'clamp(1.4rem, 2.4vw, 6.4rem)',
-  section: 'clamp(.85rem, 1.2vw, 3.2rem)',
-  body:    'clamp(.72rem, 1.05vw, 2.8rem)',
-  small:   'clamp(.62rem, .85vw, 2.3rem)',
-  score:   'clamp(1rem, 1.55vw, 4.1rem)',
-  pts:     'clamp(.95rem, 1.4vw, 3.7rem)',
-  label:   'clamp(.56rem, .75vw, 2rem)',
+  title:   'clamp(1.4rem, calc(2.4 * var(--tv-vw, 1vw)), 6.4rem)',
+  section: 'clamp(.85rem, calc(1.2 * var(--tv-vw, 1vw)), 3.2rem)',
+  body:    'clamp(.72rem, calc(1.05 * var(--tv-vw, 1vw)), 2.8rem)',
+  small:   'clamp(.62rem, calc(.85 * var(--tv-vw, 1vw)), 2.3rem)',
+  score:   'clamp(1rem, calc(1.55 * var(--tv-vw, 1vw)), 4.1rem)',
+  pts:     'clamp(.95rem, calc(1.4 * var(--tv-vw, 1vw)), 3.7rem)',
+  label:   'clamp(.56rem, calc(.75 * var(--tv-vw, 1vw)), 2rem)',
 } as const
 
 /** Velikost respektující automatické zmenšení v FitBox (--tv-fit). */

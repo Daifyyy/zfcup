@@ -75,7 +75,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
               <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(m.home_id)}</span>
               <TeamLogo team={tt(m.home_id)} size={tvLogo(28)} />
             </div>
-            <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, 3.5vw, 5rem)' }}>
+            <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, calc(3.5 * var(--tv-vw, 1vw)), 5rem)' }}>
               {m.played
                 ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>{m.home_score}:{m.away_score}</span>
                 : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.muted, letterSpacing: '.06em' }}>VS</span>
@@ -193,7 +193,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                         <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? accentColor : C.muted, fontStyle: hT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(s.home_id)}</span>
                         {hT && <TeamLogo team={hT} size={tvLogo(28)} />}
                       </div>
-                      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
+                      <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, calc(4 * var(--tv-vw, 1vw)), 5.5rem)' }}>
                         {s.played
                           ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: accentColor, letterSpacing: '.06em', lineHeight: 1 }}>{s.home_score}:{s.away_score}</span>
                           : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.muted }}>VS</span>
