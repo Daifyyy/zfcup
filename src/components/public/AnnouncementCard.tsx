@@ -1,6 +1,7 @@
 import { PlayCircle } from 'lucide-react'
 import type { Announcement } from '../../hooks/useAnnouncements'
 import { sanitizeHtml } from '../../lib/sanitize'
+import { announcementIcon } from '../../lib/announcementIcons'
 
 export function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:v=|embed\/|youtu\.be\/)([A-Za-z0-9_-]{11})/)
@@ -51,11 +52,15 @@ export function AnnouncementCard({ a }: { a: Announcement }) {
     )
   }
 
+  const { Icon, label } = announcementIcon(a.icon)
   return (
     <article className="news-card news-card--text">
-      <div className="news-card__body">
-        <h3 className="news-card__title">{a.title}</h3>
-        {a.body && <div className="rich-content" dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.body) }} />}
+      <div className="news-card__body news-card__body--icon">
+        <span className="news-card__icon" title={label} aria-hidden="true"><Icon size={20} /></span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          {a.title && <h3 className="news-card__title">{a.title}</h3>}
+          {a.body && <div className="rich-content" dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.body) }} />}
+        </div>
       </div>
     </article>
   )

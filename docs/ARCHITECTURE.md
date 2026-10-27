@@ -129,6 +129,8 @@ Jeden časovač na interval; skrytá karta = nic; návrat na kartu = všechny re
 
 **Kluby (Fáze 5)**: `clubs/ClubLibrary` (úvodní stránka → „Moje kluby“, jen přihlášený; líně), `club/ClubPage` (`/k/{slug}`, hook `useClubPage`), admin Týmy → `tabs/TeamsLibrary` (`LibraryPicker` „Přidat z knihovny“, `SaveToLibraryButton`). Odkazy na profil klubu: detail týmu, věčná tabulka soutěže.
 
+**TV (Fáze 6)**: `tv/tvTheme.ts` (`TV`, `TV_SIZE`, `fit`, `tvLogo`, `TV_ZONE`), `tv/FitBox.tsx`, `tv/TvGroupTable.tsx` — sdílí `Scoreboard` i `KioskMode`. Potvrzovací dialog `ui/ConfirmDialog.tsx` (`confirmDialog()` + `ConfirmHost` v `main.tsx`).
+
 Další veřejné: `Scoreboard` (TV tabule, paleta `C` natvrdo), `KioskMode` (TV, `kiosk/`), `PrintBulletin` (tisk), `AnnouncementCard`, `CompetitionPage` (`competition/`), `share/*` (sdílecí grafiky 1080×1080 / 1080×1920, `html-to-image`).
 
 ### 5.2 Administrace (`src/components/admin/AdminPanel.tsx`, `ADMIN_NAV`)
@@ -184,6 +186,8 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `TournamentDataContext.tsx` | `TournamentData` (data turnaje pro detaily), `useTournamentData()`, `useDetail()` | — | App, DetailHost, drawery, Teams, Results, Overview, Standings, Bracket |
 | `clubs.ts` | knihovna klubů (migrace 13): `libraryAvailable`, `fetchLibrary`, `createClub`, `uniqueClubSlug`, `addClubToTournament`, `saveTeamToLibrary`, `mergeClubs` | supabase, history, editions | ClubLibrary, TeamsLibrary, editions, CompetitionSection |
 | `clubHistory.ts` | `clubSeasons` (umístění v turnajích), `clubTotals`, `headToHead`, `clubPlayers` | history, standings, sports | ClubPage |
+| `zones.ts` | `standingsZones` — pásma postupu podle formátu (SF/QF/play-off/útěcha/vítěz ligy) | formats | Standings, TvGroupTable |
+| `announcementIcons.tsx` | sada ikon oznámení, převod starých emoji | lucide | AnnouncementCard, AnnouncementsTab |
 | `details.ts` | `findMatchDetail` (zápas i slot, hřiště jako v Zápasech), `matchEvents`, `teamFixtures`, `teamRecord`, `playerStats`, `rosterOf` | fixtures, sports | drawery, Teams |
 | `lazyComponent.tsx` | líné načítání s fallbackem | — | App |
 
@@ -225,6 +229,6 @@ Nové soubory pod `tournaments/{turnajId}/…` (`lib/storage.ts`); starší cest
 - **Závislosti:** react 18, vite 6, typescript 5, tailwind 3, `@supabase/supabase-js` **2.49.1 (nepovyšovat)**, lucide-react, @tiptap, dompurify, html-to-image, qrcode.react, xlsx, @vercel/og, @fontsource (Barlow Condensed, Inter); dev: vitest 3.
 
 ## 9. Testy a kontroly
-- `npm test` — Vitest, `src/lib/__tests__/` (91 testů): `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
+- `npm test` — Vitest, `src/lib/__tests__/` (99 testů): `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
 - `npm run typecheck` — baseline 63 starších chyb, nové nesmí přibýt.
 - Chybí: testy `tipsEval.ts`, komponent a E2E automatizace (E2E se dělá ručně v Chromu).

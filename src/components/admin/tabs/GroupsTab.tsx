@@ -1,4 +1,6 @@
+import { Check } from 'lucide-react'
 import { useState, useMemo, useEffect } from 'react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { supabase } from '../../../lib/supabase'
 import type { Team } from '../../../hooks/useTeams'
 import type { Group } from '../../../hooks/useGroups'
@@ -124,9 +126,10 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
       if (!/^\d{4}-\d{2}-\d{2}$/.test(seasonFirstDate)) { showToast('Zadej datum 1. kola'); return }
       if (!/^\d{1,2}:\d{2}$/.test(seasonKickoff)) { showToast('Zadej čas začátku zápasů'); return }
     } else if (!/^\d{1,2}:\d{2}$/.test(leagueStart)) { showToast('Zadej čas začátku prvního zápasu'); return }
-    if (!confirm(leagueGroup
+    if (!await confirmDialog(leagueGroup
       ? `Smazat stávající ligový rozpis a vygenerovat nový pro ${leagueTeamIds.length} týmů?`
-      : `Vygenerovat ligový rozpis pro ${leagueTeamIds.length} týmů?`)) return
+      : `Vygenerovat ligový rozpis pro ${leagueTeamIds.length} týmů?`,
+      { title: 'Ligový rozpis', danger: !!leagueGroup, confirmLabel: leagueGroup ? 'Smazat a vygenerovat' : 'Vygenerovat' })) return
 
     setLeagueGenerating(true)
     try {
@@ -277,7 +280,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
   }
 
   const removeGroup = async (g: Group) => {
-    if (!confirm(`Smazat skupinu "${g.name}" a všechny její zápasy?`)) return
+    if (!await confirmDialog(`Smazat skupinu "${g.name}" a všechny její zápasy?`, { danger: true })) return
     // Delete matches FIRST — otherwise DB cascade sets group_id=null and we lose the filter
     await supabase.from('matches').delete().eq('group_id', g.id)
     const { error } = await supabase.from('groups').delete().eq('id', g.id)
@@ -328,7 +331,7 @@ export default function GroupsTab({ teams, groups, matches, tournament, refetchG
               ))}
             </div>
             {leagueTeamIds.length >= 2 && (
-              <div className="gen-preview">✓ {leaguePreview()}</div>
+              <div className="gen-preview"><Check size={14} style={{ verticalAlign: '-2px' }} /> {leaguePreview()}</div>
             )}
           </div>
 

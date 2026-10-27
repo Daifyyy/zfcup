@@ -7,7 +7,7 @@ export const ASSETS_BUCKET = 'team-logos'
  * Cesta souboru turnaje ve Storage: `tournaments/{turnajId}/{druh}/{id}.{ext}`.
  * Prefix turnaje umožňuje RLS ověřit, že nahrává jeho vlastník (migrace 11, can_edit_storage_path).
  */
-export function tournamentAssetPath(tournamentId: string, kind: 'teams' | 'sponsors' | 'players', id: string, ext: 'png' | 'jpg'): string {
+export function tournamentAssetPath(tournamentId: string, kind: 'teams' | 'sponsors' | 'players' | 'announcements', id: string, ext: 'png' | 'jpg' | 'webp'): string {
   return `tournaments/${tournamentId}/${kind}/${id}.${ext}`
 }
 

@@ -1,4 +1,5 @@
-import { Camera } from 'lucide-react'
+import { Camera, Check, ChevronUp, Pencil, Trash2, Users, X } from 'lucide-react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { useRef, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { removeAssetByUrl, storagePathFromUrl, tournamentAssetPath, uploadAsset } from '../../../lib/storage'
@@ -61,7 +62,7 @@ function LogoSection({ team, tournamentId, showToast, refetchTeams }: { team: Te
   }
 
   const removeLogo = async () => {
-    if (!confirm('Smazat logo?')) return
+    if (!await confirmDialog('Smazat logo?', { danger: true })) return
     const { error } = await supabase.from('teams').update({ logo_url: null }).eq('id', team.id)
     if (error) { showToast('Chyba: ' + error.message); return }
     await removeAssetByUrl(team.logo_url)
@@ -181,7 +182,7 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
   }
 
   const removePlayer = async (id: string) => {
-    if (!confirm('Smazat hráče?')) return
+    if (!await confirmDialog('Smazat hráče?', { danger: true })) return
     const { error } = await supabase.from('players').delete().eq('id', id)
     if (error) showToast('Chyba: ' + error.message)
     else { showToast('Smazáno'); refetchPlayers() }
@@ -220,8 +221,8 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
                         <option value="goalkeeper">Brankář (B)</option>
                         <option value="both">Kapitán + Brankář</option>
                       </select>
-                      <button type="button" className="btn btn-p btn-sm" onClick={saveEdit}>✓</button>
-                      <button type="button" className="btn btn-d btn-sm" onClick={() => setEditingId(null)}>✕</button>
+                      <button type="button" className="btn btn-p btn-sm" onClick={saveEdit} aria-label="Uložit" title="Uložit"><Check size={14} /></button>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => setEditingId(null)} aria-label="Zrušit" title="Zrušit"><X size={14} /></button>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                       {p.avatar_url
@@ -248,8 +249,8 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
                       <span className="a-item-main" style={{ fontSize: '.8rem' }}>{p.name}</span>
                       <RoleBadge role={p.role} />
                     </span>
-                    <button type="button" className="btn btn-s btn-sm" onClick={() => startEdit(p)}>✎</button>
-                    <button type="button" className="btn btn-d btn-sm" onClick={() => removePlayer(p.id)}>✕</button>
+                    <button type="button" className="btn btn-s btn-sm" onClick={() => startEdit(p)} aria-label="Upravit hráče" title="Upravit"><Pencil size={14} /></button>
+                    <button type="button" className="btn btn-d btn-sm" onClick={() => removePlayer(p.id)} aria-label="Smazat hráče" title="Smazat"><Trash2 size={14} /></button>
                   </div>
                 )}
               </div>
@@ -311,7 +312,7 @@ export default function TeamsTab({ teams, players, tournament, refetchTeams, ref
   }
 
   const removeTeam = async (id: string) => {
-    if (!confirm('Smazat tým? Smaže se i soupiska a přiřazené zápasy.')) return
+    if (!await confirmDialog('Smazat tým? Smaže se i soupiska a přiřazené zápasy.', { danger: true })) return
     const { error } = await supabase.from('teams').delete().eq('id', id)
     if (error) showToast('Chyba: ' + error.message)
     else { showToast('Tým smazán'); refetchTeams() }
@@ -397,14 +398,14 @@ export default function TeamsTab({ teams, players, tournament, refetchTeams, ref
                   )}
                   {isEditing ? (
                     <>
-                      <button type="button" className="btn btn-p btn-sm" onClick={() => saveEdit(t.id)}>✓</button>
-                      <button type="button" className="btn btn-d btn-sm" onClick={() => setEditingId(null)}>✕</button>
+                      <button type="button" className="btn btn-p btn-sm" onClick={() => saveEdit(t.id)} aria-label="Uložit" title="Uložit"><Check size={14} /></button>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => setEditingId(null)} aria-label="Zrušit" title="Zrušit"><X size={14} /></button>
                     </>
                   ) : (
                     <>
-                      <button type="button" className="btn btn-d btn-sm" onClick={() => startEdit(t)}>✎</button>
+                      <button type="button" className="btn btn-d btn-sm" onClick={() => startEdit(t)} aria-label="Přejmenovat tým" title="Přejmenovat"><Pencil size={14} /></button>
                       <button type="button" className="btn btn-s btn-sm" onClick={() => setExpandedId(expanded ? null : t.id)}>
-                        {expanded ? '↑ Zavřít' : '⊕ Soupiska'}
+                        {expanded ? <><ChevronUp size={14} style={{ verticalAlign: '-2px' }} /> Zavřít</> : <><Users size={14} style={{ verticalAlign: '-2px' }} /> Soupiska</>}
                       </button>
                       <button type="button" className="btn btn-d btn-sm" onClick={() => removeTeam(t.id)}>Smazat</button>
                     </>

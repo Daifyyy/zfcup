@@ -19,6 +19,10 @@ import { TvPartnerBar } from '../ui/TvPartnerBar'
 import { getMatchState } from '../../lib/matchState'
 import { currentSeasonRound } from '../../lib/fixtures'
 import { formatDateWeekday } from '../../lib/dates'
+import { TV, TV_SIZE, tvLogo } from '../tv/tvTheme'
+import { TvGroupTable } from '../tv/TvGroupTable'
+import { FitBox } from '../tv/FitBox'
+import { standingsZones } from '../../lib/zones'
 
 interface Props {
   tournament: Tournament | null
@@ -38,36 +42,10 @@ interface Props {
 // ── palette ──────────────────────────────────────────────────────────────────
 // Tmavá broadcast paleta (TV / projektor). Akcent je světlejší varianta značky,
 // aby byl čitelný na tmavém pozadí.
-const C = {
-  bg:       '#060a12',
-  col:      '#0d1422',
-  panel:    '#0a101c',
-  hdr:      'var(--chrome)',
-  text:     '#f5f7fa',
-  muted:    'rgba(226,232,240,.58)',
-  accent:   '#7aa7ff',
-  border:   'rgba(255,255,255,.07)',
-  upcoming: 'rgba(255,255,255,.025)',
-  live:     'var(--live)',
-  success:  '#4ade80',
-  warn:     '#fbbf24',
-  gold:     '#f5c451',
-  bronze:   '#d08a4a',
-  fifth:    '#a5b4fc',
-  seventh:  '#94a3b8',
-  ninth:    '#64748b',
-}
+const C = TV
 
 // ── fluid sizes ───────────────────────────────────────────────────────────────
-const S = {
-  title:   'clamp(1.3rem, 2.2vw, 2.8rem)',
-  section: 'clamp(.75rem, 1.1vw, 1.4rem)',
-  body:    'clamp(.65rem, .95vw, 1.15rem)',
-  small:   'clamp(.58rem, .78vw, .92rem)',
-  score:   'clamp(.9rem, 1.4vw, 1.7rem)',
-  pts:     'clamp(.9rem, 1.3vw, 1.6rem)',
-  label:   'clamp(.52rem, .7vw, .82rem)',
-}
+const S = TV_SIZE
 
 function useClock() {
   const fmt = () => {
@@ -86,7 +64,6 @@ function useClock() {
 function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, tournament }: {
   groups: Group[]; matches: Match[]; teams: Team[]; players: Player[]; goals: Goal[]; bracketGoals: BracketGoal[]; tournament: Tournament | null
 }) {
-  const gt = (id: string) => teams.find(t => t.id === id)
   const isLeague = tournament?.format === 'league'
   const sportDef = getSportDef(tournament?.sport)
 
@@ -102,107 +79,21 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
     .sort((a, b) => b.total - a.total)
     .slice(0, 5)
 
-  // League row highlight: 1-2 = direct SF (green), 3-6 = QF (amber), 7+ = out (none)
-  const leagueRowStyle = (i: number): { bg: string; borderLeft: string; numColor: string } => {
-    if (i < 2)  return { bg: 'rgba(74,222,128,.07)',  borderLeft: `3px solid ${C.success}`, numColor: C.success }
-    if (i < 6)  return { bg: 'rgba(251,191,36,.06)',  borderLeft: `3px solid ${C.warn}`,    numColor: C.warn }
-    return        { bg: 'transparent',                borderLeft: '3px solid transparent',          numColor: C.muted }
-  }
+  const zones = standingsZones(tournament)
+  const teamById = new Map(teams.map(t => [t.id, t]))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-      {/* Group standings — each group gets equal share of available height */}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '.6rem .8rem .2rem', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+      {/* Tabulky skupin — když se nevejdou, FitBox plynule zmenší písmo (nic se neusekne) */}
+      <FitBox watch={`${groups.length}|${matches.length}`} style={{ flex: 1, minHeight: 0, padding: '.6rem .8rem .2rem', display: 'flex', flexDirection: 'column', gap: 'calc(.6rem * var(--tv-fit, 1))' }}>
         {groups.length === 0 ? (
           <div style={{ color: C.muted, fontSize: S.body }}>Žádné skupiny</div>
         ) : (
-          groups.map(group => {
-            const rows = calcGroupStandings(group, matches, sportDef)
-            return (
-              <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                {/* Header */}
-                <div style={{ marginBottom: '.25rem', paddingBottom: '.18rem', borderBottom: `1px solid ${C.border}` }}>
-                  <div style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: S.section,
-                    letterSpacing: '.1em',
-                    color: C.accent,
-                    lineHeight: 1.15,
-                  }}>
-                    {group.name}
-                    {isLeague && (
-                      <span style={{ fontFamily: 'var(--font-body)', fontSize: S.label, fontWeight: 400, color: C.muted, letterSpacing: 0, marginLeft: '.4em' }}>
-                        {group.tiebreaker === 'h2h_first'
-                          ? '(shoda: vzáj. zápas → gól. rozdíl → vstřelené)'
-                          : group.tiebreaker === 'score_then_h2h'
-                          ? '(shoda: gól. rozdíl → vstřelené → vzáj. zápas)'
-                          : '(shoda: gól. rozdíl → vstřelené góly)'}
-                      </span>
-                    )}
-                  </div>
-                  {isLeague && (
-                    <div style={{ display: 'flex', gap: '.7rem', marginTop: '.18rem' }}>
-                      <span style={{ fontSize: S.label, color: C.success, fontWeight: 600 }}>■ 1–2 → Semifinále</span>
-                      <span style={{ fontSize: S.label, color: C.warn, fontWeight: 600 }}>■ 3–6 → Čtvrtfinále</span>
-                    </div>
-                  )}
-                </div>
-                <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      {['#', 'Tým', 'Z', 'V', 'R', 'P', 'Sk', 'B'].map((h, i) => (
-                        <th key={h} style={{
-                          fontSize: S.label,
-                          textTransform: 'uppercase', letterSpacing: '.08em',
-                          color: C.muted,
-                          textAlign: i <= 1 ? 'left' : 'center',
-                          padding: '.1rem .22rem',
-                          fontWeight: 600,
-                        }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row, i) => {
-                      const team = gt(row.id)
-                      const ls = isLeague ? leagueRowStyle(i) : null
-                      const rowBg = ls ? ls.bg : i === 0 ? 'rgba(122,167,255,.08)' : 'transparent'
-                      const numColor = ls ? ls.numColor : C.muted
-                      const bold = isLeague ? i < 6 : i === 0
-                      return (
-                        <tr key={row.id} style={{ background: rowBg }}>
-                          <td style={{ padding: '.12rem .22rem', paddingLeft: ls ? 0 : '.22rem', textAlign: 'center', fontSize: S.label, borderLeft: ls?.borderLeft }}>
-                            <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: numColor, lineHeight: 1 }}>{i + 1}</span>
-                          </td>
-                          <td style={{ padding: '.12rem .22rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              {team && <TeamLogo team={team} size={30} />}
-                              <span style={{ fontSize: S.body, fontWeight: bold ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {team?.name ?? row.id}
-                              </span>
-                            </div>
-                          </td>
-                          {[row.played, row.w, row.d, row.l].map((v, j) => (
-                            <td key={j} style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{v}</td>
-                          ))}
-                          <td style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{row.gf}:{row.ga}</td>
-                          <td style={{ textAlign: 'center', padding: '.12rem .22rem' }}>
-                            <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: numColor !== C.muted ? numColor : i === 0 ? C.accent : C.text }}>
-                              {row.pts}
-                            </span>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                </div>
-              </div>
-            )
-          })
+          groups.map((group, gi) => (
+            <TvGroupTable key={group.id} group={group} rows={calcGroupStandings(group, matches, sportDef)} teamById={teamById} sportDef={sportDef} zones={zones} showNotes={isLeague} showLegend={gi === 0} />
+          ))
         )}
-      </div>
+      </FitBox>
 
       {/* Top scorers — always visible at bottom, compact single-line */}
       {scorers.length > 0 && (
@@ -222,7 +113,7 @@ function StandingsCol({ groups, matches, teams, players, goals, bracketGoals, to
                 <span style={{ fontFamily: 'var(--font-display)', fontSize: S.label, color: i === 0 ? C.gold : C.muted, width: 14, textAlign: 'center', flexShrink: 0 }}>
                   {i + 1}
                 </span>
-                {s.team && <TeamLogo team={s.team} size={26} />}
+                {s.team && <TeamLogo team={s.team} size={tvLogo(26)} />}
                 <span style={{ flex: 1, minWidth: 0, fontSize: S.small, fontWeight: i === 0 ? 700 : 500, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {s.name}
                   {s.team && <span style={{ color: C.muted, fontWeight: 400 }}> · {s.team.name}</span>}
@@ -284,7 +175,7 @@ function GroupMatchesSubCol({ groupName, matches, teams, tournament }: { groupNa
               <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tn(m.home_id)}
               </span>
-              <TeamLogo team={tt(m.home_id)} size={28} />
+              <TeamLogo team={tt(m.home_id)} size={tvLogo(28)} />
             </div>
             {/* Skóre */}
             <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, 3.5vw, 5rem)' }}>
@@ -298,7 +189,7 @@ function GroupMatchesSubCol({ groupName, matches, teams, tournament }: { groupNa
             </div>
             {/* Away */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
-              <TeamLogo team={tt(m.away_id)} size={28} />
+              <TeamLogo team={tt(m.away_id)} size={tvLogo(28)} />
               <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {tn(m.away_id)}
               </span>
@@ -313,7 +204,7 @@ function GroupMatchesSubCol({ groupName, matches, teams, tournament }: { groupNa
 // ── Playoff matches sub-column (po odehrání skupin) ────────────────────────────
 function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]; slots: BracketSlot[]; teams: Team[] }) {
   const gt = (id: string | null) => id ? teams.find(t => t.id === id) ?? null : null
-  const tn = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? 'TBD' : 'TBD'
+  const tn = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? 'Určí se' : 'Určí se'
 
   const sorted = [...rounds].sort((a, b) => a.position - b.position)
 
@@ -378,7 +269,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                       <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? accentColor : hT ? C.muted : C.muted, fontStyle: hT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {tn(s.home_id)}
                       </span>
-                      {hT && <TeamLogo team={hT} size={28} />}
+                      {hT && <TeamLogo team={hT} size={tvLogo(28)} />}
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
                       {s.played ? (
@@ -390,7 +281,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
-                      {aT && <TeamLogo team={aT} size={28} />}
+                      {aT && <TeamLogo team={aT} size={tvLogo(28)} />}
                       <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? accentColor : aT ? C.muted : C.muted, fontStyle: aT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {tn(s.away_id)}
                       </span>
@@ -419,7 +310,7 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
         <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {tn(match.home_id)}
         </span>
-        {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={28} />}
+        {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={tvLogo(28)} />}
       </div>
       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
         {match.played ? (
@@ -431,7 +322,7 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
-        {tt(match.away_id) && <TeamLogo team={tt(match.away_id)!} size={28} />}
+        {tt(match.away_id) && <TeamLogo team={tt(match.away_id)!} size={tvLogo(28)} />}
         <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {tn(match.away_id)}
         </span>
@@ -643,10 +534,10 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '.35rem .7rem',
                       borderBottom: `1px solid ${borderColor}`,
-                      background: hw ? (isFinal ? 'rgba(245,196,81,.12)' : isThird ? 'rgba(208,138,74,.1)' : 'rgba(122,167,255,.1)') : 'transparent',
+                      background: hw ? (isFinal ? 'rgba(245,196,81,.12)' : isThird ? 'rgba(208,138,74,.1)' : TV.accentSoft) : 'transparent',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {hT && <TeamLogo team={hT} size={30} />}
+                        {hT && <TeamLogo team={hT} size={tvLogo(30)} />}
                         <span style={{
                           fontSize: S.body,
                           fontWeight: hw ? 700 : 400,
@@ -654,7 +545,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                           fontStyle: hT ? 'normal' : 'italic',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
-                          {hT?.name ?? 'TBD'}
+                          {hT?.name ?? 'Určí se'}
                         </span>
                       </div>
                       {slot.played && (
@@ -667,10 +558,10 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                     <div style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '.35rem .7rem',
-                      background: aw ? (isFinal ? 'rgba(245,196,81,.12)' : isThird ? 'rgba(208,138,74,.1)' : 'rgba(122,167,255,.1)') : 'transparent',
+                      background: aw ? (isFinal ? 'rgba(245,196,81,.12)' : isThird ? 'rgba(208,138,74,.1)' : TV.accentSoft) : 'transparent',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {aT && <TeamLogo team={aT} size={30} />}
+                        {aT && <TeamLogo team={aT} size={tvLogo(30)} />}
                         <span style={{
                           fontSize: S.body,
                           fontWeight: aw ? 700 : 400,
@@ -678,7 +569,7 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                           fontStyle: aT ? 'normal' : 'italic',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
-                          {aT?.name ?? 'TBD'}
+                          {aT?.name ?? 'Určí se'}
                         </span>
                       </div>
                       {slot.played && (

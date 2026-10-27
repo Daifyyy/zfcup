@@ -1,4 +1,5 @@
-import { Clock, Gavel } from 'lucide-react'
+import { Check, Clock, Gavel } from 'lucide-react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { CardChip } from '../../ui/CardChip'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
@@ -353,7 +354,7 @@ function SlotEditor({
         <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.82rem' }}>
           <input type="checkbox" checked={s.played} onChange={e => setS(x => ({ ...x, played: e.target.checked }))}
             style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
-          Odehrán {s.played && <span style={{ color: 'var(--success)' }}>✓</span>}
+          Odehrán {s.played && <Check size={14} style={{ color: 'var(--success)', verticalAlign: '-2px' }} />}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
           {isSeason && (
@@ -519,7 +520,7 @@ function RoundCard({
                   {' '}
                   {at?.name ?? 'TBD'}
                 </span>
-                {slot.played && <span style={{ fontSize: '.65rem', color: 'var(--success)', flexShrink: 0 }}>✓</span>}
+                {slot.played && <Check size={13} style={{ color: 'var(--success)', flexShrink: 0 }} aria-label="Odehráno" />}
                 <button
                   type="button"
                   className="btn btn-s btn-sm"
@@ -584,7 +585,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
     const confirmMsg = hasResults
       ? `Vytvořit strukturu playoff (${formatLabel})?\n\nStávající pavouk včetně výsledků a gólů bude smazán. Tuto akci nelze vrátit.`
       : `Vytvořit strukturu playoff (${formatLabel})? Stávající pavouk bude smazán.`
-    if (!confirm(confirmMsg)) return
+    if (!await confirmDialog(confirmMsg, { title: 'Struktura play-off', danger: bracketRounds.length > 0, confirmLabel: 'Vytvořit' })) return
 
     setGenerating(true)
     try {
@@ -610,7 +611,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
       showToast(`Skupiny nejsou dohrány (${playedCount}/${groupMatches.length} zápasů)`)
       return
     }
-    if (!confirm('Nasadit týmy do playoff dle tabulky? Vyplní se TBD sloty prvního kola.')) return
+    if (!await confirmDialog('Nasadit týmy do play-off podle tabulky? Vyplní se volné sloty prvního kola.', { title: 'Nasazení play-off', confirmLabel: 'Nasadit' })) return
 
     setGenerating(true)
     try {
@@ -654,7 +655,7 @@ export default function BracketTab({ teams, players, groups, matches, bracketRou
   }
 
   const removeRound = async (id: string) => {
-    if (!confirm('Smazat kolo a všechny jeho zápasy?')) return
+    if (!await confirmDialog('Smazat kolo a všechny jeho zápasy?', { danger: true })) return
     await supabase.from('bracket_slots').delete().eq('round_id', id)
     const { error } = await supabase.from('bracket_rounds').delete().eq('id', id)
     if (error) showToast('Chyba: ' + error.message)

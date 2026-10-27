@@ -127,7 +127,7 @@ export default function Results({ matches, teams, tournament, referees = [], spo
               className="field-input field-select"
               value={teamFilter}
               onChange={e => setTeamFilter(e.target.value)}
-              style={{ fontSize: '.8rem', padding: '.4rem 1.8rem .4rem .65rem', width: 'auto', minWidth: 150 }}
+              style={{ fontSize: '.8rem', padding: '.4rem 1.8rem .4rem .65rem', width: 'auto', minWidth: 150, maxWidth: 'min(100%, 260px)', textOverflow: 'ellipsis' }}
               aria-label="Filtr týmu"
             >
               <option value="all">Všechny týmy</option>

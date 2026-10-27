@@ -35,6 +35,8 @@ export interface Tournament {
   // Migrace 08 — dokud neproběhne, jsou undefined
   brand_primary?: string | null
   brand_secondary?: string | null
+  /** Intenzita brandingu: 'subtle' | 'bold' — migrace 14 */
+  brand_style?: string | null
   press_enabled?: boolean
   press_contact_name?: string
   press_contact_email?: string

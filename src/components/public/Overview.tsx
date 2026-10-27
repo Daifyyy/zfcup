@@ -206,7 +206,7 @@ export default function Overview({
                     return (
                       <tr key={r.id}>
                         <td className="is-muted">{i + 1}</td>
-                        <td className="is-left">
+                        <td className="is-left is-name">
                           <button type="button" className="ui-teamlink" onClick={() => openTeam(r.id)} title="Detail týmu" style={{ gap: '.5rem' }}>
                             {t && <TeamLogo team={t} size={22} />}
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t?.name}</span>

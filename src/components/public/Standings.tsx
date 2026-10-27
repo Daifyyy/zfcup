@@ -10,7 +10,7 @@ import type { Tournament } from '../../hooks/useTournament'
 import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
 import { Card, SectionHeader } from '../ui/Card'
-import { getAdvancingCutoffs } from '../../lib/formats'
+import { standingsZones } from '../../lib/zones'
 import { getSportDef, sportHasOvertime } from '../../lib/sports'
 import { useDetail } from '../../lib/TournamentDataContext'
 
@@ -23,22 +23,7 @@ interface Props {
   showToast?: (msg: string) => void
 }
 
-type Zone = { color: string; label: string } | null
-
-const ZONE_A = 'var(--win)'
-const ZONE_B = 'var(--warn)'
-
-/** Postupová zóna řádku dle pozice a formátu. */
-function zoneFor(i: number, advancing: number, consolation: number, sfCutoff?: number, qfCutoff?: number): Zone {
-  if (sfCutoff !== undefined) {
-    if (i < sfCutoff) return { color: ZONE_A, label: 'SF' }
-    if (qfCutoff !== undefined && i < qfCutoff) return { color: ZONE_B, label: 'QF' }
-    return null
-  }
-  if (advancing > 0 && i < advancing) return { color: ZONE_A, label: i === 0 ? 'Vítěz' : 'Play-off' }
-  if (consolation > 0 && i < advancing + consolation) return { color: ZONE_B, label: 'Útěcha' }
-  return null
-}
+const ZONE_COLOR = { a: 'var(--win)', b: 'var(--warn)' } as const
 
 type FormResult = 'W' | 'D' | 'L'
 
@@ -72,24 +57,9 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
   // Hokej: výhry/prohry po prodloužení zvlášť (V / VP / PP / P)
   const showOt = sportHasOvertime(sportDef)
 
-  const cutoffs = tournament
-    ? getAdvancingCutoffs(tournament.format_id ?? '', tournament)
-    : { advancing: 1 }
-  const sfCutoff = cutoffs.sfCutoff
-  const qfCutoff = cutoffs.qfCutoff
-  const advancing = cutoffs.advancing ?? 1
-  const consolation = cutoffs.consolation ?? 0
+  const zones = standingsZones(tournament)
 
   if (!groups.length) return <Empty text="Tabulky se zobrazí po rozlosování skupin." />
-
-  const legend: { color: string; text: string }[] = []
-  if (sfCutoff !== undefined) {
-    legend.push({ color: ZONE_A, text: `1–${sfCutoff} postup do semifinále` })
-    if (qfCutoff !== undefined) legend.push({ color: ZONE_B, text: `${sfCutoff + 1}–${qfCutoff} postup do čtvrtfinále` })
-  } else {
-    if (advancing > 0) legend.push({ color: ZONE_A, text: advancing === 1 ? 'Vítěz skupiny postupuje do play-off' : `1–${advancing} postup do play-off` })
-    if (consolation > 0) legend.push({ color: ZONE_B, text: 'Útěšná část' })
-  }
 
   const headers = showOt
     ? ['Z', 'V', 'VP', 'PP', 'P', 'Skóre', '+/−', 'B']
@@ -133,7 +103,8 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
                 <tbody>
                   {rows.map((row, i) => {
                     const team = teamById.get(row.id)
-                    const zone = zoneFor(i, advancing, consolation, sfCutoff, qfCutoff)
+                    const z = zones.zoneAt(i)
+                    const zone = z ? { color: ZONE_COLOR[z.kind], label: z.label } : null
                     const gdColor = row.gd > 0 ? 'var(--win)' : row.gd < 0 ? 'var(--loss)' : 'var(--ink-muted)'
                     const cells = showOt
                       ? [row.played, row.w - row.otw, row.otw, row.otl, row.l - row.otl]
@@ -144,13 +115,13 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
                         <td style={{ boxShadow: zone ? `inset 4px 0 0 ${zone.color}` : undefined, fontWeight: 700 }}>
                           {i + 1}
                         </td>
-                        <td className="is-left">
+                        <td className="is-left is-name">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
                             <button type="button" className="ui-teamlink" onClick={() => openTeam(row.id)} title="Detail týmu">
                               {team && <TeamLogo team={team} size={30} />}
                               <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
                             </button>
-                            {zone && (i === 0 || sfCutoff !== undefined || advancing + consolation < rows.length) && (
+                            {zone && zones.showLabel(i, rows.length) && (
                               <span className="std-zone hide-mobile" style={{ color: zone.color, borderColor: zone.color }}>{zone.label}</span>
                             )}
                           </div>
@@ -173,8 +144,8 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
               </table>
             </div>
             <div className="std-foot">
-              {rows.length > 1 && legend.map(l => (
-                <span key={l.text}><i style={{ background: l.color }} />{l.text}</span>
+              {rows.length > 1 && zones.legend.map(l => (
+                <span key={l.text}><i style={{ background: ZONE_COLOR[l.kind] }} />{l.text}</span>
               ))}
               {showOt && (
                 <span>V výhra · VP výhra po prodl./nájezdech · PP prohra po prodl./nájezdech · P prohra ({sportDef.standings.winPts}-{sportDef.standings.otWinPts}-{sportDef.standings.otLossPts}-{sportDef.standings.lossPts} b.)</span>

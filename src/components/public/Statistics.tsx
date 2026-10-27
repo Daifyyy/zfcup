@@ -85,7 +85,7 @@ function Leaderboard({ title, columns, rows, players, teams, footer, onShare }: 
             return (
               <tr key={r.id} className={i === 0 ? 'st-leader' : undefined}>
                 <td className="is-muted" style={{ fontWeight: 700 }}>{i + 1}</td>
-                <td className="is-left"><PlayerCell player={p} team={t} /></td>
+                <td className="is-left is-name"><PlayerCell player={p} team={t} /></td>
                 {r.cells.map((c, j) => <td key={j} className="is-muted">{c}</td>)}
                 <td><span className="st-val">{r.primary}</span></td>
               </tr>

@@ -311,3 +311,33 @@
 }
 .ui-teamlink:hover > span:last-child { text-decoration: underline; text-underline-offset: 3px; }
 .ui-teamlink:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: var(--radius-sm); }
+
+/* Potvrzovací dialog (ConfirmDialog) — nad vším včetně adminu a sdílení */
+.cfm { position: fixed; inset: 0; z-index: 4000; background: rgba(11,18,32,.55); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.cfm__panel {
+  width: min(440px, 100%); background: var(--surface-1); border-radius: var(--radius-lg); padding: 1.35rem 1.4rem 1.2rem;
+  box-shadow: var(--shadow-panel); border-top: 4px solid var(--brand); animation: cfm-in .14s ease-out;
+}
+.cfm__panel--danger { border-top-color: var(--loss); }
+@keyframes cfm-in { from { transform: translateY(6px); opacity: 0 } to { transform: none; opacity: 1 } }
+.cfm__head { display: flex; align-items: center; gap: .6rem; margin-bottom: .55rem; }
+.cfm__icon { color: var(--brand); flex-shrink: 0; }
+.cfm__panel--danger .cfm__icon { color: var(--loss); }
+.cfm__title { font-size: 1.35rem; text-transform: uppercase; font-weight: 800; line-height: 1.1; }
+.cfm__msg { font-size: .92rem; color: var(--ink); line-height: 1.5; margin: 0 0 1.2rem; white-space: pre-line; overflow-wrap: anywhere; }
+.cfm__actions { display: flex; justify-content: flex-end; gap: .5rem; flex-wrap: wrap; }
+.ui-btn--danger-solid { background: var(--loss); color: #fff; }
+.ui-btn--danger-solid:hover { filter: brightness(.92); }
+.ui-btn--danger-solid:focus-visible { outline: 2px solid var(--loss); outline-offset: 2px; }
+
+/* Buňka se jménem v tabulce: zabere zbytek šířky a dlouhý název se zkrátí „…“ (nepřetéká) */
+.ui-table td.is-name { width: 100%; max-width: 0; }
+.ui-table td.is-name .ui-teamlink, .ui-table td.is-name > span, .ui-table td.is-name > div { min-width: 0; max-width: 100%; }
+.ui-table td.is-name .standings-name, .ui-table td.is-name .ui-teamlink > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Záhlaví sekce na mobilu: akce (filtry) pod nadpis, ať se nadpis nemačká */
+@media (max-width: 600px) {
+  .ui-sec { flex-wrap: wrap; align-items: flex-start; }
+  .ui-sec > div:last-child:not(:first-child) { flex-shrink: 1 !important; min-width: 0; max-width: 100%; }
+  .ui-sec select { max-width: 100%; }
+}

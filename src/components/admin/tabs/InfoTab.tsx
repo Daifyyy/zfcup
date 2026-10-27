@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
 import RichTextEditor from '../../ui/RichTextEditor'
@@ -54,7 +55,7 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
   }
 
   const removeLogo = async () => {
-    if (!tournament?.id || !confirm('Smazat logo turnaje?')) return
+    if (!tournament?.id || !await confirmDialog('Smazat logo turnaje?', { danger: true })) return
     // Sdílený starý soubor tournament-logo.png nemažeme — mohou ho používat jiné turnaje
     if (tournament.logo_url?.includes(`tournaments/${tournament.id}/`)) {
       await supabase.storage.from('team-logos').remove([`tournaments/${tournament.id}/logo.png`])

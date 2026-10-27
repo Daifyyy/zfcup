@@ -193,7 +193,7 @@ export default function App() {
   // ── Branding turnaje (barvy) ──────────────────────────
   useEffect(() => {
     applyTournamentTheme(tournamentId ? tournament : null)
-  }, [tournamentId, tournament?.brand_primary, tournament?.brand_secondary])
+  }, [tournamentId, tournament?.brand_primary, tournament?.brand_secondary, tournament?.brand_style])
 
   // ── Titulek okna ──────────────────────────────────────
   useEffect(() => {

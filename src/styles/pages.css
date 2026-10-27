@@ -13,7 +13,7 @@
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background:
     linear-gradient(115deg, transparent 0 58%, rgba(255,255,255,.035) 58% 70%, transparent 70%),
-    linear-gradient(90deg, var(--brand) 0 6px, transparent 6px);
+    linear-gradient(90deg, var(--brand-stripe) 0 6px, transparent 6px);
 }
 .ov-hero > * { position: relative; }
 .ov-hero__crest {
@@ -422,3 +422,18 @@ button.md-side:focus-visible { outline: 2px solid var(--chrome-ink); outline-off
   .kp-season__chev { display: none; }
 }
 .tm-drawer__club { color: var(--chrome-ink); text-decoration: underline; text-underline-offset: 3px; display: inline-flex; align-items: center; gap: .25rem; }
+
+/* Oznámení — ikona v textové kartě */
+.news-card__body--icon { display: flex; gap: .85rem; align-items: flex-start; }
+.news-card__icon {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px;
+  border-radius: var(--radius); background: var(--brand-soft); color: var(--brand);
+}
+
+/* Dlouhý název turnaje v úvodu Přehledu: na mobilu menší písmo a nejvýš 4 řádky */
+@media (max-width: 600px) {
+  .ov-hero__name { font-size: clamp(1.45rem, 7vw, 2rem); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+}
+
+/* Statistiky: jméno hráče a tým na jeden řádek se zkrácením (dlouhá jména) */
+.st-player__name, .st-player__team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

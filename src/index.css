@@ -45,6 +45,9 @@
   --brand-soft:  rgba(29,78,216,.08);
   --brand-line:  rgba(29,78,216,.28);
   --brand-2:     #e11d48;
+  --brand-on-dark:   #7aa7ff;  /* značka na tmavých plochách (TV, lišty) — theme.ts */
+  --brand-2-on-dark: #fb7185;
+  --brand-stripe:    var(--brand);  /* pruh pod hlavičkou a v hero; výrazný styl = doplňková barva */
 
   /* Stavy */
   --live:    #e11d48;

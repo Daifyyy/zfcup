@@ -10,7 +10,7 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); **Fáze 5 hotová a ověřená (čeká na commit)**
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); **Fáze 6 hotová a ověřená (čeká na commit + migraci 14)**
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
 **DB migrace:** 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
@@ -68,8 +68,18 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - **Ověřeno v prohlížeči po migraci** (na dočasném „QA Klub (test)“, po testu smazán i s týmem v Testovacím turnaji): založení klubu, soupiska (číslo, role), sloučení duplicity (jmenovec spojen, druhý hráč přesunut), Admin → Týmy → Přidat z knihovny (tým + 3 hráči s person_id), Aktualizovat soupisku v knihovně (nový hráč, 4/4 propojeno), odkaz Profil klubu z detailu týmu i z věčné tabulky, `/k/hc-medvedi` (umístění, vzájemné zápasy — součty sedí), proklik na turnaj a Zpět, mobil 375 px, šipky ročníků.
 - **RLS ověřeno** jako nepřihlášený: úprava/smazání klubu a osob = 0 řádků, založení klubu odmítnuto, čtení veřejné. Neověřeno: druhý přihlášený organizátor (nemáme testovací účet s heslem) — stejný mechanismus `owner_id = auth.uid()` jako u turnajů (ověřeno ve Fázi 1).
 
+### Fáze 6 — design: TV, branding, oznámení (2026-10-27)
+- **Potvrzovací dialogy**: 23× `confirm()` → `confirmDialog()` (vlastní dialog, Esc/klik mimo = zrušit, nezavře admin pod sebou); zdvojená potvrzení „Čistý start“ / „Smazat vše“ sloučena do jednoho jasného dialogu.
+- **Oznámení**: 44 ikon lucide místo emoji (klíč v `icon`, stará emoji se převádějí), ikona i ve veřejné kartě, nahrání obrázku do Storage (PNG/JPG/WebP, max 2 MB, při smazání se uklidí), segmentový přepínač typu; v adminu ✓ ✕ ✎ ↑ ↓ ⊕ nahrazeny ikonami (Týmy, Pravidla, Import, Tipovačka, Zápasy, Play-off, Skupiny).
+- **TV**: sdílené `src/components/tv/` (paleta, velikosti, `TvGroupTable`, `FitBox`). Opraveno: Tabule u hokeje ukazovala remízy a nerozlišovala VP/PP · natvrdo „1–2 SF / 3–6 QF“ u všech lig (teď podle formátu) · „HŘIŠTĚ“ v TV režimu i u hokeje · „TBD“ → „Určí se“ · akcent natvrdo modrý → barva značky · 4K mělo poloviční písmo (strop velikostí) · 4 skupiny na Full HD Tabuli useknuté (teď se písmo přizpůsobí, žádný řádek nechybí).
+- **Pásma postupu** `src/lib/zones.ts` (web + TV). Nalezena chyba: liga bez play-off psala „Vítěz skupiny postupuje do play-off“ → „1. místo = vítěz ligy“.
+- **Branding**: `--brand-on-dark` (akcenty na tmavých plochách), intenzita Jemná / Výrazná (`brand_style`, **migrace 14 — nespuštěná**, bez ní se uloží jen barvy), živý náhled hlavičky, Přehledu a TV v adminu.
+- **Audit zobrazení** na dočasném zátěžovém turnaji (16 týmů s dlouhými názvy, 112 hráčů, 4 skupiny, play-off, 10 partnerů; po auditu smazán): web 360 / 768 / 1366 / 1920 px — opraveno přetékání mini tabulky, výběru týmu v Zápasech, zalamování jmen ve Statistikách, záhlaví sekcí na mobilu, název turnaje v úvodu (mobil max. 4 řádky). Tabule a TV 1920×1080 i 3840×2160 — bez useknutí.
+- Ověřeno: typy 63, 99 testů, build (+30 kB / +8 kB gzip — ikony oznámení).
+- Zbývá do budoucna: Tabule se 4+ skupinami na Full HD je hustá (písmo ~72 %) — zvážit širší sloupec tabulek nebo střídání skupin.
+
 ### Kde navázat
-1. **Příště začít:** Fáze 6 — design (TV, branding, oznámení; nahradit `confirm()`/`alert()` vlastními dialogy, Tabule u hokeje bez sloupce R a s VP).
+1. **Příště začít:** Fáze 7 — demo na úvodní stránce (ověřit, zda uživatel spustil migraci 14).
 2. Před nasazením play-off v Cupu 2026 ověřit, že je nasazená oprava `groups_qf_full`.
 3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 

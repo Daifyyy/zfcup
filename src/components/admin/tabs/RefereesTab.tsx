@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { supabase } from '../../../lib/supabase'
 import type { Referee } from '../../../hooks/useReferees'
 
@@ -29,7 +30,7 @@ export default function RefereesTab({ referees, tournament, refetchReferees, sho
   }
 
   const removeReferee = async (id: string) => {
-    if (!confirm('Smazat rozhodčího?')) return
+    if (!await confirmDialog('Smazat rozhodčího?', { danger: true })) return
     const { error } = await supabase.from('referees').delete().eq('id', id)
     if (error) { showToast('Chyba: ' + error.message); return }
     refetchReferees()

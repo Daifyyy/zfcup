@@ -34,7 +34,7 @@ export function MatchRow({ home, away, homeScore, awayScore, state, decidedIn, m
   const linkProps = onClick ? {
     role: 'button' as const,
     tabIndex: 0,
-    'aria-label': `Detail zápasu ${home?.name ?? 'TBD'} – ${away?.name ?? 'TBD'}`,
+    'aria-label': `Detail zápasu ${home?.name ?? 'Určí se'} – ${away?.name ?? 'Určí se'}`,
     onKeyDown: (e: React.KeyboardEvent) => {
       if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() }
     },
@@ -43,7 +43,7 @@ export function MatchRow({ home, away, homeScore, awayScore, state, decidedIn, m
     <div className={cls} onClick={onClick} {...linkProps}>
       <div className="ui-match__meta">{meta}</div>
       <div className={`ui-match__team ui-match__team--home${homeLost ? ' ui-match__team--loser' : ''}`}>
-        <span className="ui-match__team-name">{home?.name ?? 'TBD'}</span>
+        <span className="ui-match__team-name">{home?.name ?? 'Určí se'}</span>
         {home && <TeamLogo team={home} size={logoSize} />}
       </div>
       <div className="ui-match__score">
@@ -58,7 +58,7 @@ export function MatchRow({ home, away, homeScore, awayScore, state, decidedIn, m
       </div>
       <div className={`ui-match__team${awayLost ? ' ui-match__team--loser' : ''}`}>
         {away && <TeamLogo team={away} size={logoSize} />}
-        <span className="ui-match__team-name">{away?.name ?? 'TBD'}</span>
+        <span className="ui-match__team-name">{away?.name ?? 'Určí se'}</span>
       </div>
       <div className="ui-match__status">
         {trailing ?? <MatchStatusBadge state={state} decidedIn={decidedIn} />}

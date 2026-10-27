@@ -207,9 +207,9 @@ export default function PrintBulletin({ tournament, teams, groups, matches, brac
                       <tr key={s.id}>
                         {hasDates && <td className="bulletin-nowrap">{formatDateShort(s.match_date) || '—'}</td>}
                         <td className="bulletin-nowrap">{s.scheduled_time || '—'}</td>
-                        <td>{tn(s.home_id, 'TBD')}</td>
+                        <td>{tn(s.home_id, 'Určí se')}</td>
                         <td className="bulletin-c bulletin-nowrap" style={{ fontWeight: 700 }}>{scoreText(s)}</td>
-                        <td>{tn(s.away_id, 'TBD')}</td>
+                        <td>{tn(s.away_id, 'Určí se')}</td>
                       </tr>
                     ))}
                   </tbody>

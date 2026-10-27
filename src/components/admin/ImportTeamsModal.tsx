@@ -1,3 +1,4 @@
+import { ArrowLeft, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
@@ -183,7 +184,7 @@ export default function ImportTeamsModal({ open, existingTeams, tournamentId, on
       <div style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 520, maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,.18)' }}>
         <div style={{ padding: '1rem 1.2rem .75rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', letterSpacing: '.06em' }}>Import týmů z CSV/Excel</span>
-          <button type="button" className="btn btn-d btn-sm" onClick={onClose}>✕</button>
+          <button type="button" className="btn btn-d btn-sm" onClick={onClose} aria-label="Zavřít" title="Zavřít"><X size={14} /></button>
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '1rem 1.2rem' }}>
@@ -243,7 +244,7 @@ export default function ImportTeamsModal({ open, existingTeams, tournamentId, on
 
         {preview && (
           <div style={{ padding: '.75rem 1.2rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '.5rem', justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn-d" onClick={() => { setPreview(null); setFileName('') }}>← Zpět</button>
+            <button type="button" className="btn btn-d" onClick={() => { setPreview(null); setFileName('') }}><ArrowLeft size={14} style={{ verticalAlign: '-2px' }} /> Zpět</button>
             <button type="button" className="btn btn-p" onClick={handleImport} style={{ opacity: importing ? .6 : 1 }}>
               {importing ? 'Importuji…' : `Importovat (${preview.length} týmů)`}
             </button>

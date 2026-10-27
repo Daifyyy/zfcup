@@ -69,9 +69,38 @@ function readableOnLight(hex: string): string {
   return c
 }
 
+/** Tmavé plochy TV/hlaviček (--chrome-2 / TV panel). */
+export const DARK_SURFACE = '#0d1422'
+
+/**
+ * Barva značky pro text a akcenty na tmavém pozadí (TV, tmavé lišty) —
+ * tmavé barvy se zesvětlí, aby měly kontrast ≥ 4,5:1.
+ */
+export function readableOnDark(hex: string): string {
+  let c = hex
+  for (let i = 0; i < 12 && contrastRatio(c, DARK_SURFACE) < 4.5; i++) c = mix(c, '#ffffff', 0.15)
+  return c
+}
+
+export type BrandStyle = 'subtle' | 'bold'
+
+/**
+ * Tmavý odstín značky pro velké plochy (hlavička, hero, TV) ve výrazném stylu —
+ * dost tmavý, aby bílý text měl kontrast ≥ 10:1.
+ */
+export function brandChrome(hex: string): { chrome: string; chrome2: string } {
+  let k = 0.55
+  let c = mix(hex, '#0b1220', k)
+  while (contrastRatio(c, '#ffffff') < 10 && k < 0.95) { k += 0.05; c = mix(hex, '#0b1220', k) }
+  // Druhá lišta (navigace) o kousek světlejší, ale stále s kontrastem ≥ 8:1
+  let c2 = mix(c, '#ffffff', 0.06)
+  if (contrastRatio(c2, '#ffffff') < 8) c2 = c
+  return { chrome: c, chrome2: c2 }
+}
+
 export interface BrandVars { [k: string]: string }
 
-export function brandVars(primary?: string | null, secondary?: string | null): BrandVars | null {
+export function brandVars(primary?: string | null, secondary?: string | null, style: BrandStyle = 'subtle'): BrandVars | null {
   if (!isHex(primary)) return null
   const p = readableOnLight(primary.trim())
   const s = isHex(secondary) ? secondary.trim() : DEFAULT_BRAND_2
@@ -82,16 +111,30 @@ export function brandVars(primary?: string | null, secondary?: string | null): B
     '--brand-soft': rgba(p, 0.08),
     '--brand-line': rgba(p, 0.28),
     '--brand-2': s,
+    '--brand-on-dark': readableOnDark(primary.trim()),
+    '--brand-2-on-dark': readableOnDark(s),
+    ...(style === 'bold' ? (() => {
+      const { chrome, chrome2 } = brandChrome(primary.trim())
+      return {
+        '--chrome': chrome,
+        '--chrome-2': chrome2,
+        // Pruhy a akcenty na tmavých plochách doplňkovou barvou (značka už je v ploše)
+        '--brand-stripe': readableOnDark(s),
+      }
+    })() : {}),
   }
 }
 
-const KEYS = ['--brand', '--brand-hov', '--brand-ink', '--brand-soft', '--brand-line', '--brand-2']
+const KEYS = ['--brand', '--brand-hov', '--brand-ink', '--brand-soft', '--brand-line', '--brand-2', '--brand-on-dark', '--brand-2-on-dark', '--chrome', '--chrome-2', '--brand-stripe']
 
 /** Aplikuje branding turnaje na :root. Bez barev vrátí výchozí tokeny z index.css. */
-export function applyTournamentTheme(t: { brand_primary?: string | null; brand_secondary?: string | null } | null | undefined): void {
+export function applyTournamentTheme(t: { brand_primary?: string | null; brand_secondary?: string | null; brand_style?: string | null } | null | undefined): void {
   const root = document.documentElement
-  const vars = brandVars(t?.brand_primary, t?.brand_secondary)
+  const style: BrandStyle = t?.brand_style === 'bold' ? 'bold' : 'subtle'
+  const vars = brandVars(t?.brand_primary, t?.brand_secondary, style)
   for (const k of KEYS) root.style.removeProperty(k)
+  root.removeAttribute('data-brand-style')
   if (!vars) return
+  root.setAttribute('data-brand-style', style)
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
 }

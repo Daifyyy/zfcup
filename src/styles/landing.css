@@ -23,7 +23,7 @@
 }
 .lp-hero__inner { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 3rem; align-items: center; }
 @media (max-width: 900px) { .lp-hero { padding: 3rem 0 3.5rem; } .lp-hero__inner { grid-template-columns: minmax(0, 1fr); gap: 2.25rem; } }
-.lp-eyebrow { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .16em; color: #7aa7ff; margin-bottom: 1rem; }
+.lp-eyebrow { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .16em; color: var(--brand-on-dark); margin-bottom: 1rem; }
 .lp-hero__title {
   font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
   font-size: clamp(2.6rem, 6.4vw, 4.6rem); line-height: .92; letter-spacing: .003em;
@@ -51,7 +51,7 @@
 .lp-board__row--live { box-shadow: inset 4px 0 0 var(--live); background: rgba(225,29,72,.08); }
 .lp-board__team { font-weight: 600; font-size: .92rem; display: flex; align-items: center; gap: .4rem; }
 .lp-board__team--home { justify-content: flex-end; }
-.lp-board__team em { font-style: normal; font-size: .6rem; font-weight: 800; color: #7aa7ff; letter-spacing: .06em; }
+.lp-board__team em { font-style: normal; font-size: .6rem; font-weight: 800; color: var(--brand-on-dark); letter-spacing: .06em; }
 .lp-board__score { display: flex; gap: 2px; }
 .lp-board__score b {
   font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; min-width: 34px; text-align: center;

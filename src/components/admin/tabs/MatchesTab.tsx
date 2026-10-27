@@ -1,5 +1,6 @@
 import { compareRounds } from '../../../lib/leagueSchedule'
-import { Clock, Gavel } from 'lucide-react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
+import { Check, Clock, Gavel } from 'lucide-react'
 import { CardChip } from '../../ui/CardChip'
 import { useState, useRef } from 'react'
 import { supabase } from '../../../lib/supabase'
@@ -348,7 +349,7 @@ function InlineMatchEditor({
         <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.82rem' }}>
           <input type="checkbox" checked={played} onChange={e => setPlayed(e.target.checked)}
             style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
-          Odehrán {played && <span style={{ color: 'var(--success)' }}>✓</span>}
+          Odehrán {played && <Check size={14} style={{ color: 'var(--success)', verticalAlign: '-2px' }} />}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
           {isSeason && (
@@ -612,7 +613,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
   }
 
   const removeMatch = async (id: string) => {
-    if (!confirm('Smazat zápas?')) return
+    if (!await confirmDialog('Smazat zápas?', { danger: true })) return
     await supabase.from('goals').delete().eq('match_id', id)
     const { error } = await supabase.from('matches').delete().eq('id', id)
     if (error) showToast('Chyba: ' + error.message)
@@ -695,7 +696,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
                         </div>
                         <div className="a-item-sub">
                           {m.played ? (
-                            <span style={{ color: 'var(--success)' }}>✓ {m.home_score}:{m.away_score}</span>
+                            <span style={{ color: 'var(--success)', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Check size={13} />{m.home_score}:{m.away_score}</span>
                           ) : 'Plánováno'}
                           {m.match_date && <> · {m.match_date.split('-').reverse().join('. ').replace(/^0/, '')}</>}
                           {m.scheduled_time && <> · {m.scheduled_time}</>}
@@ -791,7 +792,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
           <label style={{ display: 'flex', alignItems: 'center', gap: '.4rem', cursor: 'pointer', fontSize: '.82rem' }}>
             <input type="checkbox" checked={form.played} onChange={e => setForm(p => ({ ...p, played: e.target.checked }))}
               style={{ accentColor: 'var(--accent)', width: 14, height: 14 }} />
-            Zápas odehrán {form.played && <span style={{ color: 'var(--success)' }}>✓</span>}
+            Zápas odehrán {form.played && <Check size={14} style={{ color: 'var(--success)', verticalAlign: '-2px' }} />}
           </label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
             <label className="field-label" style={{ margin: 0 }}>Čas:</label>

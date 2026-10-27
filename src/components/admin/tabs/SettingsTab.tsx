@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
 import { formatsForScheduleMode, getFormatDef, formatColumns } from '../../../lib/formats'
@@ -123,8 +124,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
 
   const resetTournamentData = async () => {
     if (!tournament) return
-    if (!confirm('Smazat zápasy, skupiny, góly a tipy? Týmy a hráči zůstanou.')) return
-    if (!confirm('Opravdu? Tato akce je nevratná.')) return
+    if (!await confirmDialog('Smažou se zápasy, skupiny, play-off, góly a tipy. Týmy a hráči zůstanou.\n\nTuto akci nelze vrátit.', { danger: true, title: 'Čistý start', confirmLabel: 'Smazat výsledky' })) return
 
     const tid = tournament.id
     // Soft tables: ignore errors (may not exist or have missing RLS)
@@ -146,8 +146,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
 
   const resetData = async () => {
     if (!tournament) return
-    if (!confirm('Opravdu smazat VŠECHNA data? Tuto akci nelze vrátit!')) return
-    if (!confirm('Opravdu? Poslední potvrzení — smazat vše?')) return
+    if (!await confirmDialog('Smažou se VŠECHNA data turnaje včetně týmů a hráčů.\n\nTuto akci nelze vrátit.', { danger: true, title: 'Smazat vše', confirmLabel: 'Smazat vše' })) return
 
     const tid = tournament.id
     const tables = [

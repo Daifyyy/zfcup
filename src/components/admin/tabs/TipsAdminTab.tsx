@@ -1,4 +1,6 @@
+import { Check, Trash2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { supabase } from '../../../lib/supabase'
 import { useTipsters } from '../../../hooks/useTipsters'
 import { calcGroupStandings } from '../../../lib/standings'
@@ -134,7 +136,7 @@ function EvalRow({ tipType, label, teamPool, showToast, autoWinnerId, tournament
   }
 
   const resetEval = async () => {
-    if (!confirm(`Zrušit vyhodnocení "${label}"? Body za tento tip budou vymazány.`)) return
+    if (!await confirmDialog(`Zrušit vyhodnocení "${label}"? Body za tento tip budou vymazány.`, { danger: true, confirmLabel: 'Zrušit vyhodnocení', cancelLabel: 'Ponechat' })) return
     setResetting(true)
     try {
       await supabase.from('special_tips')
@@ -243,7 +245,7 @@ function EvalRowPlayer({ tipType, label, playerPool, showToast, tournamentId }: 
   }
 
   const resetEval = async () => {
-    if (!confirm(`Zrušit vyhodnocení "${label}"?`)) return
+    if (!await confirmDialog(`Zrušit vyhodnocení "${label}"?`, { danger: true, confirmLabel: 'Zrušit vyhodnocení', cancelLabel: 'Ponechat' })) return
     setResetting(true)
     try {
       await supabase.from('special_tips').update({ evaluated: false, points_earned: 0 }).eq('tip_type', tipType).eq('tournament_id', tournamentId)
@@ -265,7 +267,7 @@ function EvalRowPlayer({ tipType, label, playerPool, showToast, tournamentId }: 
       </div>
       {done ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', flexShrink: 0 }}>
-          <span style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}>✓ Vyhodnoceno</span>
+          <span style={{ fontSize: '.78rem', color: 'var(--success)', fontWeight: 600 }}><Check size={13} style={{ verticalAlign: '-2px' }} /> Vyhodnoceno</span>
           <button type="button" className="btn btn-d btn-sm" onClick={resetEval} style={{ opacity: resetting ? .6 : 1 }}>
             {resetting ? '…' : 'Zrušit'}
           </button>
@@ -386,7 +388,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
   }
 
   const resetAll = async () => {
-    if (!confirm('Smazat všechny tipy a vynulovat body? Tuto akci nelze vrátit.')) return
+    if (!await confirmDialog('Smazat všechny tipy a vynulovat body? Tuto akci nelze vrátit.', { danger: true })) return
     const [r1, r2, r3, r4] = await Promise.all([
       supabase.from('tips').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
       supabase.from('bracket_tips').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
@@ -402,7 +404,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
   }
 
   const deleteTipster = async (id: string, name: string) => {
-    if (!confirm(`Smazat tipéra "${name}" včetně jeho tipů?`)) return
+    if (!await confirmDialog(`Smazat tipéra "${name}" včetně jeho tipů?`, { danger: true })) return
     await supabase.from('tips').delete().eq('tipster_id', id)
     await supabase.from('bracket_tips').delete().eq('tipster_id', id)
     await supabase.from('special_tips').delete().eq('tipster_id', id)
@@ -560,7 +562,7 @@ export default function TipsAdminTab({ showToast, tournament, teams, players, gr
                 fontFamily: 'var(--font-display)', fontSize: '1.1rem',
                 color: 'var(--accent)', flexShrink: 0, marginRight: '.2rem',
               }}>{t.total_points} b.</span>
-              <button type="button" className="btn btn-d btn-sm" onClick={() => deleteTipster(t.id, t.name)}>✕</button>
+              <button type="button" className="btn btn-d btn-sm" onClick={() => deleteTipster(t.id, t.name)} aria-label="Smazat tipéra" title="Smazat"><Trash2 size={14} /></button>
             </div>
           ))}
         </div>

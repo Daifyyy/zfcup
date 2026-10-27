@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { ExternalLink } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
@@ -133,7 +134,7 @@ export default function CompetitionSection({ tournament, teams, refetchTournamen
   const carryOver = () => run('carry', async () => {
     if (!tournament || !competitionId || !sourceId) return
     const src = editions.find(e => e.id === sourceId)
-    if (!confirm(`Převzít týmy a soupisky z ${src?.edition ?? ''}. ročníku (${src?.name})? Týmy, které už v tomto ročníku jsou, se přeskočí.`)) return
+    if (!await confirmDialog(`Převzít týmy a soupisky z ${src?.edition ?? ''}. ročníku (${src?.name})? Týmy, které už v tomto ročníku jsou, se přeskočí.`, { title: 'Převzít týmy', confirmLabel: 'Převzít' })) return
     const res = await carryOverTeams(sourceId, tournament.id, competitionId)
     refetchTeams(); refetchPlayers(); loadClubs()
     showToast(res.teams ? `Převzato ${res.teams} týmů a ${res.players} hráčů` : 'Všechny týmy už v ročníku jsou')
@@ -159,7 +160,7 @@ export default function CompetitionSection({ tournament, teams, refetchTournamen
   })
 
   const detach = () => run('detach', async () => {
-    if (!tournament || !confirm('Odebrat tento turnaj ze soutěže? Týmy a hráči zůstanou, jen se přestanou počítat do historie soutěže.')) return
+    if (!tournament || !await confirmDialog('Odebrat tento turnaj ze soutěže? Týmy a hráči zůstanou, jen se přestanou počítat do historie soutěže.', { danger: true, confirmLabel: 'Odebrat' })) return
     const { error } = await supabase.from('tournament').update({ competition_id: null, edition: null }).eq('id', tournament.id)
     if (error) { showToast('Chyba: ' + error.message); return }
     refetchTournament(); showToast('Odebráno ze soutěže')

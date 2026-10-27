@@ -16,39 +16,17 @@ import { TvPartnerBar } from '../ui/TvPartnerBar'
 import { currentSeasonRound } from '../../lib/fixtures'
 import { formatDateWeekday } from '../../lib/dates'
 import { getSportDef } from '../../lib/sports'
+import { TV, TV_SIZE, tvLogo } from '../tv/tvTheme'
+import { TvGroupTable } from '../tv/TvGroupTable'
+import { FitBox } from '../tv/FitBox'
+import { standingsZones } from '../../lib/zones'
 
 /* ── Palette ───────────────────────────────────────────── */
 // Tmavá broadcast paleta — shodná s TV tabulí (Scoreboard).
-const C = {
-  bg:       '#060a12',
-  col:      '#0d1422',
-  panel:    '#0a101c',
-  hdr:      'var(--chrome)',
-  text:     '#f5f7fa',
-  muted:    'rgba(226,232,240,.58)',
-  accent:   '#7aa7ff',
-  border:   'rgba(255,255,255,.07)',
-  upcoming: 'rgba(255,255,255,.025)',
-  success:  '#4ade80',
-  warn:     '#fbbf24',
-  gold:     '#f5c451',
-  silver:   '#cbd5e1',
-  bronze:   '#d08a4a',
-  fifth:    '#a5b4fc',
-  seventh:  '#94a3b8',
-  ninth:    '#64748b',
-}
+const C = TV
 
 /* ── Fluid sizes (Scoreboard-quality scale) ─────────────── */
-const S = {
-  title:   'clamp(1.3rem, 2.2vw, 2.8rem)',
-  section: 'clamp(.75rem, 1.1vw, 1.4rem)',
-  body:    'clamp(.65rem, .95vw, 1.15rem)',
-  small:   'clamp(.58rem, .78vw, .92rem)',
-  score:   'clamp(.9rem, 1.4vw, 1.7rem)',
-  pts:     'clamp(.9rem, 1.3vw, 1.6rem)',
-  label:   'clamp(.52rem, .7vw, .82rem)',
-}
+const S = TV_SIZE
 
 /* ── Views config ──────────────────────────────────────── */
 type KioskView = 'matches' | 'table' | 'bracket'
@@ -95,7 +73,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
               <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(m.home_id)}</span>
-              <TeamLogo team={tt(m.home_id)} size={28} />
+              <TeamLogo team={tt(m.home_id)} size={tvLogo(28)} />
             </div>
             <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, 3.5vw, 5rem)' }}>
               {m.played
@@ -104,7 +82,7 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
               }
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
-              <TeamLogo team={tt(m.away_id)} size={28} />
+              <TeamLogo team={tt(m.away_id)} size={tvLogo(28)} />
               <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(m.away_id)}</span>
             </div>
           </div>
@@ -123,7 +101,7 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '.18rem', minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.2rem', minWidth: 0 }}>
         <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(match.home_id)}</span>
-        {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={28} />}
+        {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={tvLogo(28)} />}
       </div>
       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
         {match.played
@@ -132,14 +110,14 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
         }
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', minWidth: 0 }}>
-        {tt(match.away_id) && <TeamLogo team={tt(match.away_id)!} size={28} />}
+        {tt(match.away_id) && <TeamLogo team={tt(match.away_id)!} size={tvLogo(28)} />}
         <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? C.text : C.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(match.away_id)}</span>
       </div>
     </div>
   )
 }
 
-function LeagueMatchesCol({ matches, teams, numPitches = 2 }: { matches: Match[]; teams: Team[]; numPitches?: number }) {
+function LeagueMatchesCol({ matches, teams, numPitches = 2, pitchLabel }: { matches: Match[]; teams: Team[]; numPitches?: number; pitchLabel: string }) {
   const slotsMap = new Map<string, Match[]>()
   for (const m of [...matches].sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))) {
     const key = m.scheduled_time ?? ''
@@ -154,7 +132,7 @@ function LeagueMatchesCol({ matches, teams, numPitches = 2 }: { matches: Match[]
         {'ABCD'.slice(0, numPitches).split('').map((letter, i) => (
           <div key={letter} style={{ display: 'contents' }}>
             {i > 0 && <div style={{ width: 1, flexShrink: 0 }} />}
-            <div style={{ flex: 1, textAlign: 'center', fontSize: S.label, color: C.accent, fontWeight: 700, letterSpacing: '.08em' }}>HŘIŠTĚ {letter}</div>
+            <div style={{ flex: 1, textAlign: 'center', fontSize: S.label, color: C.accent, fontWeight: 700, letterSpacing: '.08em' }}>{pitchLabel.toUpperCase()} {letter}</div>
           </div>
         ))}
       </div>
@@ -178,7 +156,7 @@ function LeagueMatchesCol({ matches, teams, numPitches = 2 }: { matches: Match[]
 
 function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]; slots: BracketSlot[]; teams: Team[] }) {
   const gt = (id: string | null) => id ? teams.find(t => t.id === id) ?? null : null
-  const tn = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? 'TBD' : 'TBD'
+  const tn = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? 'Určí se' : 'Určí se'
   const sorted = [...rounds].sort((a, b) => a.position - b.position)
   if (!sorted.length) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: C.muted, fontSize: S.body }}>
@@ -213,7 +191,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: '.3rem', padding: '.26rem .5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.25rem', minWidth: 0 }}>
                         <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hw ? accentColor : C.muted, fontStyle: hT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(s.home_id)}</span>
-                        {hT && <TeamLogo team={hT} size={28} />}
+                        {hT && <TeamLogo team={hT} size={tvLogo(28)} />}
                       </div>
                       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, 4vw, 5.5rem)' }}>
                         {s.played
@@ -222,7 +200,7 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                         }
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', minWidth: 0 }}>
-                        {aT && <TeamLogo team={aT} size={28} />}
+                        {aT && <TeamLogo team={aT} size={tvLogo(28)} />}
                         <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aw ? accentColor : C.muted, fontStyle: aT ? 'normal' : 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tn(s.away_id)}</span>
                       </div>
                     </div>
@@ -268,7 +246,7 @@ function KioskMatches({ tournament, teams, groups, matches, bracketRounds, brack
   }
 
   if (isLeague) {
-    return <LeagueMatchesCol matches={groupMatches} teams={teams} numPitches={tournament?.num_pitches ?? 2} />
+    return <LeagueMatchesCol matches={groupMatches} teams={teams} numPitches={tournament?.num_pitches ?? 2} pitchLabel={getSportDef(tournament?.sport).terms.pitchLabel} />
   }
 
   const numCols = sortedGroups.length <= 3 ? sortedGroups.length : Math.ceil(sortedGroups.length / 2)
@@ -298,16 +276,11 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
   tournament: Tournament | null; teams: Team[]; players: Player[]; groups: Group[]
   matches: Match[]; goals: Goal[]; bracketGoals: BracketGoal[]
 }) {
-  const gt = (id: string) => teams.find(t => t.id === id)
   const isLeague = tournament?.format === 'league'
   const sportDef = getSportDef(tournament?.sport)
-  const allowDraws = sportDef.standings.allowDraws
 
-  const leagueRowStyle = (i: number) => {
-    if (i < 2) return { bg: 'rgba(74,222,128,.07)', borderLeft: `3px solid ${C.success}`, numColor: C.success }
-    if (i < 6) return { bg: 'rgba(251,191,36,.06)', borderLeft: `3px solid ${C.warn}`,    numColor: C.warn }
-    return          { bg: 'transparent',             borderLeft: '3px solid transparent',          numColor: C.muted }
-  }
+  const zones = standingsZones(tournament)
+  const teamById = new Map(teams.map(t => [t.id, t]))
 
   // Top 10 scorers — aggregate group goals + bracket_goals (O(n) pass)
   const goalsAgg: Record<string, number> = {}
@@ -325,74 +298,15 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
     <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', height: '100%', overflow: 'hidden' }}>
       {/* Left: Standings */}
       <div style={{ borderRight: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '.6rem .8rem .2rem' }}>
-        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+        <FitBox watch={`${groups.length}|${matches.length}`} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 'calc(.6rem * var(--tv-fit, 1))' }}>
           {groups.length === 0 ? (
             <div style={{ color: C.muted, fontSize: S.body, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>Žádné skupiny</div>
           ) : (
-            groups.map(group => {
-              const rows = calcGroupStandings(group, matches, sportDef)
-              return (
-                <div key={group.id} style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ marginBottom: '.25rem', paddingBottom: '.18rem', borderBottom: `1px solid ${C.border}` }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: S.section, letterSpacing: '.1em', color: C.accent, lineHeight: 1.15 }}>
-                      {group.name}
-                    </div>
-                    {isLeague && (
-                      <div style={{ display: 'flex', gap: '.7rem', marginTop: '.18rem' }}>
-                        <span style={{ fontSize: S.label, color: C.success, fontWeight: 600 }}>■ 1–2 → SF</span>
-                        <span style={{ fontSize: S.label, color: C.warn, fontWeight: 600 }}>■ 3–6 → QF</span>
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr>
-                          {(allowDraws ? ['#', 'Tým', 'Z', 'V', 'R', 'P', 'Sk', 'B'] : ['#', 'Tým', 'Z', 'V', 'P', 'Sk', 'B']).map((h, i) => (
-                            <th key={h} style={{ fontSize: S.label, textTransform: 'uppercase', letterSpacing: '.08em', color: C.muted, textAlign: i <= 1 ? 'left' : 'center', padding: '.1rem .22rem', fontWeight: 600 }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((row, i) => {
-                          const team = gt(row.id)
-                          const ls = isLeague ? leagueRowStyle(i) : null
-                          const rowBg = ls ? ls.bg : i === 0 ? 'rgba(122,167,255,.08)' : 'transparent'
-                          const numColor = ls ? ls.numColor : C.muted
-                          const bold = isLeague ? i < 6 : i === 0
-                          return (
-                            <tr key={row.id} style={{ background: rowBg }}>
-                              <td style={{ padding: '.12rem .22rem', paddingLeft: ls ? 0 : '.22rem', textAlign: 'center', fontSize: S.label, borderLeft: ls?.borderLeft }}>
-                                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: numColor, lineHeight: 1 }}>{i + 1}</span>
-                              </td>
-                              <td style={{ padding: '.12rem .22rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  {team && <TeamLogo team={team} size={28} />}
-                                  <span style={{ fontSize: S.body, fontWeight: bold ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {team?.name ?? row.id}
-                                  </span>
-                                </div>
-                              </td>
-                              {(allowDraws ? [row.played, row.w, row.d, row.l] : [row.played, row.w, row.l]).map((v, j) => (
-                                <td key={j} style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{v}</td>
-                              ))}
-                              <td style={{ textAlign: 'center', padding: '.12rem .22rem', fontSize: S.label, color: C.muted }}>{row.gf}:{row.ga}</td>
-                              <td style={{ textAlign: 'center', padding: '.12rem .22rem' }}>
-                                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: numColor !== C.muted ? numColor : i === 0 ? C.accent : C.text }}>
-                                  {row.pts}
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )
-            })
+            groups.map((group, gi) => (
+              <TvGroupTable key={group.id} group={group} rows={calcGroupStandings(group, matches, sportDef)} teamById={teamById} sportDef={sportDef} zones={zones} showNotes={isLeague} showLegend={gi === 0} logoSize={28} />
+            ))
           )}
-        </div>
+        </FitBox>
       </div>
 
       {/* Right: Scorers */}
@@ -409,7 +323,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
                 <div style={{ width: '2em', textAlign: 'center', flexShrink: 0 }}>
                   <span style={{ fontFamily: 'var(--font-display)', fontSize: S.pts, color: i < 3 ? podium[i] : C.muted, lineHeight: 1 }}>{i + 1}</span>
                 </div>
-                {sc.team && <TeamLogo team={sc.team} size={28} />}
+                {sc.team && <TeamLogo team={sc.team} size={tvLogo(28)} />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: S.body, fontWeight: i < 3 ? 700 : 500, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sc.name}</div>
                   {sc.team && <div style={{ fontSize: S.label, color: C.muted }}>{sc.team.name}</div>}
@@ -427,7 +341,7 @@ function KioskTable({ tournament, teams, players, groups, matches, goals, bracke
 /* ── View C: Pavouk ─────────────────────────────────────── */
 function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots: BracketSlot[]; teams: Team[] }) {
   const gt = (id: string | null) => id ? teams.find(t => t.id === id) ?? null : null
-  const tn = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? 'TBD' : 'TBD'
+  const tn = (id: string | null) => id ? teams.find(t => t.id === id)?.name ?? 'Určí se' : 'Určí se'
   const sorted = [...rounds].sort((a, b) => a.position - b.position)
 
   if (!sorted.length) return (
@@ -464,18 +378,18 @@ function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots:
                       <div style={{ fontSize: S.label, color: C.muted, padding: '.2rem .7rem 0', fontWeight: 600 }}>{slot.scheduled_time}</div>
                     )}
                     {/* Home row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.4rem .7rem', borderBottom: `1px solid ${borderColor}`, background: hw ? (isFinal ? 'rgba(245,196,81,.12)' : 'rgba(122,167,255,.1)') : 'transparent' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.4rem .7rem', borderBottom: `1px solid ${borderColor}`, background: hw ? (isFinal ? 'rgba(245,196,81,.12)' : TV.accentSoft) : 'transparent' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {hT && <TeamLogo team={hT} size={28} />}
-                        <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hT ? (hw ? accentColor : C.text) : C.muted, fontStyle: hT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hT?.name ?? 'TBD'}</span>
+                        {hT && <TeamLogo team={hT} size={tvLogo(28)} />}
+                        <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hT ? (hw ? accentColor : C.text) : C.muted, fontStyle: hT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hT?.name ?? 'Určí se'}</span>
                       </div>
                       {slot.played && <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.home_score}</span>}
                     </div>
                     {/* Away row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.4rem .7rem', background: aw ? (isFinal ? 'rgba(245,196,81,.12)' : 'rgba(122,167,255,.1)') : 'transparent' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.4rem .7rem', background: aw ? (isFinal ? 'rgba(245,196,81,.12)' : TV.accentSoft) : 'transparent' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
-                        {aT && <TeamLogo team={aT} size={28} />}
-                        <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aT ? (aw ? accentColor : C.text) : C.muted, fontStyle: aT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aT?.name ?? 'TBD'}</span>
+                        {aT && <TeamLogo team={aT} size={tvLogo(28)} />}
+                        <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aT ? (aw ? accentColor : C.text) : C.muted, fontStyle: aT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aT?.name ?? 'Určí se'}</span>
                       </div>
                       {slot.played && <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.away_score}</span>}
                     </div>
@@ -615,7 +529,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
             <span style={{ fontSize: S.label, color: 'rgba(255,255,255,.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Pozastaveno</span>
           )}
           <button type="button" onClick={e => { e.stopPropagation(); onScoreboard() }} style={{ background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 8, color: 'rgba(255,255,255,.7)', fontSize: S.label, fontWeight: 700, padding: '.35rem 1rem', cursor: 'pointer', transition: 'all .15s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(122,167,255,.25)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--brand-on-dark) 28%, transparent)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.1)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.7)' }}>
             Tabule
           </button>

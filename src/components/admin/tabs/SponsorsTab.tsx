@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { ArrowDown, ArrowUp, ImagePlus, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { removeAssetByUrl, tournamentAssetPath, uploadAsset } from '../../../lib/storage'
@@ -72,7 +73,7 @@ export default function SponsorsTab({ sponsors, tournament, refetchSponsors, sho
   }
 
   const remove = async (s: Sponsor) => {
-    if (!confirm(`Smazat partnera "${s.name}"?`)) return
+    if (!await confirmDialog(`Smazat partnera "${s.name}"?`, { danger: true })) return
     const { error } = await supabase.from('sponsors').delete().eq('id', s.id)
     if (error) { showToast('Chyba: ' + error.message); return }
     await removeAssetByUrl(s.logo_url)

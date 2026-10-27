@@ -8,11 +8,13 @@ import './styles/pages.css'
 import './styles/landing.css'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { ConfirmHost } from './components/ui/ConfirmDialog'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <App />
+      <ConfirmHost />
     </ErrorBoundary>
   </StrictMode>,
 )

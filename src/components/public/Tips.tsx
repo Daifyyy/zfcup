@@ -815,7 +815,7 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.4rem', minWidth: 0 }}>
                       <span style={{ fontSize: '.82rem', fontWeight: hw ? 700 : 500, textAlign: 'right', color: hT ? (hw ? 'var(--accent)' : 'var(--text)') : 'var(--muted)', fontStyle: hT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {hT ? hT.name : 'TBD'}
+                        {hT ? hT.name : 'Určí se'}
                       </span>
                       {hT && <TeamLogo team={hT} size={30} />}
                     </div>
@@ -862,13 +862,13 @@ function BracketTipsSection({ bracketRounds, bracketSlots, teams, bracketTips, t
                           ))}
                         </div>
                       ) : (
-                        <span style={{ fontSize: '.75rem', color: 'var(--muted)', fontStyle: 'italic' }}>TBD</span>
+                        <span style={{ fontSize: '.75rem', color: 'var(--muted)', fontStyle: 'italic' }}>Určí se</span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', minWidth: 0 }}>
                       {aT && <TeamLogo team={aT} size={30} />}
                       <span style={{ fontSize: '.82rem', fontWeight: aw ? 700 : 500, color: aT ? (aw ? 'var(--accent)' : 'var(--text)') : 'var(--muted)', fontStyle: aT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {aT ? aT.name : 'TBD'}
+                        {aT ? aT.name : 'Určí se'}
                       </span>
                     </div>
                   </div>

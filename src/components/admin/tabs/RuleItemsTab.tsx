@@ -1,4 +1,6 @@
+import { ArrowDown, ArrowUp } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 import { supabase } from '../../../lib/supabase'
 import type { RuleItem } from '../../../hooks/useRuleItems'
 import RichTextEditor from '../../ui/RichTextEditor'
@@ -38,7 +40,7 @@ export default function RuleItemsTab({ ruleItems, tournament, refetchRuleItems, 
   }
 
   const remove = async (id: string) => {
-    if (!confirm('Smazat položku pravidel?')) return
+    if (!await confirmDialog('Smazat položku pravidel?', { danger: true })) return
     const { error } = await supabase.from('rule_items').delete().eq('id', id)
     if (error) { showToast('Chyba: ' + error.message); return }
     refetchRuleItems()
@@ -100,7 +102,7 @@ export default function RuleItemsTab({ ruleItems, tournament, refetchRuleItems, 
       <div className="btn-row">
         <button type="button" className="btn btn-p" onClick={save}>{editId ? 'Uložit' : '+ Přidat'}</button>
         {editId && (
-          <button type="button" className="btn btn-d btn-sm" onClick={() => { setEditId(null); setForm({ title: '', body: '' }) }}>✕ Zrušit</button>
+          <button type="button" className="btn btn-d btn-sm" onClick={() => { setEditId(null); setForm({ title: '', body: '' }) }}>Zrušit úpravy</button>
         )}
       </div>
 
@@ -123,8 +125,8 @@ export default function RuleItemsTab({ ruleItems, tournament, refetchRuleItems, 
                   </div>
                 )}
               </div>
-              <button type="button" className="btn btn-s btn-sm" onClick={() => moveUp(i)} style={{ opacity: i === 0 ? 0.3 : 1 }}>↑</button>
-              <button type="button" className="btn btn-s btn-sm" onClick={() => moveDown(i)} style={{ opacity: i === items.length - 1 ? 0.3 : 1 }}>↓</button>
+              <button type="button" className="btn btn-s btn-sm" onClick={() => moveUp(i)} style={{ opacity: i === 0 ? 0.3 : 1 }} aria-label="Posunout nahoru" title="Nahoru"><ArrowUp size={14} /></button>
+              <button type="button" className="btn btn-s btn-sm" onClick={() => moveDown(i)} style={{ opacity: i === items.length - 1 ? 0.3 : 1 }} aria-label="Posunout dolů" title="Dolů"><ArrowDown size={14} /></button>
               <button type="button" className="btn btn-d btn-sm" onClick={() => edit(r)}>Upravit</button>
               <button type="button" className="btn btn-d btn-sm" onClick={() => remove(r.id)}>Smazat</button>
             </div>
