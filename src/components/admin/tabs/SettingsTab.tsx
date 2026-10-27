@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
-import { TOURNAMENT_FORMATS, getFormatDef } from '../../../lib/formats'
+import { TOURNAMENT_FORMATS, getFormatDef, formatColumns } from '../../../lib/formats'
 import { getSportDef } from '../../../lib/sports'
 import BrandingSection from './BrandingSection'
 import CompetitionSection from './CompetitionSection'
@@ -66,16 +66,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       const def = getFormatDef(formatId)
       if (!def) return
 
-      const updates: Record<string, unknown> = {
-        format_id: formatId,
-        format: def.groupConfig.tournamentFormat,
-        num_groups: def.groupConfig.defaultGroups,
-        advancing_per_group: def.groupConfig.defaultAdvancingPerGroup,
-      }
-      if (def.groupConfig.leagueHasPlayoff !== undefined) {
-        updates.league_has_playoff = def.groupConfig.leagueHasPlayoff
-      }
-
+      const updates = formatColumns(def)
       const { error } = await supabase.from('tournament').update(updates).eq('id', tournament.id)
       if (error) showToast('Chyba: ' + error.message)
       else {

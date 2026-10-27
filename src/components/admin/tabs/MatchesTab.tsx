@@ -1,3 +1,4 @@
+import { compareRounds } from '../../../lib/leagueSchedule'
 import { Clock, Gavel } from 'lucide-react'
 import { CardChip } from '../../ui/CardChip'
 import { useState, useRef } from 'react'
@@ -627,7 +628,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
     if (!roundsMap[r]) roundsMap[r] = []
     roundsMap[r].push(m)
   }
-  const roundEntries = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
+  const roundEntries = Object.entries(roundsMap).sort(([a], [b]) => compareRounds(a, b))
 
   return (
     <div>

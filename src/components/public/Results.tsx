@@ -11,7 +11,7 @@ import { Card, SectionHeader } from '../ui/Card'
 import { Segmented } from '../ui/Tabs'
 import { MatchRow } from '../ui/MatchRow'
 import { formatDateShort, formatDateWeekday } from '../../lib/dates'
-import { roundNumber } from '../../lib/leagueSchedule'
+import { roundNumber, compareRounds } from '../../lib/leagueSchedule'
 import { MatchStatusBadge } from '../ui/Badge'
 import type { Sponsor } from '../../hooks/useSponsors'
 import { ShareMatchDialog } from '../share/lazy'
@@ -99,7 +99,7 @@ export default function Results({ matches, teams, tournament, referees = [], spo
       const r = m.round || 'Bez skupiny'
       ;(map[r] ??= []).push(m)
     }
-    for (const [round, items] of Object.entries(map).sort(([a], [b]) => a.localeCompare(b, 'cs'))) {
+    for (const [round, items] of Object.entries(map).sort(([a], [b]) => compareRounds(a, b))) {
       items.sort((a, b) => (a.scheduled_time ?? '').localeCompare(b.scheduled_time ?? ''))
       sections.push({ key: round, title: round, items })
     }

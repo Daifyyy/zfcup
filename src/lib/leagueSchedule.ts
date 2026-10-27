@@ -315,3 +315,10 @@ export function roundNumber(round: string | null | undefined): number {
   const m = /^(\d+)\./.exec((round ?? '').trim())
   return m ? Number(m[1]) : Infinity
 }
+
+/** Řazení názvů kol: „2. kolo“ před „10. kolo“, ostatní (např. „Skupina A“) abecedně za nimi. */
+export function compareRounds(a: string, b: string): number {
+  const na = roundNumber(a), nb = roundNumber(b)
+  if (na !== nb) return na - nb
+  return a.localeCompare(b, 'cs')
+}

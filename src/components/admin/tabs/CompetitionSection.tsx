@@ -84,14 +84,16 @@ export default function CompetitionSection({ tournament, teams, refetchTournamen
 
   const assign = () => run('assign', async () => {
     if (!tournament) return
-    const ed = parseInt(edition)
+    // Nová soutěž bez vyplněného čísla = 1. ročník (pole ukazuje „1“ jako nápovědu)
+    const ed = edition.trim() === '' && mode === 'new' ? 1 : parseInt(edition)
     if (!ed || ed < 1) { showToast('Zadej číslo ročníku'); return }
     let compId = pickId
     if (mode === 'new') {
       const name = newName.trim()
       if (!name) { showToast('Zadej název soutěže'); return }
+      const ownerId = (await supabase.auth.getUser()).data.user?.id ?? null
       const { data, error } = await supabase.from('competitions')
-        .insert({ name, slug: slugify(name), sport: tournament.sport, logo_url: tournament.logo_url })
+        .insert({ name, slug: slugify(name), sport: tournament.sport, logo_url: tournament.logo_url, owner_id: ownerId })
         .select('id').single()
       if (error) { showToast(error.message.includes('unique') || error.code === '23505' ? 'Soutěž s tímto názvem už existuje' : 'Chyba: ' + error.message); return }
       compId = data.id as string

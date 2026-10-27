@@ -5,22 +5,26 @@
 
 ---
 
-## Aktuální stav — 2026-10-26 (konec dne)
+## Aktuální stav — 2026-10-27
 
-**Větev v práci:** `feature/competitions` (3 commity navíc oproti `main`, NEsloučeno)
-**Produkce (`main`, Vercel):** redesign + hotfixy nasazeny; web je stále za maintenance heslem (`MAINTENANCE=true`)
-**DB migrace:** 01–09 spuštěné v Supabase (09 ověřena přes REST 2026-10-26)
+**Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
+Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-### Kde přesně navázat zítra
-1. Lokálně: `npm run dev` (port 5173), přihlásit se v Chromu do adminu (heslo zadává uživatel sám).
-2. **E2E test soutěží (fáze C3/C4)** na testovacích datech:
-   - Turnaj „QA liga (test)“ (`5532fe3c-6f5c-49d7-8a88-c8d420f05f2f`, hokej, liga + play-off, vše odehráno, vítěz HC Medvedi) → Admin → Nastavení → Soutěž a ročník → *Nová soutěž* „QA soutěž“, 1. ročník.
-   - Úvodní stránka → Nový turnaj → Hokej, Sezóna, *Další ročník: QA soutěž*, převzít týmy → ověřit, že se zkopírovalo 6 týmů (soupisky jsou prázdné — případně přidat hráče).
-   - V 2. ročníku vygenerovat **rozpis sezóny** (Skupiny: datum 1. kola, 7 dní, dvoukolově) → ověřit 10 kol × 3 zápasy, data, Zápasy po kolech, editor s datem, TV tabule = aktuální kolo.
-   - Zadat pár výsledků → `/s/qa-soutez`: síň vítězů, věčná tabulka (ruční přepočet), rekordy, hráči + profil, odkaz z hlavičky ročníku.
-   - Ověřit tipovačku v sezóně (zámek podle data).
-3. Po úspěšném testu: `git checkout main && git merge --ff-only feature/competitions && git push`.
-4. **Úklid testovacích dat — jen se souhlasem uživatele:** „QA liga (test)“, druhý QA ročník, „QA soutěž“ (+ clubs/persons). Uživatel zatím nesouhlasil se smazáním.
+**Větev v práci:** `feature/competitions` — Fáze 0 (E2E soutěží) hotová, opravy commitnuty
+**Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
+**DB migrace:** 01–09 spuštěné; **10 (`10_realtime_publication.sql`) čeká na spuštění v SQL Editoru**
+
+### Fáze 0 — výsledek E2E testu (2026-10-27)
+- Ověřeno v UI proti DB: soutěž „QA soutěž“ (1. ročník = QA liga), 2. ročník „QA liga 2 (test)“ (`8892b38c-f314-41f6-b338-a793bfd8aef2`, hokej, sezóna) s převzetím 6 týmů, rozpis sezóny 10 kol × 3 zápasy (každý tým 5× doma), výsledky vč. PP/SN, tabulka 3-2-1-0, Zápasy po kolech, TV tabule = nejbližší kolo, `/s/qa-soutez` (síň vítězů, věčná tabulka — součty sedí, rekordy).
+- Opraveno: sezóna se zakládala se skupinovým formátem (chyběl generátor sezóny) · nový ročník přebírá formát/časy/moduly/vzhled (`lastEdition`, `formatColumns`) · kolize párování týmů při převzetí · „Číslo ročníku“ prázdné = 1 · `competitions.owner_id` se zapisuje · kola řazena číselně (`compareRounds`) v admin Zápasech, veřejných Zápasech a Tipech.
+- **Nalezeno — realtime nefunguje:** DB neposílá žádné `postgres_changes` (tabulky nejsou v publikaci `supabase_realtime`) → veřejný web se obnoví až pollingem po 120 s. Oprava = migrace 10.
+- Do dalších fází: `confirm()` dialogy nahradit vlastními (blokují i automatizaci) · v sezónním režimu nenabízet skupinové formáty · Tabule u hokeje ukazuje sloupec R a nerozlišuje VP · stránka soutěže se načítá ~8 s · prázdný Přehled nového turnaje.
+- Testovací data: „QA liga (test)“, „QA liga 2 (test)“, „QA soutěž“ (+ 6 clubs) — mazat jen se souhlasem uživatele.
+
+### Kde navázat
+1. Uživatel spustí `db-backup/10_realtime_publication.sql` → ověřit realtime (změna výsledku se projeví bez reloadu).
+2. Sloučit `feature/competitions` do `main`.
+3. Fáze 1 — bezpečnost a role. Pozn.: čísla migrací v plánu se posouvají o 1 (role = 11, indexy = 12, kluby = 13).
 
 ### Otevřené body / nápady
 - Prázdný turnaj na Přehledu ukazuje jen hero — doplnit přívětivý prázdný stav („Turnaj se připravuje“).
@@ -34,6 +38,9 @@
 ---
 
 ## Historie
+
+### 2026-10-27 — Plán dotažení + Fáze 0 (E2E soutěží a sezón)
+- Schválen plán 9 fází. E2E test soutěží/sezón proti DB prošel po opravách (viz Aktuální stav); nalezen nefunkční realtime (migrace 10).
 
 ### 2026-10-26 — Soutěže, sezóny, opravy formátů (větev `feature/competitions`)
 - **Hotfix (na `main`)** `ac83632`: výběr ligového formátu padal na chybějícím `playoff_style`.

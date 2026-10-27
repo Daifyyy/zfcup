@@ -1,3 +1,4 @@
+import { compareRounds } from '../../lib/leagueSchedule'
 import { Lock } from 'lucide-react'
 import { todayISO, formatDateWeekday } from '../../lib/dates'
 import { useState, useEffect, Fragment } from 'react'
@@ -588,7 +589,7 @@ function GroupTipsSection({ matches, teams, myTips, tipsterId, loading, showToas
       if (!roundsMap[r]) roundsMap[r] = []
       roundsMap[r].push(m)
     }
-    sections = Object.entries(roundsMap).sort(([a], [b]) => a.localeCompare(b, 'cs'))
+    sections = Object.entries(roundsMap).sort(([a], [b]) => compareRounds(a, b))
   }
   const tn = (id: string) => teams.find(t => t.id === id)?.name ?? '—'
   const tt = (id: string) => teams.find(t => t.id === id) ?? { color: '#8b95a5', logo_url: null }

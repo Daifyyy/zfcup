@@ -120,8 +120,10 @@ export async function carryOverTeams(fromTournamentId: string, toTournamentId: s
     .select('id,club_id')
   if (insErr) throw new Error(insErr.message)
 
-  const newTeamByClub = new Map((newTeams ?? []).map(t => [t.club_id as string, t.id as string]))
-  const oldToNew = new Map(toCopy.map(t => [t.id, newTeamByClub.get(t.club_id ?? '')]))
+  // Hromadný INSERT vrací řádky ve stejném pořadí jako vstup → párovat podle indexu
+  // (párování podle club_id kolidovalo u týmů bez klubu nebo se stejným klubem).
+  if ((newTeams ?? []).length !== toCopy.length) throw new Error('Převzetí týmů: nesouhlasí počet vložených týmů')
+  const oldToNew = new Map(toCopy.map((t, i) => [t.id, (newTeams ?? [])[i].id as string]))
   const playerRows = ((srcPlayers ?? []) as PlayerRow[])
     .filter(p => oldToNew.get(p.team_id))
     .map(p => ({
@@ -133,6 +135,29 @@ export async function carryOverTeams(fromTournamentId: string, toTournamentId: s
     if (error) throw new Error(error.message)
   }
   return { teams: toCopy.length, players: playerRows.length }
+}
+
+/** Nastavení, která nový ročník přebírá z posledního ročníku soutěže (formát, časy, moduly, vzhled). */
+const EDITION_SETTING_COLUMNS = [
+  'format', 'format_id', 'num_groups', 'advancing_per_group', 'league_has_playoff', 'playoff_style',
+  'match_duration', 'halves', 'round_break', 'num_pitches',
+  'assists_enabled', 'cards_enabled', 'penalty_minutes_enabled', 'sponsors_enabled',
+  'brand_primary', 'brand_secondary', 'venue',
+] as const
+
+/** Poslední ročník soutěže (id + přenositelná nastavení), nebo null. */
+export async function lastEdition(competitionId: string): Promise<{ id: string; settings: Record<string, unknown> } | null> {
+  const { data, error } = await supabase.from('tournament')
+    .select('*')
+    .eq('competition_id', competitionId)
+    .order('edition', { ascending: false })
+    .limit(1)
+  if (error || !data?.length) return null
+  const row = data[0] as Record<string, unknown>
+  const settings: Record<string, unknown> = {}
+  // Kopírovat jen sloupce, které v DB opravdu jsou (frontend musí fungovat i bez novějších migrací)
+  for (const col of EDITION_SETTING_COLUMNS) if (col in row && row[col] !== undefined) settings[col] = row[col]
+  return { id: row.id as string, settings }
 }
 
 /** Další volné číslo ročníku v soutěži. */

@@ -93,6 +93,18 @@ export function getFormatDef(formatId: string): TournamentFormatDef | undefined 
   return TOURNAMENT_FORMATS.find(f => f.id === formatId)
 }
 
+/** Sloupce tabulky `tournament`, které určuje zvolený formát (Nastavení i zakládání turnaje). */
+export function formatColumns(def: TournamentFormatDef): Record<string, unknown> {
+  const cols: Record<string, unknown> = {
+    format_id: def.id,
+    format: def.groupConfig.tournamentFormat,
+    num_groups: def.groupConfig.defaultGroups,
+    advancing_per_group: def.groupConfig.defaultAdvancingPerGroup,
+  }
+  if (def.groupConfig.leagueHasPlayoff !== undefined) cols.league_has_playoff = def.groupConfig.leagueHasPlayoff
+  return cols
+}
+
 export function getLegacyFormatDef(tournament: Tournament | null, groups: Group[]): TournamentFormatDef | undefined {
   if (!tournament) return undefined
   const isLeague = tournament.format === 'league'

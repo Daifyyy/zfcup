@@ -4,7 +4,8 @@ import type { Session } from '@supabase/supabase-js'
 import { SPORTS, getSportDef, type SportId } from '../lib/sports'
 import { BRAND } from '../lib/brand'
 import { useCompetitions } from '../hooks/useCompetitions'
-import { carryOverTeams, nextEditionNumber } from '../lib/editions'
+import { carryOverTeams, lastEdition, nextEditionNumber } from '../lib/editions'
+import { formatColumns, getFormatDef } from '../lib/formats'
 import {
   ArrowRight, CalendarDays, ChevronRight, GitBranch, Handshake, Lock, LogOut, MapPin, MonitorPlay,
   Newspaper, Plus, Radio, Share2, Smartphone, Target, Trophy,
@@ -141,11 +142,21 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
     try {
       const user = (await supabase.auth.getUser()).data.user
       const competition = competitions.find(c => c.id === newCompetitionId)
-      const edition = competition ? await nextEditionNumber(competition.id) : null
+      const [edition, prev] = competition
+        ? await Promise.all([nextEditionNumber(competition.id), lastEdition(competition.id)])
+        : [null, null]
+      // Nový ročník přebírá formát, časy, moduly a vzhled z minulého ročníku.
+      // Sezóna se hraje po kolech → musí být ligový formát (jinak chybí generátor rozpisu sezóny).
+      const leagueDef = getFormatDef('league')
+      const formatSettings = {
+        ...(prev?.settings ?? {}),
+        ...(newMode === 'season' && prev?.settings.format !== 'league' && leagueDef ? formatColumns(leagueDef) : {}),
+      }
       const res = await supabase
         .from('tournament')
         .insert({
           name: newName.trim(), slug: newSlug.trim(), sport: competition?.sport ?? newSport, owner_id: user?.id ?? null,
+          ...formatSettings,
           // Nové sloupce (migrace 09) posílat jen když jsou potřeba — bez migrace jde založit běžný turnaj
           ...(newMode === 'season' ? { schedule_mode: 'season' } : {}),
           ...(competition ? { competition_id: competition.id, edition } : {}),
@@ -158,14 +169,9 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
       }
       data = res.data
       // Převzít týmy a soupisky z posledního ročníku soutěže
-      if (competition && newCarryOver) {
-        const prev = tournaments
-          .filter(t => t.competition_id === competition.id && t.id !== data!.id)
-          .sort((a, b) => (b.edition ?? 0) - (a.edition ?? 0))[0]
-        if (prev) {
-          try { await carryOverTeams(prev.id, data.id, competition.id) }
-          catch (e) { setCreateError('Turnaj založen, ale převzetí týmů selhalo: ' + (e instanceof Error ? e.message : String(e))) }
-        }
+      if (competition && newCarryOver && prev) {
+        try { await carryOverTeams(prev.id, data.id, competition.id) }
+        catch (e) { setCreateError('Turnaj založen, ale převzetí týmů selhalo: ' + (e instanceof Error ? e.message : String(e))) }
       }
     } finally {
       setCreating(false)
