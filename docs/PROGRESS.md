@@ -10,9 +10,9 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev v práci:** `feature/competitions` — Fáze 0 (E2E soutěží) hotová, opravy commitnuty
+**Větev:** `main` — Fáze 0 hotová, `feature/competitions` sloučena a pushnuta (3d2e4f0)
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
-**DB migrace:** 01–09 spuštěné; **10 (`10_realtime_publication.sql`) čeká na spuštění v SQL Editoru**
+**DB migrace:** 01–10 spuštěné (10 = realtime publikace, ověřeno 2026-10-27: změna výsledku se projeví na otevřené stránce do ~3 s)
 
 ### Fáze 0 — výsledek E2E testu (2026-10-27)
 - Ověřeno v UI proti DB: soutěž „QA soutěž“ (1. ročník = QA liga), 2. ročník „QA liga 2 (test)“ (`8892b38c-f314-41f6-b338-a793bfd8aef2`, hokej, sezóna) s převzetím 6 týmů, rozpis sezóny 10 kol × 3 zápasy (každý tým 5× doma), výsledky vč. PP/SN, tabulka 3-2-1-0, Zápasy po kolech, TV tabule = nejbližší kolo, `/s/qa-soutez` (síň vítězů, věčná tabulka — součty sedí, rekordy).
@@ -22,9 +22,7 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Testovací data: „QA liga (test)“, „QA liga 2 (test)“, „QA soutěž“ (+ 6 clubs) — mazat jen se souhlasem uživatele.
 
 ### Kde navázat
-1. Uživatel spustí `db-backup/10_realtime_publication.sql` → ověřit realtime (změna výsledku se projeví bez reloadu).
-2. Sloučit `feature/competitions` do `main`.
-3. Fáze 1 — bezpečnost a role. Pozn.: čísla migrací v plánu se posouvají o 1 (role = 11, indexy = 12, kluby = 13).
+1. Fáze 1 — bezpečnost a role. Pozn.: čísla migrací v plánu se posouvají o 1 (role = 11, indexy = 12, kluby = 13).
 
 ### Otevřené body / nápady
 - Prázdný turnaj na Přehledu ukazuje jen hero — doplnit přívětivý prázdný stav („Turnaj se připravuje“).
