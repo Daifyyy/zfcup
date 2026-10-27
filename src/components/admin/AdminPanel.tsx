@@ -70,6 +70,11 @@ const ACTION_TABS: ATab[] = ['matches', 'bracket', 'tips']
 
 interface Props {
   session: Session | null
+  /** Smí přihlášený uživatel spravovat tento turnaj (vlastník nebo správce platformy) */
+  canEdit: boolean
+  isPlatformAdmin: boolean
+  /** Globální vypínač tipovačky (správce platformy) */
+  tipsAvailable: boolean
   tournamentId: string
   tournament: Tournament | null
   teams: Team[]
@@ -113,7 +118,7 @@ interface Props {
 }
 
 export default function AdminPanel(props: Props) {
-  const { session, onClose, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals } = props
+  const { session, canEdit, onClose, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals } = props
   const [aTab, setATab] = useState<ATab>('info')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -157,7 +162,8 @@ export default function AdminPanel(props: Props) {
   const tabProps = { ...props, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals }
   const isLeagueNoPlayoff = props.tournament?.format === 'league' && !(props.tournament?.league_has_playoff ?? true)
   const nav = ADMIN_NAV
-    .map(g => ({ ...g, items: g.items.filter(it => !isLeagueNoPlayoff || it.id !== 'bracket') }))
+    .map(g => ({ ...g, items: g.items.filter(it =>
+      !(isLeagueNoPlayoff && it.id === 'bracket') && !(!props.tipsAvailable && it.id === 'tips')) }))
     .filter(g => g.items.length > 0)
   const current = nav.flatMap(g => g.items).find(it => it.id === aTab)
   const mouseDownOnBackdrop = useRef(false)
@@ -168,7 +174,7 @@ export default function AdminPanel(props: Props) {
       onClick={e => { if (e.target === e.currentTarget && mouseDownOnBackdrop.current) onClose() }}
       className="adm"
     >
-      <div className={session ? 'adm__panel' : 'adm__panel adm__panel--narrow'}>
+      <div className={session && canEdit ? 'adm__panel' : 'adm__panel adm__panel--narrow'}>
 
         {/* Header */}
         <header className="adm__head">
@@ -261,6 +267,15 @@ export default function AdminPanel(props: Props) {
               </div>
             )}
           </div>
+        ) : !canEdit ? (
+          /* Přihlášený, ale turnaj patří jinému organizátorovi */
+          <div style={{ padding: '1.7rem', display: 'flex', flexDirection: 'column', gap: '.9rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem' }}>Bez oprávnění</h3>
+            <p style={{ fontSize: '.88rem', color: 'var(--ink-muted)', margin: 0 }}>
+              Tento turnaj spravuje jiný pořadatel. Účet <strong>{session.user.email}</strong> může spravovat jen turnaje, které sám založil.
+            </p>
+            <button type="button" className="btn btn-s" onClick={onClose} style={{ alignSelf: 'flex-start' }}>Zavřít</button>
+          </div>
         ) : (
           <>
             <div className="adm__body">
@@ -300,7 +315,7 @@ export default function AdminPanel(props: Props) {
               {aTab === 'matches'       && <MatchesTab {...tabProps} />}
               {aTab === 'scorers'       && <ScorersTab {...tabProps} />}
               {aTab === 'bracket'       && <BracketTab {...tabProps} />}
-              {aTab === 'tips'          && <TipsAdminTab showToast={showToast} tournament={props.tournament} teams={props.teams} players={props.players} groups={props.groups} matches={props.matches} bracketSlots={props.bracketSlots} bracketRounds={props.bracketRounds} />}
+              {aTab === 'tips' && props.tipsAvailable && <TipsAdminTab showToast={showToast} tournament={props.tournament} teams={props.teams} players={props.players} groups={props.groups} matches={props.matches} bracketSlots={props.bracketSlots} bracketRounds={props.bracketRounds} />}
               {aTab === 'sponsors'      && <SponsorsTab sponsors={props.sponsors} tournament={props.tournament} refetchSponsors={props.refetchSponsors} showToast={showToast} />}
               {aTab === 'settings'      && <SettingsTab {...tabProps} />}
             </div>

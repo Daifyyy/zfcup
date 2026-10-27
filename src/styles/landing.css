@@ -157,3 +157,13 @@
 .cp-record__value { font-family: var(--font-display); font-weight: 800; font-size: 2.4rem; line-height: 1.05; margin-top: .3rem; font-variant-numeric: tabular-nums; }
 .cp-record__value small { font-family: var(--font-body); font-size: .74rem; font-weight: 600; color: var(--ink-muted); margin-left: .35rem; text-transform: none; }
 .cp-record__detail { font-size: .82rem; color: var(--ink-muted); margin-top: .2rem; }
+
+/* ── Štítek „Spravujete“ na kartě turnaje ── */
+.lp-tcard__mine { margin-left: .35rem; padding: .05rem .4rem; border-radius: var(--radius-sm, 4px); background: var(--brand-soft); color: var(--brand); border: 1px solid var(--brand-line); letter-spacing: .06em; }
+
+/* ── Správa platformy: řádek s přepínačem ── */
+.lp-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem .95rem; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius); }
+.lp-switch { position: relative; flex-shrink: 0; width: 44px; height: 24px; border-radius: 12px; border: none; cursor: pointer; background: var(--line); transition: background .2s; }
+.lp-switch span { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--surface-1); box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .2s; }
+.lp-switch--on { background: var(--brand); }
+.lp-switch--on span { left: 23px; }

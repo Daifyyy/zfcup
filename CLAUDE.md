@@ -51,7 +51,8 @@ Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'foo
 |-----|------|
 | Divák | Žádný — čtení přes URL `/{tournamentId}` |
 | Tipér | Vlastní systém — jméno + PIN → tabulka `tipsters` |
-| Admin | Supabase Auth (email + heslo) → JWT → RLS write |
+| Organizátor (admin) | Supabase Auth (email + heslo) → JWT → RLS zápis jen do vlastních turnajů/soutěží (`owner_id`) |
+| Správce platformy | Supabase Auth + řádek v `platform_admins` → smí vše, ovládá `platform_settings` (vypínač tipovačky) |
 
 ### Routing
 - **`/`** → `TournamentLanding` (seznam + admin login + create)
@@ -61,8 +62,13 @@ Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'foo
 - **Auth → "Allow new users to sign up" = VYPNUTO** — nové účty přes Supabase dashboard → Invite user
 
 ## RLS a DB záloha
-Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–05_*.sql`.
-Stručný přehled RLS šablony: SELECT pro všechny (anon), ALL pro authenticated — viz `db-backup/02_rls.sql`.
+Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–11_*.sql`.
+- **Čtení**: SELECT pro všechny (anon) — diváci bez přihlášení.
+- **Zápis (migrace 11)**: `can_edit_tournament(tournament_id)` = vlastník turnaje (`tournament.owner_id`) nebo správce platformy (`is_platform_admin()`); soutěže/kluby/osoby přes `can_edit_competition`. Storage: `can_edit_storage_path(name)` — nové soubory ukládat pod `tournaments/{turnajId}/…` (`src/lib/storage.ts`: `tournamentAssetPath`, `uploadAsset`, `removeAssetByUrl`).
+- **Frontend**: `useAuthRole()` (`session`, `isPlatformAdmin`, `canEditTournament(ownerId)`); `App.tsx` `canEdit` řídí admin panel (cizí turnaj → „Bez oprávnění“). Výběr soutěže pro nový ročník jen z vlastních.
+- **Tipovačka**: globální vypínač `platform_settings.tips_globally_enabled` (`usePlatformSettings()`, úvodní stránka → Platforma, jen správce); bez migrace = vypnuto. Zabezpečení tipovačky (PINy, anon zápisy) je **odloženo** — nezapínat ji globálně, dokud se nevyřeší.
+- **Realtime (migrace 10)**: tabulky musí být v publikaci `supabase_realtime`, jinak DB neposílá události.
+- **Hlavičky**: `vercel.json` — CSP, HSTS, X-Frame-Options… Nový externí zdroj (font, iframe, API) = doplnit do CSP.
 
 ## DB Schema — kritické detaily
 - `matches.scheduled_time TEXT NOT NULL`, `matches.round TEXT NOT NULL` — při UPDATE posílat `''`, **ne `null`** → jinak 400
@@ -237,7 +243,7 @@ Aktivní záložky (Zápasy, Play-off, Tipovačka) = zelené zvýraznění (`ACT
 Soubor `middleware.ts` v kořeni projektu chrání aplikaci heslem.
 - **Aktivace**: Vercel env var `MAINTENANCE = true` + Redeploy
 - **Deaktivace**: `MAINTENANCE = false` nebo smazat proměnnou + Redeploy (bez commitu)
-- Přihlašovací údaje: `denis` / `zftest2026`
+- Přihlašovací údaje: env proměnné Vercelu `MAINTENANCE_USER` + `MAINTENANCE_PASSWORD` (nikdy v kódu ani zde). Bez nich vrací middleware při `MAINTENANCE=true` 503 (fail closed)
 - Middleware dále obsluhuje OG náhledy pro roboty (viz Volitelné moduly → Náhledy odkazů); maintenance kontrola musí zůstat první
 - Proměnná `MAINTENANCE` je server-side (ne `VITE_` prefix) — čte ji edge middleware, ne frontend bundle
 

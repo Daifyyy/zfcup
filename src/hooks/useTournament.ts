@@ -44,6 +44,8 @@ export interface Tournament {
   edition?: number | null
   season_label?: string
   schedule_mode?: 'day' | 'season'
+  /** Vlastník (organizátor) — migrace 11 hlídá zápis přes RLS */
+  owner_id?: string | null
 }
 
 export function useTournament(tournamentId?: string) {

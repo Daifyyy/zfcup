@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Session } from '@supabase/supabase-js'
 import { SPORTS, getSportDef, type SportId } from '../lib/sports'
 import { BRAND } from '../lib/brand'
 import { useCompetitions } from '../hooks/useCompetitions'
+import { useAuthRole } from '../hooks/useAuthRole'
+import { usePlatformSettings } from '../hooks/usePlatformSettings'
 import { carryOverTeams, lastEdition, nextEditionNumber } from '../lib/editions'
 import { formatColumns, getFormatDef } from '../lib/formats'
 import {
   ArrowRight, CalendarDays, ChevronRight, GitBranch, Handshake, Lock, LogOut, MapPin, MonitorPlay,
-  Newspaper, Plus, Radio, Share2, Smartphone, Target, Trophy,
+  Newspaper, Plus, Radio, Settings2, Share2, Smartphone, Target, Trophy,
 } from 'lucide-react'
 
 interface TournamentSummary {
@@ -21,6 +22,7 @@ interface TournamentSummary {
   logo_url?: string | null
   competition_id?: string | null
   edition?: number | null
+  owner_id?: string | null
 }
 
 interface Props {
@@ -43,7 +45,13 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
   const [tournaments, setTournaments] = useState<TournamentSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [session, setSession] = useState<Session | null>(null)
+  const { session, userId, isPlatformAdmin, canEditTournament } = useAuthRole()
+  const platform = usePlatformSettings()
+  const [showPlatform, setShowPlatform] = useState(false)
+  const [platformSaving, setPlatformSaving] = useState(false)
+  const [platformError, setPlatformError] = useState('')
+  // Do soutěže smí přidat ročník jen její vlastník (nebo správce platformy)
+  const myCompetitions = competitions.filter(c => isPlatformAdmin || (!!userId && c.owner_id === userId))
 
   // Login modal
   const [showLogin, setShowLogin] = useState(false)
@@ -67,13 +75,6 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
   const [slugManual, setSlugManual] = useState(false)
   const [createError, setCreateError] = useState('')
   const [creating, setCreating] = useState(false)
-
-  // Auth state
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
-    return () => subscription.unsubscribe()
-  }, [])
 
   // Load tournaments
   useEffect(() => {
@@ -141,7 +142,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
     let data: { id: string } | null = null
     try {
       const user = (await supabase.auth.getUser()).data.user
-      const competition = competitions.find(c => c.id === newCompetitionId)
+      const competition = myCompetitions.find(c => c.id === newCompetitionId)
       const [edition, prev] = competition
         ? await Promise.all([nextEditionNumber(competition.id), lastEdition(competition.id)])
         : [null, null]
@@ -207,6 +208,11 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
             {session ? (
               <>
                 <span className="lp-nav__user hide-mobile">{session.user.email}</span>
+                {isPlatformAdmin && (
+                  <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={() => { setShowPlatform(true); setPlatformError('') }}>
+                    <Settings2 size={15} /><span className="hide-mobile">Platforma</span>
+                  </button>
+                )}
                 <button type="button" className="ui-btn ui-btn--primary ui-btn--sm" onClick={() => { setShowCreate(true); setCreateError('') }}>
                   <Plus size={15} />Nový turnaj
                 </button>
@@ -290,7 +296,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
               { icon: Handshake, title: 'Partneři a branding', text: 'Úrovně partnerů, „presented by“, vlastní barvy turnaje a loga všude, kde to má smysl.' },
               { icon: Share2, title: 'Grafiky na sociální sítě', text: 'Jedním klikem výsledek, tabulka nebo střelci jako hotový obrázek pro Instagram a Facebook.' },
               { icon: GitBranch, title: 'Skupiny, liga i play-off', text: 'Jedenáct formátů turnaje, automatický rozpis, postup v pavouku a vyhodnocení.' },
-              { icon: Target, title: 'Tipovačka', text: 'Hráči a fanoušci tipují výsledky — body se počítají automaticky.' },
+              ...(platform.tipsEnabled ? [{ icon: Target, title: 'Tipovačka', text: 'Hráči a fanoušci tipují výsledky — body se počítají automaticky.' }] : []),
               { icon: Newspaper, title: 'Mediální servis', text: 'Kontakt pro novináře, loga ke stažení a výsledky v Excelu i k tisku.' },
               { icon: Smartphone, title: 'Mobil na prvním místě', text: 'Funguje v každém prohlížeči, bez aplikace a bez registrace diváků.' },
             ].map(f => {
@@ -379,7 +385,10 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
                       {t.logo_url ? <img src={t.logo_url} alt="" /> : <Icon size={28} strokeWidth={1.5} />}
                     </div>
                     <div className="lp-tcard__body">
-                      <div className="lp-tcard__sport"><Icon size={12} />{sport.label}{t.edition && t.competition_id ? ` · ${t.edition}. ročník` : ''}</div>
+                      <div className="lp-tcard__sport">
+                        <Icon size={12} />{sport.label}{t.edition && t.competition_id ? ` · ${t.edition}. ročník` : ''}
+                        {canEditTournament(t.owner_id) && <span className="lp-tcard__mine">Spravujete</span>}
+                      </div>
                       <div className="lp-tcard__name">{t.name || '(bez názvu)'}</div>
                       {t.subtitle && <div className="lp-tcard__sub">{t.subtitle}</div>}
                       <div className="lp-tcard__meta">
@@ -402,6 +411,46 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
           <span>{BRAND.tagline}</span>
         </div>
       </footer>
+
+      {/* ── Správa platformy (jen správce) ───────────── */}
+      {showPlatform && isPlatformAdmin && (
+        <div className="lp-modal" onClick={() => setShowPlatform(false)}>
+          <div className="lp-modal__panel" onClick={e => e.stopPropagation()}>
+            <h2 className="lp-modal__title">Správa platformy</h2>
+            <p style={{ fontSize: '.85rem', color: 'var(--ink-muted)', margin: '0 0 1rem' }}>
+              Globální nastavení pro všechny turnaje a organizátory.
+            </p>
+            <div className="lp-switch-row">
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '.9rem' }}>Tipovačka</div>
+                <div style={{ fontSize: '.78rem', color: 'var(--ink-muted)', marginTop: 2 }}>
+                  {platform.tipsEnabled
+                    ? 'Povolena — organizátoři ji mohou zapnout u svých turnajů.'
+                    : 'Vypnuta — není vidět v žádném turnaji, v administraci ani na úvodní stránce.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={platform.tipsEnabled}
+                aria-label="Povolit tipovačku"
+                className={platform.tipsEnabled ? 'lp-switch lp-switch--on' : 'lp-switch'}
+                style={{ opacity: platformSaving ? 0.5 : 1 }}
+                onClick={async () => {
+                  if (platformSaving) return
+                  setPlatformSaving(true); setPlatformError('')
+                  try {
+                    const err = await platform.setTipsGloballyEnabled(!platform.tipsEnabled)
+                    if (err) setPlatformError(err)
+                  } finally { setPlatformSaving(false) }
+                }}
+              ><span /></button>
+            </div>
+            {platformError && <p style={{ color: 'var(--loss)', fontSize: '.8rem', marginTop: '.6rem' }}>{platformError}</p>}
+            <button type="button" className="ui-btn ui-btn--ghost" style={{ width: '100%', marginTop: '1.2rem' }} onClick={() => setShowPlatform(false)}>Zavřít</button>
+          </div>
+        </div>
+      )}
 
       {/* ── Přihlášení ─────────────────────────────── */}
       {showLogin && (
@@ -491,12 +540,12 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
                 </div>
                 <p className="lp-modal__hint">{newMode === 'season' ? 'Liga po kolech s datem každého zápasu (např. okresní liga).' : 'Všechny zápasy v jeden den (např. firemní turnaj).'}</p>
               </div>
-              {competitions.filter(c => c.sport === newSport).length > 0 && (
+              {myCompetitions.filter(c => c.sport === newSport).length > 0 && (
                 <div>
                   <label className="field-label">Soutěž</label>
                   <select className="field-input field-select" value={newCompetitionId} onChange={e => setNewCompetitionId(e.target.value)}>
                     <option value="">Samostatný turnaj</option>
-                    {competitions.filter(c => c.sport === newSport).map(c => (
+                    {myCompetitions.filter(c => c.sport === newSport).map(c => (
                       <option key={c.id} value={c.id}>Další ročník: {c.name}</option>
                     ))}
                   </select>

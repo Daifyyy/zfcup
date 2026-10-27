@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowDown, ArrowUp, ImagePlus, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
+import { removeAssetByUrl, tournamentAssetPath, uploadAsset } from '../../../lib/storage'
 import type { Sponsor } from '../../../hooks/useSponsors'
 import { PARTNER_TIERS, sortByTier, tierOf, tierLabel, isMissingColumnError, type PartnerTier } from '../../../lib/partners'
 
@@ -72,12 +73,9 @@ export default function SponsorsTab({ sponsors, tournament, refetchSponsors, sho
 
   const remove = async (s: Sponsor) => {
     if (!confirm(`Smazat partnera "${s.name}"?`)) return
-    if (s.logo_url && s.logo_url.includes('sponsors/')) {
-      const path = s.logo_url.split('sponsors/')[1]?.split('?')[0]
-      if (path) await supabase.storage.from('team-logos').remove([`sponsors/${path}`])
-    }
     const { error } = await supabase.from('sponsors').delete().eq('id', s.id)
     if (error) { showToast('Chyba: ' + error.message); return }
+    await removeAssetByUrl(s.logo_url)
     refetchSponsors()
     showToast('Smazáno')
   }
@@ -85,17 +83,18 @@ export default function SponsorsTab({ sponsors, tournament, refetchSponsors, sho
   const uploadLogo = async (file: File, sponsorId?: string) => {
     if (!file.type.match(/^image\/(png|jpeg)$/)) { showToast('Pouze PNG nebo JPG'); return }
     if (file.size > 500 * 1024) { showToast('Max. 500 KB'); return }
-    const id = sponsorId ?? editId ?? `tmp_${Date.now()}`
-    const ext = file.name.endsWith('.png') ? 'png' : 'jpg'
+    if (!tournament?.id || uploading) return
+    // Nový partner ještě nemá id → dočasný název souboru (stále pod složkou turnaje)
+    const id = sponsorId ?? editId ?? `new-${Date.now()}`
+    const ext = file.type === 'image/png' ? 'png' : 'jpg'
     setUploading(true)
     try {
-      const path = `sponsors/${id}.${ext}`
-      const { error } = await supabase.storage.from('team-logos').upload(path, file, { upsert: true })
-      if (error) { showToast('Chyba uploadu: ' + error.message); return }
-      const { data } = supabase.storage.from('team-logos').getPublicUrl(path)
-      const url = `${data.publicUrl}?v=${Date.now()}`
+      const res = await uploadAsset(tournamentAssetPath(tournament.id, 'sponsors', id, ext), file)
+      if ('error' in res) { showToast('Chyba uploadu: ' + res.error); return }
+      const url = res.url
       if (sponsorId) {
-        await supabase.from('sponsors').update({ logo_url: url }).eq('id', sponsorId)
+        const { error } = await supabase.from('sponsors').update({ logo_url: url }).eq('id', sponsorId)
+        if (error) { showToast('Chyba: ' + error.message); return }
         refetchSponsors()
         showToast('Logo nahráno')
       } else {

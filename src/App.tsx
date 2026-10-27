@@ -19,6 +19,8 @@ import { useRuleItems } from './hooks/useRuleItems'
 import { useReferees } from './hooks/useReferees'
 import { useSponsors } from './hooks/useSponsors'
 import { useCompetitions } from './hooks/useCompetitions'
+import { useAuthRole } from './hooks/useAuthRole'
+import { usePlatformSettings } from './hooks/usePlatformSettings'
 import { TournamentProvider } from './lib/TournamentContext'
 import Header, { HEADER_HEIGHT_DESKTOP } from './components/layout/Header'
 import { BRAND } from './lib/brand'
@@ -89,7 +91,6 @@ export default function App() {
   const [kiosk, setKiosk] = useState(() => new URLSearchParams(window.location.search).get('kiosk') === '1')
   const [scoreboard, setScoreboard] = useState(false)
   const [printOpen, setPrintOpen] = useState(false)
-  const [session, setSession] = useState<Session | null>(null)
   const [toast, setToast] = useState('')
   const [toastShow, setToastShow] = useState(false)
   const [passwordRecovery, setPasswordRecovery] = useState(false)
@@ -115,13 +116,18 @@ export default function App() {
   const { referees, refetch: refetchReferees } = useReferees(tournamentId)
   const { sponsors, refetch: refetchSponsors } = useSponsors(tournamentId)
   const { competitions } = useCompetitions()
+  const { session, isPlatformAdmin, canEditTournament } = useAuthRole()
+  const platform = usePlatformSettings()
+  // Organizátor spravuje jen své turnaje, správce platformy všechny
+  const canEdit = !!tournament && canEditTournament(tournament.owner_id)
+  // Tipovačka: globální vypínač správce platformy AND přepínač turnaje
+  const tipsOn = platform.tipsEnabled && (tournament?.tips_enabled ?? false)
 
   // ── Auth ──────────────────────────────────────────────
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+    // Session a role drží useAuthRole; tady jen obnova hesla z e-mailu
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
       if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
-      setSession(s)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -301,8 +307,8 @@ export default function App() {
         onScoreboard={() => setScoreboard(true)}
         onPrint={() => setPrintOpen(true)}
         onHome={goHome}
-        isAdmin={!!session}
-        tipsEnabled={tournament?.tips_enabled ?? false}
+        isAdmin={canEdit}
+        tipsEnabled={tipsOn}
         showBracket={showBracket}
         cardsEnabled={tournament?.cards_enabled ?? false}
         sponsorsEnabled={sponsorsEnabled}
@@ -327,7 +333,7 @@ export default function App() {
         {tab === 'bracket'   && showBracket && <Bracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />}
         {tab === 'info'      && <Info tournament={tournament} announcements={announcements} onTab={navigateTab} />}
         {tab === 'rules'     && <Rules tournament={tournament} ruleItems={ruleItems} />}
-        {tab === 'tips'      && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
+        {tab === 'tips'      && tipsOn && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
         {tab === 'sponsors'  && <Sponsors sponsors={sponsors} />}
         {tab === 'media'     && mediaEnabled && <Media tournament={tournament} sponsors={sponsorsEnabled ? sortedSponsors : []} matches={matches} groups={groups} teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots} onPrint={() => setPrintOpen(true)} showToast={showToast} />}
       </main>
@@ -358,6 +364,9 @@ export default function App() {
         <AdminPanel
           {...shared}
           session={session}
+          canEdit={canEdit}
+          isPlatformAdmin={isPlatformAdmin}
+          tipsAvailable={platform.tipsEnabled}
           tournamentId={tournamentId}
           tournament={tournament}
           bracketGoals={bracketGoals}
@@ -390,7 +399,7 @@ export default function App() {
           onClose={() => setAdminOpen(false)}
         />
       )}
-      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tournament?.tips_enabled ?? false} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} sponsorsEnabled={sponsorsEnabled} mediaEnabled={mediaEnabled} />
+      <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tipsOn} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} sponsorsEnabled={sponsorsEnabled} mediaEnabled={mediaEnabled} />
       <Toast message={toast} show={toastShow} />
       {passwordRecovery && <PasswordResetOverlay onDone={() => setPasswordRecovery(false)} />}
       {printOpen && (

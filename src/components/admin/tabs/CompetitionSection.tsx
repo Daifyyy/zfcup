@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
 import type { Team } from '../../../hooks/useTeams'
 import { useCompetitions, useCompetitionEditions, type Club } from '../../../hooks/useCompetitions'
+import { useAuthRole } from '../../../hooks/useAuthRole'
 import { carryOverTeams, ensureIdentities, nextEditionNumber, slugify } from '../../../lib/editions'
 import { normalizeName } from '../../../lib/history'
 
@@ -19,6 +20,9 @@ interface Props {
 /** Admin → Nastavení → Soutěž a ročník. */
 export default function CompetitionSection({ tournament, teams, refetchTournament, refetchTeams, refetchPlayers, showToast }: Props) {
   const { competitions, available, refetch: refetchCompetitions } = useCompetitions()
+  const { userId, isPlatformAdmin } = useAuthRole()
+  // Přiřadit ročník lze jen do vlastní soutěže (RLS by jinak zápis odmítla)
+  const myCompetitions = competitions.filter(c => isPlatformAdmin || (!!userId && c.owner_id === userId))
   const competitionId = tournament?.competition_id ?? ''
   const competition = competitions.find(c => c.id === competitionId)
   const { editions } = useCompetitionEditions(competitionId)
@@ -39,9 +43,9 @@ export default function CompetitionSection({ tournament, teams, refetchTournamen
   }, [tournament?.id, tournament?.edition, tournament?.season_label])
 
   useEffect(() => {
-    if (!pickId && competitions.length) setPickId(competitions[0].id)
-    if (!competitions.length) setMode('new')
-  }, [competitions, pickId])
+    if (!pickId && myCompetitions.length) setPickId(myCompetitions[0].id)
+    if (!myCompetitions.length) setMode('new')
+  }, [myCompetitions.length, pickId])
 
   // Návrh čísla ročníku pro vybranou soutěž
   useEffect(() => {
@@ -152,7 +156,7 @@ export default function CompetitionSection({ tournament, teams, refetchTournamen
     refetchTournament(); showToast('Odebráno ze soutěže')
   })
 
-  const sameSport = competitions.filter(c => c.sport === tournament?.sport)
+  const sameSport = myCompetitions.filter(c => c.sport === tournament?.sport)
 
   return (
     <div>

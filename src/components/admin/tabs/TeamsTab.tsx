@@ -1,6 +1,7 @@
 import { Camera } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
+import { removeAssetByUrl, storagePathFromUrl, tournamentAssetPath, uploadAsset } from '../../../lib/storage'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import { TEAM_COLORS } from '../../../lib/constants'
@@ -35,31 +36,34 @@ function RoleBadge({ role }: { role: string | null }) {
   return null
 }
 
-function LogoSection({ team, showToast, refetchTeams }: { team: Team; showToast: (m: string) => void; refetchTeams: () => void }) {
+function LogoSection({ team, tournamentId, showToast, refetchTeams }: { team: Team; tournamentId: string; showToast: (m: string) => void; refetchTeams: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
   const uploadLogo = async (file: File) => {
     if (!file.type.includes('png')) { showToast('Pouze PNG soubory'); return }
     if (file.size > 512_000) { showToast('Max velikost je 500 KB'); return }
+    if (uploading || !tournamentId) return
     setUploading(true)
-    const path = `${team.id}.png`
-    const { error: upErr } = await supabase.storage
-      .from('team-logos')
-      .upload(path, file, { upsert: true })
-    if (upErr) { showToast('Chyba uploadu: ' + upErr.message); setUploading(false); return }
-    const { data } = supabase.storage.from('team-logos').getPublicUrl(path)
-    const urlWithTs = `${data.publicUrl}?v=${Date.now()}`
-    const { error } = await supabase.from('teams').update({ logo_url: urlWithTs }).eq('id', team.id)
-    setUploading(false)
-    if (error) showToast('Chyba: ' + error.message)
-    else { showToast('Logo nahráno ✓'); refetchTeams() }
+    try {
+      const res = await uploadAsset(tournamentAssetPath(tournamentId, 'teams', team.id, 'png'), file)
+      if ('error' in res) { showToast('Chyba uploadu: ' + res.error); return }
+      const oldUrl = team.logo_url
+      const { error } = await supabase.from('teams').update({ logo_url: res.url }).eq('id', team.id)
+      if (error) { showToast('Chyba: ' + error.message); return }
+      // Starý soubor (např. dřívější cesta {teamId}.png) uklidit, pokud se liší
+      if (storagePathFromUrl(oldUrl) !== storagePathFromUrl(res.url)) await removeAssetByUrl(oldUrl)
+      showToast('Logo nahráno ✓'); refetchTeams()
+    } finally {
+      setUploading(false)
+    }
   }
 
   const removeLogo = async () => {
     if (!confirm('Smazat logo?')) return
-    await supabase.storage.from('team-logos').remove([`${team.id}.png`])
-    await supabase.from('teams').update({ logo_url: null }).eq('id', team.id)
+    const { error } = await supabase.from('teams').update({ logo_url: null }).eq('id', team.id)
+    if (error) { showToast('Chyba: ' + error.message); return }
+    await removeAssetByUrl(team.logo_url)
     showToast('Logo odstraněno')
     refetchTeams()
   }
@@ -152,14 +156,14 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
     if (file.size > 204_800) { showToast('Max velikost je 200 KB'); return }
     setUploadingAvatar(true)
     try {
+      if (!tournament?.id) return
       const ext = file.type === 'image/jpeg' ? 'jpg' : 'png'
-      const path = `players/${playerId}.${ext}`
-      const { error: upErr } = await supabase.storage.from('team-logos').upload(path, file, { upsert: true, contentType: file.type })
-      if (upErr) { showToast('Chyba uploadu: ' + upErr.message); return }
-      const { data: { publicUrl } } = supabase.storage.from('team-logos').getPublicUrl(path)
-      const url = `${publicUrl}?v=${Date.now()}`
-      const { error: dbErr } = await supabase.from('players').update({ avatar_url: url }).eq('id', playerId)
+      const res = await uploadAsset(tournamentAssetPath(tournament.id, 'players', playerId, ext), file)
+      if ('error' in res) { showToast('Chyba uploadu: ' + res.error); return }
+      const oldUrl = players.find(p => p.id === playerId)?.avatar_url
+      const { error: dbErr } = await supabase.from('players').update({ avatar_url: res.url }).eq('id', playerId)
       if (dbErr) { showToast('Chyba uložení: ' + dbErr.message); return }
+      if (storagePathFromUrl(oldUrl) !== storagePathFromUrl(res.url)) await removeAssetByUrl(oldUrl)
       showToast('Foto uloženo ✓')
       refetchPlayers()
     } finally {
@@ -168,9 +172,11 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
   }
 
   const removeAvatar = async (playerId: string) => {
+    const oldUrl = players.find(p => p.id === playerId)?.avatar_url
     const { error } = await supabase.from('players').update({ avatar_url: null }).eq('id', playerId)
-    if (error) showToast('Chyba: ' + error.message)
-    else { showToast('Foto odstraněno ✓'); refetchPlayers() }
+    if (error) { showToast('Chyba: ' + error.message); return }
+    await removeAssetByUrl(oldUrl)
+    showToast('Foto odstraněno ✓'); refetchPlayers()
   }
 
   const removePlayer = async (id: string) => {
@@ -403,7 +409,7 @@ export default function TeamsTab({ teams, players, tournament, refetchTeams, ref
                 </div>
                 {expanded && !isEditing && (
                   <div style={{ padding: '0 .9rem .75rem' }}>
-                    <LogoSection team={t} showToast={showToast} refetchTeams={refetchTeams} />
+                    <LogoSection team={t} tournamentId={tournament?.id ?? ''} showToast={showToast} refetchTeams={refetchTeams} />
                     <RosterSection team={t} players={players} tournament={tournament} showToast={showToast} refetchPlayers={refetchPlayers} />
                   </div>
                 )}

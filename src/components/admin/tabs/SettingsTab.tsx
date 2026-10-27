@@ -19,9 +19,11 @@ interface Props {
   teams?: Team[]
   refetchTeams?: () => void
   refetchPlayers?: () => void
+  /** Globální vypínač tipovačky (správce platformy) */
+  tipsAvailable?: boolean
 }
 
-export default function SettingsTab({ tournament, refetchTournament, refetchGroups, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals, showToast, teams = [], refetchTeams = () => {}, refetchPlayers = () => {} }: Props) {
+export default function SettingsTab({ tournament, refetchTournament, refetchGroups, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals, showToast, teams = [], refetchTeams = () => {}, refetchPlayers = () => {}, tipsAvailable = false }: Props) {
   const sportDef = getSportDef(tournament?.sport)
   const [p1, setP1] = useState('')
   const [p2, setP2] = useState('')
@@ -420,49 +422,52 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
         </div>
       ))}
 
-      <hr className="divider" />
-      <div className="sub-title">Tipovačka</div>
-      <div style={{ marginBottom: '.75rem' }}>
-        <label className="field-label">Datum turnaje (uzamkne tipy v čase začátku zápasu)</label>
-        <input
-          className="field-input"
-          type="date"
-          value={tournament?.tips_lock_from ?? ''}
-          onChange={async e => {
-            if (!tournament) return
-            const { error } = await supabase.from('tournament').update({ tips_lock_from: e.target.value }).eq('id', tournament.id)
-            if (error) showToast('Chyba: ' + error.message)
-            else refetchTournament()
-          }}
-        />
-        <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: '.28rem' }}>
-          Tipy se uzamknou v čas zápasu pouze v tento den. Bez data se zamykají podle času každý den.
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.7rem .9rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, marginBottom: '1rem' }}>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: '.85rem' }}>Zobrazit tipovačku uživatelům</div>
-          <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: 2 }}>
-            {tournament?.tips_enabled ? 'Tipovačka je viditelná v navigaci' : 'Tipovačka je skrytá — jen ty ji vidíš'}
+      {/* Tipovačka — jen když ji správce platformy globálně povolil */}
+      {tipsAvailable && (<>
+        <hr className="divider" />
+        <div className="sub-title">Tipovačka</div>
+        <div style={{ marginBottom: '.75rem' }}>
+          <label className="field-label">Datum turnaje (uzamkne tipy v čase začátku zápasu)</label>
+          <input
+            className="field-input"
+            type="date"
+            value={tournament?.tips_lock_from ?? ''}
+            onChange={async e => {
+              if (!tournament) return
+              const { error } = await supabase.from('tournament').update({ tips_lock_from: e.target.value }).eq('id', tournament.id)
+              if (error) showToast('Chyba: ' + error.message)
+              else refetchTournament()
+            }}
+          />
+          <div style={{ fontSize: '.7rem', color: 'var(--muted)', marginTop: '.28rem' }}>
+            Tipy se uzamknou v čas zápasu pouze v tento den. Bez data se zamykají podle času každý den.
           </div>
         </div>
-        <button
-          type="button"
-          onClick={toggleTips}
-          style={{
-            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
-            background: tournament?.tips_enabled ? 'var(--accent)' : '#cbd5e1',
-            position: 'relative', transition: 'background .2s',
-          }}
-        >
-          <span style={{
-            position: 'absolute', top: 3, borderRadius: '50%',
-            width: 18, height: 18, background: '#fff',
-            left: tournament?.tips_enabled ? 23 : 3,
-            transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
-          }} />
-        </button>
-      </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.7rem .9rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, marginBottom: '1rem' }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '.85rem' }}>Zobrazit tipovačku uživatelům</div>
+            <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: 2 }}>
+              {tournament?.tips_enabled ? 'Tipovačka je viditelná v navigaci' : 'Tipovačka je skrytá — jen ty ji vidíš'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleTips}
+            style={{
+              width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
+              background: tournament?.tips_enabled ? 'var(--accent)' : '#cbd5e1',
+              position: 'relative', transition: 'background .2s',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 3, borderRadius: '50%',
+              width: 18, height: 18, background: '#fff',
+              left: tournament?.tips_enabled ? 23 : 3,
+              transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+            }} />
+          </button>
+        </div>
+      </>)}
 
       <hr className="divider" />
       <div className="info-box">

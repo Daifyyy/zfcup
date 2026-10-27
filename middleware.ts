@@ -3,8 +3,8 @@
 // 2) Náhledy odkazů: robotům sociálních sítí vrátí na /{tournamentId}
 //    HTML s Open Graph metadaty (SPA je bez JS nevidí). Lidé jdou dál na aplikaci.
 
-const USER = 'denis'
-const PASS = 'zftest2026'
+// Přihlašovací údaje maintenance režimu jsou jen v env proměnných Vercelu
+// (MAINTENANCE_USER, MAINTENANCE_PASSWORD) — nikdy v kódu.
 
 const UUID_PATH = /^\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i
 const BOT_UA = /facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|discordbot|telegrambot|whatsapp|skypeuripreview|googlebot|bingbot|applebot|pinterest|redditbot|embedly|vkshare/i
@@ -52,12 +52,18 @@ async function ogResponse(url: URL, id: string): Promise<Response | undefined> {
 
 export default async function middleware(request: Request): Promise<Response | undefined> {
   if (process.env.MAINTENANCE === 'true') {
+    const user = process.env.MAINTENANCE_USER
+    const pass = process.env.MAINTENANCE_PASSWORD
+    // Bez nastavených údajů raději zavřít (fail closed), než web nechtěně otevřít
+    if (!user || !pass) {
+      return new Response('Web je v údržbě.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '3600' } })
+    }
     const auth = request.headers.get('authorization')
-    const expected = 'Basic ' + btoa(`${USER}:${PASS}`)
+    const expected = 'Basic ' + btoa(`${user}:${pass}`)
     if (auth !== expected) {
       return new Response('Přístup zakázán', {
         status: 401,
-        headers: { 'WWW-Authenticate': 'Basic realm="ZF Cup"' },
+        headers: { 'WWW-Authenticate': 'Basic realm="Turnajnik", charset="UTF-8"' },
       })
     }
   }
