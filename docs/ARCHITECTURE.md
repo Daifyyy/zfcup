@@ -38,10 +38,12 @@ Výjimky s vlastními hooky: `TournamentLanding`, `CompetitionPage`, `Competitio
 | `/{uuid}` | turnaj: `Header` + záložky + `BottomNav` | `detectTournamentIdFromUrl()` |
 | `/{uuid}?kiosk=1` | `KioskMode` (+ `Scoreboard` přes tlačítko) | stav `kiosk` |
 | `/s/{slug}` | `CompetitionPage` (síň vítězů, věčná tabulka, rekordy, hráči) | `detectCompetitionSlugFromUrl()` |
+| `/{uuid}?zapas={id}` / `?tym={id}` | turnaj s otevřeným detailem zápasu (i play-off slotu) / týmu | `DetailHost` |
 
 - Záložka turnaje je jen ve `history.state.tab` (ne v URL). Jediný `popstate` handler čte turnaj/soutěž z URL a záložku ze state.
 - `openTournament(id)` → vždy Přehled; změna `tournamentId` zavře admin/bulletin/tabuli.
 - Načítání: `TournamentSkeleton`, dokud `tournament.id !== tournamentId` nebo se načítají týmy/skupiny/zápasy; `notFound` → „Turnaj nenalezen“.
+- **Detaily (Fáze 4)**: `TournamentDataContext` (data, která App už načítá — `useTournamentData()`) + `DetailHost` (stav otevřeného detailu, `useDetail().openTeam/openMatch`). Otevření = `pushState` s `detail` + `detailDepth` ve stavu a `?zapas=`/`?tym=` v URL; Zpět vrátí předchozí detail, křížek/Esc zavře všechny (`history.go(-depth)`); odkaz z URL se otevře bez nového záznamu (hloubka 0). `DetailHost` má `key={tournamentId}`. V kiosku/TV a adminu se detaily neotevírají (`useDetail()` mimo provider nic nedělá).
 - Překryvy: `AdminPanel` (Ctrl+Shift+A / ikona zámku, jen `canEdit`), `PrintBulletin` (portál do `<body>`), `Scoreboard`, `PasswordResetOverlay`.
 - Líně načítané: `AdminPanel`, `KioskMode`, `Scoreboard`, `PrintBulletin`, `CompetitionPage` (`lib/lazyComponent.tsx`), sdílecí grafiky (`share/lazy.tsx`), `xlsx` v exportech.
 
@@ -114,13 +116,15 @@ Jeden časovač na interval; skrytá karta = nic; návrat na kartu = všechny re
 | Zápasy | `Results` | matchState, leagueSchedule (řazení kol), dates, share | — |
 | Tabulka | `Standings` | standings, formats (`getAdvancingCutoffs`), share | — |
 | Statistiky | `Statistics` (+ `Scorers`) | sports | — |
-| Týmy | `Teams` (drawer detailu uvnitř — Fáze 4 ho vyjme) | matchState, dates | — |
+| Týmy | `Teams` (karta → detail týmu) | details, fixtures | — |
 | Pavouk | `Bracket` | history (`isPlacementRound`) | ne u ligy bez play-off |
 | Pravidla | `Rules` | sanitize | — |
 | Tipovačka | `Tips` (vlastní hooky tipů) | tipsEval, leagueSchedule, dates | globální vypínač && `tips_enabled` |
 | Partneři | `Sponsors` | partners | `sponsors_enabled` |
 | Média | `Media` | partners, exportPress (líně), `onPrint` | `press_enabled` |
 | (Info) | `Info` | sanitize | starší záložka — není v `buildPublicTabs`, dostupná jen přes stav `tab`; kandidát na odstranění |
+
+**Detaily**: `TeamDetailDrawer` (bilance ze skupin i play-off, zápasy → detail zápasu, soupiska se statistikami; exportuje `RoleBadge`/`StatBadges`), `MatchDetailDrawer` (skóre + PP/SN, kolo/datum/čas/hřiště/rozhodčí, střelci/asistence/karty/tresty po týmech, kopírování odkazu), `DetailHost`. Otevírají se z: `MatchRow` (Zápasy, Přehled, detail týmu), slot v `Bracket`, tým v `Standings`, mini tabulce a prázdném stavu Přehledu, karta v `Teams`, týmy v detailu zápasu.
 
 Další veřejné: `Scoreboard` (TV tabule, paleta `C` natvrdo), `KioskMode` (TV, `kiosk/`), `PrintBulletin` (tisk), `AnnouncementCard`, `CompetitionPage` (`competition/`), `share/*` (sdílecí grafiky 1080×1080 / 1080×1920, `html-to-image`).
 
@@ -161,7 +165,7 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `bracket-formats/*` | `generate` / `seed` / `autoAdvance` pro každý formát; `bracketHelpers` (`createRound`, `slotsOf`, `fill`) | supabase, standings | formats |
 | `leagueSchedule.ts` | ligový rozpis (circle + DP), sezóna (Berger), `compareRounds`, `roundNumber`, `addDays` | — | GroupsTab, MatchesTab, Results, Tips, bulletin |
 | `fixtures.ts` | `buildFixtures` (zápasy + play-off), `topScorers`, `currentSeasonRound` | matchState | Overview, Scoreboard, Kiosk |
-| `matchState.ts` | `getMatchState` scheduled/live/final, `matchDay`, `parseHHMM` | dates | Overview, Results, Scoreboard, Teams, MatchRow, fixtures |
+| `matchState.ts` | `getMatchState` scheduled/live/final, `matchDay`, `parseHHMM` | dates | Overview, Results, Scoreboard, drawery detailů, MatchRow, fixtures |
 | `dates.ts` | formátování dat | — | 8 modulů |
 | `history.ts` | souhrn ročníků, věčná tabulka, rekordy, hráči napříč ročníky | standings, sports | CompetitionPage, CompetitionSection, Bracket, editions |
 | `editions.ts` | `ensureIdentities`, `carryOverTeams`, `nextEditionNumber`, `slugify` | supabase, history | TournamentLanding, CompetitionSection |
@@ -174,6 +178,8 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `brand.ts` | `BRAND.name` (název platformy — nepsat natvrdo) | — | 8 modulů |
 | `constants.ts` | `TEAM_COLORS`, `addMinutes`, `matchCount` | — | admin, Scoreboard |
 | `TournamentContext.tsx` | `useTournamentId()` | — | App |
+| `TournamentDataContext.tsx` | `TournamentData` (data turnaje pro detaily), `useTournamentData()`, `useDetail()` | — | App, DetailHost, drawery, Teams, Results, Overview, Standings, Bracket |
+| `details.ts` | `findMatchDetail` (zápas i slot, hřiště jako v Zápasech), `matchEvents`, `teamFixtures`, `teamRecord`, `playerStats`, `rosterOf` | fixtures, sports | drawery, Teams |
 | `lazyComponent.tsx` | líné načítání s fallbackem | — | App |
 
 **Citlivá místa (změna = spustit `npm test`):** `standings.ts` → nasazení play-off, tipy, historie, TV; `sports.ts` → bodování všude; `bracket-formats/*` → postup v pavouku; `leagueSchedule.ts` → rozpisy.
@@ -214,6 +220,6 @@ Nové soubory pod `tournaments/{turnajId}/…` (`lib/storage.ts`); starší cest
 - **Závislosti:** react 18, vite 6, typescript 5, tailwind 3, `@supabase/supabase-js` **2.49.1 (nepovyšovat)**, lucide-react, @tiptap, dompurify, html-to-image, qrcode.react, xlsx, @vercel/og, @fontsource (Barlow Condensed, Inter); dev: vitest 3.
 
 ## 9. Testy a kontroly
-- `npm test` — Vitest, `src/lib/__tests__/` (74 testů): `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
+- `npm test` — Vitest, `src/lib/__tests__/` (85 testů): `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
 - `npm run typecheck` — baseline 63 starších chyb, nové nesmí přibýt.
 - Chybí: testy `tipsEval.ts`, komponent a E2E automatizace (E2E se dělá ručně v Chromu).

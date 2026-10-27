@@ -1,3 +1,4 @@
+import type React from 'react'
 import type { ReactNode } from 'react'
 import { TeamLogo } from './TeamLogo'
 import { MatchStatusBadge } from './Badge'
@@ -29,9 +30,17 @@ export function MatchRow({ home, away, homeScore, awayScore, state, decidedIn, m
   const as = awayScore ?? 0
   const homeLost = state === 'final' && hs < as
   const awayLost = state === 'final' && as < hs
-  const cls = ['ui-match', state === 'live' && 'ui-match--live'].filter(Boolean).join(' ')
+  const cls = ['ui-match', state === 'live' && 'ui-match--live', onClick && 'ui-match--link'].filter(Boolean).join(' ')
+  const linkProps = onClick ? {
+    role: 'button' as const,
+    tabIndex: 0,
+    'aria-label': `Detail zápasu ${home?.name ?? 'TBD'} – ${away?.name ?? 'TBD'}`,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() }
+    },
+  } : {}
   return (
-    <div className={cls} onClick={onClick} style={onClick ? { cursor: 'pointer' } : undefined}>
+    <div className={cls} onClick={onClick} {...linkProps}>
       <div className="ui-match__meta">{meta}</div>
       <div className={`ui-match__team ui-match__team--home${homeLost ? ' ui-match__team--loser' : ''}`}>
         <span className="ui-match__team-name">{home?.name ?? 'TBD'}</span>

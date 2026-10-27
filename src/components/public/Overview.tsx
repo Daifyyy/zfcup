@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, ChevronRight, MapPin, Radio } from 'lucide-react'
+import { CalendarDays, ChevronRight, Hourglass, MapPin, Radio } from 'lucide-react'
 import type { Tab } from '../../App'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Announcement } from '../../hooks/useAnnouncements'
@@ -22,6 +22,8 @@ import { AnnouncementCard } from './AnnouncementCard'
 import { Card } from '../ui/Card'
 import { Badge } from '../ui/Badge'
 import { MatchRow } from '../ui/MatchRow'
+import { useDetail } from '../../lib/TournamentDataContext'
+import { fixtureId } from '../../lib/details'
 import { TeamLogo } from '../ui/TeamLogo'
 import { PartnerStrip } from '../ui/PartnerStrip'
 
@@ -65,6 +67,7 @@ export default function Overview({
   bracketRounds = [], bracketSlots = [], sponsors = [], presentedBy,
 }: Props) {
   useMinuteTick()
+  const { openTeam, openMatch } = useDetail()
   const sport = getSportDef(tournament?.sport)
   const SportIcon = sport.Icon
   const teamById = useMemo(() => new Map(teams.map(t => [t.id, t])), [teams])
@@ -101,6 +104,7 @@ export default function Overview({
       awayScore={f.away_score}
       state={state}
       decidedIn={f.decided_in}
+      onClick={() => openMatch(fixtureId(f))}
       meta={<div>{f.match_date ? <>{formatDateShort(f.match_date)} <span style={{ color: 'var(--ink-faint)' }}>{f.scheduled_time}</span></> : (f.scheduled_time || '—')}<div style={{ fontSize: '.66rem', color: 'var(--ink-faint)', fontWeight: 500, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.label}</div></div>}
     />
   )
@@ -152,6 +156,32 @@ export default function Overview({
         </div>
       )}
 
+      {/* ── Nový turnaj bez rozpisu ─────────────────── */}
+      {!hasBoard && (
+        <section className="ov-prep">
+          <Hourglass size={28} className="ov-prep__icon" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 className="ov-prep__title">Turnaj se připravuje</h3>
+            <p className="ov-prep__text">
+              {teams.length > 0
+                ? `Přihlášeno ${teams.length} ${teams.length === 1 ? 'tým' : teams.length < 5 ? 'týmy' : 'týmů'}. Rozpis zápasů zveřejníme brzy.`
+                : 'Týmy a rozpis zápasů zveřejníme brzy.'}
+              {' '}Výsledky se tu pak budou objevovat živě.
+            </p>
+            {teams.length > 0 && (
+              <div className="ov-prep__teams">
+                {teams.map(t => (
+                  <button key={t.id} type="button" className="ov-prep__team" onClick={() => openTeam(t.id)} title={t.name}>
+                    <TeamLogo team={t} size={28} />
+                    <span>{t.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       <div className={hasAside ? 'ov-grid' : ''}>
         <div className="ov-col">
           {live.length > 0 && (
@@ -177,10 +207,10 @@ export default function Overview({
                       <tr key={r.id}>
                         <td className="is-muted">{i + 1}</td>
                         <td className="is-left">
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '.5rem', fontWeight: 600 }}>
+                          <button type="button" className="ui-teamlink" onClick={() => openTeam(r.id)} title="Detail týmu" style={{ gap: '.5rem' }}>
                             {t && <TeamLogo team={t} size={22} />}
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t?.name}</span>
-                          </span>
+                          </button>
                         </td>
                         <td className="is-muted">{r.played}</td>
                         <td className="is-muted">{r.gf}:{r.ga}</td>

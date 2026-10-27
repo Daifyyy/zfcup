@@ -5,6 +5,7 @@ import Empty from '../ui/Empty'
 import { TeamLogo } from '../ui/TeamLogo'
 import { SectionHeader } from '../ui/Card'
 import { isPlacementRound } from '../../lib/history'
+import { useDetail } from '../../lib/TournamentDataContext'
 
 interface Props {
   rounds: BracketRound[]
@@ -16,6 +17,7 @@ const DECIDED_IN_BADGE: Record<string, string> = { ot: 'PP', so: 'SN' }
 
 
 function SlotCard({ slot, teams, isFinal }: { slot: BracketSlot; teams: Map<string, Team>; isFinal: boolean }) {
+  const { openMatch } = useDetail()
   const hT = slot.home_id ? teams.get(slot.home_id) : undefined
   const aT = slot.away_id ? teams.get(slot.away_id) : undefined
   const hw = slot.played && slot.home_score > slot.away_score
@@ -30,15 +32,23 @@ function SlotCard({ slot, teams, isFinal }: { slot: BracketSlot; teams: Map<stri
     </div>
   )
 
-  return (
-    <div className={`brk-slot${isFinal ? ' brk-slot--final' : ''}`}>
+  const cls = `brk-slot${isFinal ? ' brk-slot--final' : ''}`
+  const body = (
+    <>
       {row(hT, slot.home_score, hw, aw)}
       {row(aT, slot.away_score, aw, hw)}
       <div className="brk-slot__meta">
         <span>{slot.played ? 'Konec' : slot.scheduled_time || 'Termín upřesníme'}</span>
         {decided && <span className="brk-slot__ot">{decided}</span>}
       </div>
-    </div>
+    </>
+  )
+  // Detail jen u slotu, kde už je aspoň jeden tým
+  if (!hT && !aT) return <div className={cls}>{body}</div>
+  return (
+    <button type="button" className={`${cls} brk-slot--link`} onClick={() => openMatch(slot.id)} aria-label={`Detail zápasu ${hT?.name ?? 'Určí se'} – ${aT?.name ?? 'Určí se'}`}>
+      {body}
+    </button>
   )
 }
 

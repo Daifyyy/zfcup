@@ -15,6 +15,7 @@ import { roundNumber, compareRounds } from '../../lib/leagueSchedule'
 import { MatchStatusBadge } from '../ui/Badge'
 import type { Sponsor } from '../../hooks/useSponsors'
 import { ShareMatchDialog } from '../share/lazy'
+import { useDetail } from '../../lib/TournamentDataContext'
 
 interface Props {
   matches: Match[]
@@ -33,6 +34,7 @@ export default function Results({ matches, teams, tournament, referees = [], spo
   const [teamFilter, setTeamFilter] = useState('all')
   const [shareId, setShareId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const { openMatch } = useDetail()
   const [, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60_000)
@@ -159,7 +161,7 @@ export default function Results({ matches, teams, tournament, referees = [], spo
                 trailing={state === 'final' ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.35rem' }}>
                     <MatchStatusBadge state={state} decidedIn={m.decided_in} />
-                    <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" title="Sdílet grafiku výsledku" onClick={() => setShareId(m.id)}>
+                    <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" title="Sdílet grafiku výsledku" onClick={e => { e.stopPropagation(); setShareId(m.id) }}>
                       <Share2 size={15} />
                     </button>
                   </span>
@@ -168,6 +170,7 @@ export default function Results({ matches, teams, tournament, referees = [], spo
                   ? <div>{formatDateShort(m.match_date) || '—'}<div style={{ fontSize: '.68rem', color: 'var(--ink-faint)', fontWeight: 500 }}>{m.scheduled_time}</div></div>
                   : isLeague ? (pitch ?? m.scheduled_time) : (m.scheduled_time || '—')}
                 sub={ref ? <span><Gavel size={12} />{ref}</span> : undefined}
+                onClick={() => openMatch(m.id)}
               />
             )
           })}

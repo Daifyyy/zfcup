@@ -12,6 +12,7 @@ import { TeamLogo } from '../ui/TeamLogo'
 import { Card, SectionHeader } from '../ui/Card'
 import { getAdvancingCutoffs } from '../../lib/formats'
 import { getSportDef, sportHasOvertime } from '../../lib/sports'
+import { useDetail } from '../../lib/TournamentDataContext'
 
 interface Props {
   groups: Group[]
@@ -64,6 +65,7 @@ function tiebreakerText(tb: Group['tiebreaker']): string {
 
 export default function Standings({ groups, matches, teams, tournament, sponsors = [], showToast }: Props) {
   const [shareGroupId, setShareGroupId] = useState<string | null>(null)
+  const { openTeam } = useDetail()
   const teamById = new Map(teams.map(t => [t.id, t]))
   const sportDef = getSportDef(tournament?.sport)
   const allowDraws = sportDef.standings.allowDraws
@@ -144,8 +146,10 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
                         </td>
                         <td className="is-left">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-                            {team && <TeamLogo team={team} size={30} />}
-                            <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
+                            <button type="button" className="ui-teamlink" onClick={() => openTeam(row.id)} title="Detail týmu">
+                              {team && <TeamLogo team={team} size={30} />}
+                              <span className="standings-name" style={{ fontWeight: 600 }}>{team?.name ?? row.id}</span>
+                            </button>
                             {zone && (i === 0 || sfCutoff !== undefined || advancing + consolation < rows.length) && (
                               <span className="std-zone hide-mobile" style={{ color: zone.color, borderColor: zone.color }}>{zone.label}</span>
                             )}

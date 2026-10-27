@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { supabase } from './lib/supabase'
 import { useTournament } from './hooks/useTournament'
 import { useTeams } from './hooks/useTeams'
@@ -22,6 +22,8 @@ import { useCompetitions } from './hooks/useCompetitions'
 import { useAuthRole } from './hooks/useAuthRole'
 import { usePlatformSettings } from './hooks/usePlatformSettings'
 import { TournamentProvider } from './lib/TournamentContext'
+import { TournamentDataContext, type TournamentData } from './lib/TournamentDataContext'
+import DetailHost from './components/public/DetailHost'
 import Header, { HEADER_HEIGHT_DESKTOP } from './components/layout/Header'
 import { BRAND } from './lib/brand'
 import { sortByTier, getTitlePartner } from './lib/partners'
@@ -110,7 +112,7 @@ export default function App() {
   const { bracketCards, refetch: refetchBracketCards } = useBracketCards(tournamentId)
   const { penalties, refetch: refetchPenalties } = usePenalties(tournamentId)
   const { bracketPenalties, refetch: refetchBracketPenalties } = useBracketPenalties(tournamentId)
-  const { rounds: bracketRounds, slots: bracketSlots, refetch: refetchBracket } = useBracket(tournamentId)
+  const { rounds: bracketRounds, slots: bracketSlots, loading: bracketLoading, refetch: refetchBracket } = useBracket(tournamentId)
   const { bracketGoals, refetch: refetchBracketGoals } = useBracketGoals(tournamentId)
   const { announcements, refetch: refetchAnnouncements } = useAnnouncements(tournamentId)
   const { ruleItems, refetch: refetchRuleItems } = useRuleItems(tournamentId)
@@ -195,6 +197,14 @@ export default function App() {
     clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToastShow(false), 2600)
   }, [])
+
+  // Data pro detaily týmu a zápasu (kontext — bez dalších props a dotazů)
+  const detailData = useMemo<TournamentData | null>(() => (tournament ? {
+    tournament, teams, players, groups, matches, goals, assists, cards, penalties,
+    bracketRounds, bracketSlots, bracketGoals, bracketAssists, bracketCards, bracketPenalties,
+    referees, bracketLoading,
+  } : null), [tournament, teams, players, groups, matches, goals, assists, cards, penalties,
+    bracketRounds, bracketSlots, bracketGoals, bracketAssists, bracketCards, bracketPenalties, referees, bracketLoading])
 
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, ruleItems, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))
@@ -289,6 +299,8 @@ export default function App() {
 
   return (
     <TournamentProvider tournamentId={tournamentId}>
+    <TournamentDataContext.Provider value={detailData}>
+    <DetailHost key={tournamentId}>
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Header
         tournament={tournament}
@@ -406,6 +418,8 @@ export default function App() {
         />
       )}
     </div>
+    </DetailHost>
+    </TournamentDataContext.Provider>
     </TournamentProvider>
   )
 }

@@ -24,6 +24,7 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 - **Značka platformy**: `src/lib/brand.ts` (`BRAND.name` — název zatím není finální, nikde jinde nepsat natvrdo).
 - **Stav zápasu** `getMatchState(match, tournament)` (`src/lib/matchState.ts`) → `scheduled|live|final`; „Živě“ jen v den turnaje (`tips_lock_from`) v okně `scheduled_time + match_duration`. Bez změny DB.
 - `src/lib/fixtures.ts`: `buildFixtures()` (zápasy + play-off sloty), `topScorers()`.
+- **Detail týmu / zápasu**: `useDetail().openTeam(id)` / `openMatch(id)` (id zápasu i play-off slotu) odkudkoli na veřejném webu; data z `useTournamentData()` (`src/lib/TournamentDataContext.tsx`, plní `App.tsx` — žádné další dotazy), výpočty v `src/lib/details.ts`. `DetailHost` drží stav, URL `?zapas=`/`?tym=` a historii (Zpět zavře). Klikací `MatchRow` = prop `onClick`; vnořená tlačítka (Sdílet) musí volat `e.stopPropagation()`.
 
 ## Soutěže, ročníky a sezóny (migrace 09)
 - **Hierarchie**: `competitions` (soutěž) → ročníky = `tournament` s `competition_id` + `edition` (UNIQUE v soutěži) + `season_label`.

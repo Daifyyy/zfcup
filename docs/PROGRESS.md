@@ -10,7 +10,7 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; **Fáze 4 hotová a ověřená v prohlížeči (čeká na commit)**
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
 **DB migrace:** 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
@@ -46,14 +46,25 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - **Realtime ověřen naostro** (přihlášený správce, divák v druhé kartě, QA liga 2): změna zápasu v cizím turnaji → divák nestáhl nic; ve vlastním → refetch zápasů za 0,4 s; nové oznámení → zobrazeno za 2 s; smazání → zmizelo za 0,8 s (nefiltrovaný DELETE funguje). Testovací oznámení smazáno.
 - Pozor při měření v dev režimu: buffer `performance` má 250 položek a Vite ho zaplní moduly → nové požadavky se nezapisují. Před měřením `performance.setResourceTimingBufferSize(10000); performance.clearResourceTimings()`.
 
+### Fáze 4 — detail týmu a zápasu (2026-10-27)
+- **Rozhodnutí uživatele:** data přes sdílený kontext (ne TanStack Query) · detail zápasu sdílitelný odkazem `?zapas={id}` (doplněno i `?tym={id}`).
+- `TournamentDataContext` + `DetailHost`: detail se otevře odkudkoli, Zpět ho zavře (vnořené detaily se vrací po jednom), křížek/Esc zavře vše; odkaz z URL otevře turnaj rovnou s detailem.
+- `TeamDetailDrawer` (vyjmut z `Teams.tsx`): bilance a zápasy **včetně play-off** (dřív jen skupiny), u hokeje bez remíz (i na kartě týmu), zápasy klikací → detail zápasu, neplatný odkaz = „Tým nenalezen“.
+- `MatchDetailDrawer` (nový): skóre + PP/SN, kolo/skupina, datum, výkop, hřiště (jen jednodenní liga se souběžnými zápasy — stejně jako Zápasy), rozhodčí, střelci/asistence/karty/trestné minuty po týmech (jen zapnuté moduly), kopírování odkazu, „Střelci nebyli zadáni“, záznamy hráčů mimo soupisku.
+- Otevírání: Zápasy, Přehled (živé/další/poslední + mini tabulka), Tabulka (tým), Pavouk (slot s aspoň jedním týmem), Týmy, detaily navzájem. `MatchRow` s `onClick` je přístupný z klávesnice. TV/kiosk záměrně bez detailů (pasivní obrazovka).
+- Přehled: prázdný stav „Turnaj se připravuje“ (počet týmů + klikací týmy).
+- Ověřeno: typová kontrola 63 = baseline, 85 testů (11 nových v `details.test.ts`), produkční build (+15 kB, +4 kB gzip).
+- **Ověřeno v prohlížeči (dev):** hokej/sezóna (QA liga 2) i fotbal se skupinami a play-off (Testovací Turnaj, QA liga): detail z Přehledu, Zápasů, Tabulky, Pavouka (prázdné sloty neklikací), Týmů, prázdného stavu; vnořený detail tým → zápas, Zpět vrací po jednom, Vpřed znovu otevře, křížek a Esc zavřou vše, přímý odkaz `?zapas=` (hloubka 0) i neplatný `?tym=`; Sdílet v Zápasech neotevře detail; mobil 360/375/390 px (rámce) a desktop, dlouhé názvy týmů se zalamují (max. 3 řádky). Prázdný stav „Turnaj se připravuje“ na Cupu 2026.
+- Úpravy po ověření: prázdný průběh = jen hláška · u jednodenního turnaje datum turnaje · u odehraného zápasu bez času nic místo „Termín upřesníme“ · „1 hráč / 2 hráči / 5 hráčů“.
+- Neověřeno: tlačítko Zpět na fyzickém Androidu, kopírování odkazu do schránky (na http bez schránky se ukáže pole s odkazem).
+
 ### Kde navázat
-1. **Příště začít:** přečíst tento deník + `docs/ARCHITECTURE.md`, pak Fáze 4 — detail týmu a zápasu. Na začátku rozhodnout s uživatelem: TanStack Query teď, nebo data z `App.tsx` přes kontext (viz plán, Fáze 4).
+1. **Příště začít:** Fáze 5 — knihovna klubů (pokud Fáze 4 ještě není commitnutá/nasazená, nejdřív commit + push po souhlasu uživatele).
 2. Před nasazením play-off v Cupu 2026 ověřit, že je nasazená oprava `groups_qf_full`.
 3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 
 ### Otevřené body / nápady
 - **TanStack Query — potenciál do budoucna** (rozhodnutí uživatele 2026-10-27): dnes malý přínos (teplé načtení 0,2 s). Hodí se, až bude víc obrazovek sdílet stejná data (detail týmu/zápasu ve Fázi 4, knihovna klubů) — cache, deduplikace, okamžitý návrat na otevřený turnaj, jedno místo pro polling. Převádět hooky po jednom se zachováním API (`data`, `loading`, `refetch`); `poller.ts` a `realtimeManager.ts` pak jen invalidují dotazy.
-- Prázdný turnaj na Přehledu ukazuje jen hero — doplnit přívětivý prázdný stav („Turnaj se připravuje“).
 - Studené otevření ~2–3 s (Supabase free tier se uspává, 19 dotazů) — zvážit placený tier nebo sloučení dotazů do jednoho RPC.
 - Loga turnajů: kvůli staré chybě (sdílený `tournament-logo.png`) je nutné nahrát logo znovu u každého turnaje.
 - OG náhledy odkazů (`api/og.ts`, middleware) ověřit až po vypnutí maintenance (roboti dostávají 401).

@@ -310,3 +310,89 @@ a.pt-tile:hover { border-color: var(--line-strong); box-shadow: var(--shadow-lg)
 .brk-placement__title::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 .brk-placement__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1.25rem; }
 .brk-placement .brk-slot::after { display: none; }
+
+/* Play-off slot jako odkaz na detail zápasu */
+.brk-slot--link {
+  display: block; width: 100%; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer;
+  transition: border-color .12s, box-shadow .12s;
+}
+.brk-slot--link:hover { border-color: var(--brand-line); box-shadow: var(--shadow-card); }
+.brk-slot--final.brk-slot--link:hover { border-color: var(--gold); }
+.brk-slot--link:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* Detail zápasu (drawer) */
+.md-head { gap: .5rem; border-bottom-color: var(--brand); }
+.md-head__label {
+  flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.1rem;
+  text-transform: uppercase; letter-spacing: .04em; color: var(--chrome-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.md-board {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: .75rem;
+  padding: 1.5rem 1rem 1.25rem; background: var(--chrome-2); color: var(--chrome-ink);
+}
+.md-side {
+  display: flex; flex-direction: column; align-items: center; gap: .55rem; min-width: 0; text-align: center;
+  background: none; border: none; padding: .25rem; font: inherit; color: inherit; border-radius: var(--radius);
+}
+button.md-side { cursor: pointer; }
+button.md-side:hover .md-side__name { text-decoration: underline; text-underline-offset: 3px; }
+button.md-side:focus-visible { outline: 2px solid var(--chrome-ink); outline-offset: 2px; }
+.md-side__ph { width: 56px; height: 56px; border-radius: 50%; border: 1px dashed var(--chrome-muted); }
+.md-side__name {
+  font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; line-height: 1.05; text-transform: uppercase;
+  overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.md-score { display: flex; flex-direction: column; align-items: center; gap: .5rem; padding-top: .6rem; }
+.md-score__nums {
+  display: flex; align-items: center; gap: .35rem;
+  font-family: var(--font-display); font-weight: 800; font-size: 3.2rem; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.md-score__nums i { font-style: normal; color: var(--chrome-muted); font-size: 2.4rem; }
+.md-board--live .md-score__nums span { color: var(--live); }
+.md-score__vs { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; color: var(--chrome-muted); padding: .4rem 0; }
+.md-score__note { font-size: .72rem; color: var(--chrome-muted); }
+.md-facts {
+  list-style: none; display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; padding: .85rem 1.25rem;
+  background: var(--surface-1); border-bottom: 1px solid var(--line); font-size: .85rem; color: var(--ink-muted);
+}
+.md-facts li { display: inline-flex; align-items: center; gap: .4rem; }
+.md-events { display: grid; grid-template-columns: 1fr 1fr; }
+.md-events__col { padding: .85rem 1rem; display: flex; flex-direction: column; gap: .9rem; min-width: 0; }
+.md-events__col--away { border-left: 1px solid var(--line); }
+.md-events__none { color: var(--ink-faint); }
+.md-ev__title {
+  font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-muted); margin-bottom: .3rem;
+}
+.md-ev__row { display: flex; align-items: center; gap: .4rem; font-size: .88rem; padding: .15rem 0; min-width: 0; }
+.md-ev__name { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.md-ev__val { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink-muted); flex-shrink: 0; }
+.md-ev__val--pim { color: var(--loss); }
+.md-note { font-size: .78rem; color: var(--ink-muted); margin-top: .5rem; }
+@media (max-width: 480px) {
+  .md-board { padding: 1.1rem .6rem 1rem; gap: .4rem; }
+  .md-side__name { font-size: 1rem; }
+  .md-score__nums { font-size: 2.5rem; }
+  .md-score__nums i { font-size: 1.8rem; }
+  .md-events__col { padding: .75rem .7rem; }
+  .tm-drawer__name { font-size: 1.5rem; }
+}
+
+/* Přehled — prázdný stav nového turnaje */
+.ov-prep {
+  display: flex; gap: 1rem; align-items: flex-start; padding: 1.25rem 1.4rem;
+  background: var(--surface-1); border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: var(--radius-lg);
+}
+.ov-prep__icon { color: var(--brand); flex-shrink: 0; margin-top: .15rem; }
+.ov-prep__title { font-size: 1.35rem; text-transform: uppercase; margin-bottom: .25rem; }
+.ov-prep__text { color: var(--ink-muted); font-size: .92rem; }
+.ov-prep__teams { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .9rem; }
+.ov-prep__team {
+  display: inline-flex; align-items: center; gap: .45rem; max-width: 100%;
+  padding: .3rem .7rem .3rem .3rem; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px;
+  font: inherit; font-size: .82rem; font-weight: 600; color: var(--ink); cursor: pointer;
+}
+.ov-prep__team span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-prep__team:hover { border-color: var(--brand-line); }
+.ov-prep__team:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (max-width: 480px) { .ov-prep { padding: 1rem; } .ov-prep__icon { display: none; } }

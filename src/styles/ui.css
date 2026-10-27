@@ -295,3 +295,19 @@
 .tsk__msg { text-align: center; max-width: 360px; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 2rem 1.5rem; }
 .tsk__msg-title { font-size: 1.6rem; color: var(--ink); }
 .tsk__msg p { color: var(--ink-muted); margin: .5rem 0 1.25rem; font-size: .92rem; }
+
+/* Klikací prvky otevírající detail (Fáze 4) */
+.ui-match--link { cursor: pointer; transition: background .12s; }
+.ui-match--link:hover { background: var(--surface-2); }
+.ui-match--link:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.ui-match__label {
+  font-size: .66rem; color: var(--ink-faint); font-weight: 500; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Tým jako odkaz na detail (tabulky) — vzhled beze změny, jen kurzor a podtržení */
+.ui-teamlink {
+  display: flex; align-items: center; gap: .6rem; min-width: 0; max-width: 100%;
+  background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.ui-teamlink:hover > span:last-child { text-decoration: underline; text-underline-offset: 3px; }
+.ui-teamlink:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: var(--radius-sm); }
