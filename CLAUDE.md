@@ -4,6 +4,8 @@
 Jsi senior full-stack developer. Multi-sportová platforma pro firemní a amatérské turnaje (prodávaný produkt, profesionální „broadcast“ vzhled).
 Referenční implementace: `turnaj_final.html` — zachovej veškerou existující funkcionalitu.
 
+**Orientace v projektu:** `docs/ARCHITECTURE.md` (mapa aplikace: routing, datový tok, hooky → tabulky, komponenty → zápisy, závislosti `src/lib`, DB, migrace) · `docs/PROGRESS.md` (stav, „Kde navázat“) · plán fází `C:Usersdenis.claudeplansexpressive-leaping-pnueli.md`. Při přidání souboru/hooku/tabulky/migrace aktualizovat i mapu.
+
 ## Technický stack
 - **Frontend:** React 18 + Vite 6, TypeScript (`npm run typecheck`); **Styling:** CSS tokeny + Tailwind 3 — viz „Design systém“
 - **Testy:** Vitest (`npm test`) — `src/lib/__tests__/` (tabulky, rozpisy, stav zápasu, historie, polling a integrační test všech 12 formátů play-off s paměťovou „DB“). Změna výpočtů = spustit testy.

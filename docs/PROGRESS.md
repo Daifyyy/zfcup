@@ -47,7 +47,7 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Pozor při měření v dev režimu: buffer `performance` má 250 položek a Vite ho zaplní moduly → nové požadavky se nezapisují. Před měřením `performance.setResourceTimingBufferSize(10000); performance.clearResourceTimings()`.
 
 ### Kde navázat
-1. Fáze 4 — detail týmu a zápasu (zvážit TanStack Query, viz Otevřené body).
+1. **Příště začít:** přečíst tento deník + `docs/ARCHITECTURE.md`, pak Fáze 4 — detail týmu a zápasu. Na začátku rozhodnout s uživatelem: TanStack Query teď, nebo data z `App.tsx` přes kontext (viz plán, Fáze 4).
 2. Před nasazením play-off v Cupu 2026 ověřit, že je nasazená oprava `groups_qf_full`.
 3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 
@@ -65,6 +65,10 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 ---
 
 ## Historie
+
+### 2026-10-27 — Fáze 2 a 3 (konec dne)
+- Fáze 2 (9aaf0b2) a Fáze 3 cílená (80dfef6) nasazené; migrace 12 spuštěná; realtime filtr ověřen naostro; 74 testů; opravena chyba `groups_qf_full`.
+- Sepsána mapa aplikace `docs/ARCHITECTURE.md`, aktualizován plán fází (stav, odchylky, číslování migrací, nálezy přesunuté do Fází 4–6).
 
 ### 2026-10-27 — Plán dotažení + Fáze 0 (E2E soutěží a sezón)
 - Schválen plán 9 fází. E2E test soutěží/sezón proti DB prošel po opravách (viz Aktuální stav); nalezen nefunkční realtime (migrace 10).
