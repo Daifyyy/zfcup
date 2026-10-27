@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { subscribeTable } from '../lib/realtimeManager'
+import { onPoll } from '../lib/poller'
 
 export interface SpecialTip {
   id: string
@@ -30,20 +31,13 @@ export function useSpecialTips(tipsterId: string | null, tournamentId: string) {
     fetchRef.current = fetch
     fetch()
 
-    const unsub = subscribeTable('special_tips', () => fetchRef.current())
+    const unsub = subscribeTable('special_tips', () => fetchRef.current(), `tipster_id=eq.${tipsterId}`)
 
-    let poll: ReturnType<typeof setInterval> | null = null
-    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 180_000) }
-    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
-    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
-
-    startPoll()
-    document.addEventListener('visibilitychange', onVisibility)
+    const unpoll = onPoll(() => fetchRef.current(), 180_000)
 
     return () => {
       unsub()
-      stopPoll()
-      document.removeEventListener('visibilitychange', onVisibility)
+      unpoll()
     }
   }, [tipsterId, tournamentId])
 

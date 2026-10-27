@@ -70,7 +70,7 @@ export function useCompetitionEditions(competitionId: string) {
     }
     fetchRef.current = fetch
     fetch()
-    const unsub = subscribeTable('tournament', () => fetchRef.current())
+    const unsub = subscribeTable('tournament', () => fetchRef.current(), `competition_id=eq.${competitionId}`)
     return () => unsub()
   }, [competitionId])
 
@@ -115,8 +115,11 @@ export function useCompetitionHistory(slug: string) {
   const [notFound, setNotFound] = useState(false)
   const [available, setAvailable] = useState(true)
   const fetchRef = useRef<() => void>(() => {})
+  // Pro realtime: id soutěže a ročníků (známé až po prvním načtení)
+  const [scope, setScope] = useState<{ compId: string; ids: string[] } | null>(null)
 
   useEffect(() => {
+    let cancelled = false
     async function fetch() {
       if (!slug) { setLoading(false); return }
       const { data: comp, error } = await supabase.from('competitions').select('*').eq('slug', slug).maybeSingle()
@@ -156,6 +159,8 @@ export function useCompetitionHistory(slug: string) {
         byTournament<CompetitionHistoryData['bracketCards'][number]>('bracket_cards'),
       ])
 
+      if (cancelled) return
+      setScope(prev => (prev && prev.compId === comp.id && prev.ids.join() === ids.join()) ? prev : { compId: comp.id, ids })
       setData({
         competition: comp as Competition, editions: (eds ?? []) as Tournament[], clubs, persons, teams, players, groups,
         matches, bracketRounds, bracketSlots, goals, bracketGoals, assists, bracketAssists, penalties, bracketPenalties,
@@ -166,10 +171,26 @@ export function useCompetitionHistory(slug: string) {
     }
     fetchRef.current = fetch
     fetch()
-    // Historie se mění zřídka — stačí reagovat na změny ročníků a výsledků
-    const unsubs = ['tournament', 'matches', 'bracket_slots'].map(t => subscribeTable(t, () => fetchRef.current()))
-    return () => unsubs.forEach(u => u())
+    return () => { cancelled = true }
   }, [slug])
+
+  // Realtime jen pro ročníky této soutěže a jejich výsledky. Historie se stahuje
+  // celá (desítky dotazů), proto se dávka změn (živý zápas) sloučí do jednoho
+  // obnovení za 3 s.
+  useEffect(() => {
+    if (!scope) return
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const refresh = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => fetchRef.current(), 3000)
+    }
+    const inIds = `tournament_id=in.(${scope.ids.join(',')})`
+    const unsubs = [
+      subscribeTable('tournament', refresh, `competition_id=eq.${scope.compId}`),
+      ...(scope.ids.length ? ['matches', 'bracket_slots'].map(t => subscribeTable(t, refresh, inIds)) : []),
+    ]
+    return () => { if (timer) clearTimeout(timer); unsubs.forEach(u => u()) }
+  }, [scope])
 
   return { ...data, loading, notFound, available, refetch: () => fetchRef.current() }
 }

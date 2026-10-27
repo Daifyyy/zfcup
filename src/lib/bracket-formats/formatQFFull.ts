@@ -44,10 +44,10 @@ async function seed({ groups, matches, bracketRounds, bracketSlots, advancingPer
       qfPairs.push({ home: fill(H, 0), away: fill(G, 3) })
       qfPairs.push({ home: fill(H, 1), away: fill(G, 2) })
     } else {
+      // 2 postupující ze skupiny (4 skupiny): křížově 1A–2B, 1B–2A — stejně jako groups_qf.
+      // (Dřív se tu přidávaly 4 dvojice na pár skupin → každý tým 2× a skupiny C, D se nenasadily.)
       qfPairs.push({ home: fill(G, 0), away: fill(H, 1) })
-      qfPairs.push({ home: fill(G, 1), away: fill(H, 0) })
       qfPairs.push({ home: fill(H, 0), away: fill(G, 1) })
-      qfPairs.push({ home: fill(H, 1), away: fill(G, 0) })
     }
   }
   for (let i = 0; i < qfPairs.length; i++) {

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { subscribeTable } from '../lib/realtimeManager'
+import { subscribeTable, byTournament } from '../lib/realtimeManager'
+import { onPoll } from '../lib/poller'
 
 export interface BracketRound {
   id: string
@@ -52,23 +53,16 @@ export function useBracket(tournamentId: string) {
     fetchRef.current = fetch
     fetch()
 
-    const unsubR = subscribeTable('bracket_rounds', () => fetchRef.current())
-    const unsubS = subscribeTable('bracket_slots', () => fetchRef.current())
+    const unsubR = subscribeTable('bracket_rounds', () => fetchRef.current(), byTournament(tournamentId))
+    const unsubS = subscribeTable('bracket_slots', () => fetchRef.current(), byTournament(tournamentId))
 
-    let poll: ReturnType<typeof setInterval> | null = null
-    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
-    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
-    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
-
-    startPoll()
-    document.addEventListener('visibilitychange', onVisibility)
+    const unpoll = onPoll(() => fetchRef.current())
 
     return () => {
       cancelled = true
       unsubR()
       unsubS()
-      stopPoll()
-      document.removeEventListener('visibilitychange', onVisibility)
+      unpoll()
     }
   }, [tournamentId])
 

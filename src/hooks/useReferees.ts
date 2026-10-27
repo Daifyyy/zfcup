@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeTable, byTournament } from '../lib/realtimeManager'
+import { onPoll } from '../lib/poller'
 
 export interface Referee {
   id: string
@@ -23,18 +25,13 @@ export function useReferees(tournamentId: string) {
     fetchRef.current = fetch
     fetch()
 
-    let poll: ReturnType<typeof setInterval> | null = null
-    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
-    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
-    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
-
-    startPoll()
-    document.addEventListener('visibilitychange', onVisibility)
+    const unsub = subscribeTable('referees', () => fetchRef.current(), byTournament(tournamentId))
+    const unpoll = onPoll(() => fetchRef.current())
 
     return () => {
       cancelled = true
-      stopPoll()
-      document.removeEventListener('visibilitychange', onVisibility)
+      unsub()
+      unpoll()
     }
   }, [tournamentId])
 

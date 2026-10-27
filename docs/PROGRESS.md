@@ -10,9 +10,9 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2)
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
-**DB migrace:** 01–11 spuštěné (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
+**DB migrace:** 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
 
 ### Fáze 0 — výsledek E2E testu (2026-10-27)
@@ -34,19 +34,33 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Ověřeno v prohlížeči (dev): přepnutí A→B bez míchání dat (starý → skeleton → nový), Zpět/Vpřed, úvodní stránka ↔ turnaj, neplatný odkaz, bulletin hokej/sezóna i fotbal/skupiny+play-off, simulace tiskového CSS. Typová kontrola 63 = baseline, build OK.
 - Uživatel ověřil na produkci: tisk bulletinu do PDF a Přehled na mobilu — OK.
 
+### Fáze 3 — datová vrstva, cílená verze (2026-10-27)
+- **Měření (produkční build, před změnami):** studené otevření turnaje ~2,7–3,4 s, teplé otevření/reload **0,2 s**, přepnutí turnaje 0,13 s; 19 dotazů na turnaj. Pomalost = studený start Supabase free tieru + navázání spojení, ne dotazy → uživatel zvolil cílenou verzi bez TanStack Query.
+- **Realtime filtr** (`realtimeManager.ts`): odběry `tournament_id=eq.{id}` (tournament `id=eq.`, tipy `tipster_id=eq.`, stránka soutěže `competition_id`/`tournament_id=in.(ročníky)` + 3s sloučení). Dřív každá změna v jakémkoli turnaji vyvolala refetch u všech diváků všech turnajů. DELETE nejde filtrovat → nefiltrovaný DELETE na tabulku. Kanál se přestaví jen při změně filtrů; po výpadku spojení jednorázový refetch. `useReferees` dostal realtime (dřív chyběl).
+- **Společný polling** (`poller.ts`): 1 časovač na interval místo ~22 `setInterval` + 22 posluchačů viditelnosti; návrat na kartu = refetch rozložený do 1,5 s. Naměřeno: 0 dotazů za 20 s v klidu.
+- **Migrace 12** `db-backup/12_tournament_indexes.sql`: index `tournament_id` na 22 tabulkách + chybějící FK indexy (asistence, karty, rozhodčí) + složené pro tipy. Spuštěná uživatelem 2026-10-27 (dnes neměřitelný přínos, příprava na víc turnajů).
+- **Fonty lokálně** (`@fontsource`, `src/fonts.ts`): bez Google Fonts (GDPR + o jedno spojení méně), CSP bez Google domén. Ověřeno na produkčním buildu s hlavičkami z `vercel.json`: fonty z vlastní domény, 0 externích požadavků, sdílecí grafika OK, žádné porušení CSP.
+- **Testy (Vitest, `npm test`)**: 74 testů — tabulky (fotbal, hokej 3-2-1-0, H2H, tiebreakery), rozpisy (liga 3–10 týmů, 1–4 hřiště, přestávka; sezóna 2–16 týmů, 1×/2×, doma/venku), stav zápasu, historie soutěže, polling, **integrační test všech 12 formátů play-off** (struktura → nasazení → odehrání → vítěz).
+- **Nalezená a opravená chyba:** `groups_qf_full` (Skupiny + QF + Umístění) ve výchozím nastavení 4 skupiny × 2 nasadil do QF jen skupiny A a B, každý tým 2×, skupiny C a D vůbec. **Cup 2026 tento formát používá** — zatím nemá skupiny ani play-off, takže bez škody.
+- Vynecháno záměrně: zúžení `select('*')` (úvodní stránka potřebuje celé řádky pro převzetí nastavení do nového ročníku, úspora pár kB) · lazy loading obrázků (riziko chybějících log ve sdílecích grafikách) · TanStack Query (viz Otevřené body).
+- **Realtime ověřen naostro** (přihlášený správce, divák v druhé kartě, QA liga 2): změna zápasu v cizím turnaji → divák nestáhl nic; ve vlastním → refetch zápasů za 0,4 s; nové oznámení → zobrazeno za 2 s; smazání → zmizelo za 0,8 s (nefiltrovaný DELETE funguje). Testovací oznámení smazáno.
+- Pozor při měření v dev režimu: buffer `performance` má 250 položek a Vite ho zaplní moduly → nové požadavky se nezapisují. Před měřením `performance.setResourceTimingBufferSize(10000); performance.clearResourceTimings()`.
+
 ### Kde navázat
-1. Fáze 2 kompletně ověřena (i uživatelem na produkci).
-2. Fáze 3 — datová vrstva (TanStack Query, migrace indexů, realtime filtr, Vitest). Hooky teď mají vzor `cancelled` + reset; při převodu na Query ho nahradí cache.
+1. Fáze 4 — detail týmu a zápasu (zvážit TanStack Query, viz Otevřené body).
+2. Před nasazením play-off v Cupu 2026 ověřit, že je nasazená oprava `groups_qf_full`.
 3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
 
 ### Otevřené body / nápady
+- **TanStack Query — potenciál do budoucna** (rozhodnutí uživatele 2026-10-27): dnes malý přínos (teplé načtení 0,2 s). Hodí se, až bude víc obrazovek sdílet stejná data (detail týmu/zápasu ve Fázi 4, knihovna klubů) — cache, deduplikace, okamžitý návrat na otevřený turnaj, jedno místo pro polling. Převádět hooky po jednom se zachováním API (`data`, `loading`, `refetch`); `poller.ts` a `realtimeManager.ts` pak jen invalidují dotazy.
 - Prázdný turnaj na Přehledu ukazuje jen hero — doplnit přívětivý prázdný stav („Turnaj se připravuje“).
-- Turnaj se načítá ~5–8 s (mnoho hooků najednou) — zvážit sloučení dotazů / RPC.
+- Studené otevření ~2–3 s (Supabase free tier se uspává, 19 dotazů) — zvážit placený tier nebo sloučení dotazů do jednoho RPC.
 - Loga turnajů: kvůli staré chybě (sdílený `tournament-logo.png`) je nutné nahrát logo znovu u každého turnaje.
 - OG náhledy odkazů (`api/og.ts`, middleware) ověřit až po vypnutí maintenance (roboti dostávají 401).
 - Zvážit ověření názvu „Turnajník“ v rejstříku ochranných známek (ÚPV/EUIPO) před prodejem.
 - `docs/pitch.md` (necommitnutý) má zastaralé údaje (např. „8 formátů“) — aktualizovat pro prodej.
-- Typová kontrola: baseline 63 starších chyb (`npm run typecheck`); nové změny nesmí přidat žádnou. Porovnávací skript: scratchpad `tscdiff.sh` (při novém sezení vygenerovat baseline znovu).
+- Typová kontrola: baseline 63 starších chyb (`npm run typecheck`); nové změny nesmí přidat žádnou (testy v `src/lib/__tests__` se kontrolují také).
+- Ověření CSP lokálně: `vite preview` hlavičky z `vercel.json` neaplikuje — použít malý statický server, který je čte (bez HSTS, `upgrade-insecure-requests` a `Cache-Control`, jinak se na http://localhost rozbije načítání).
 
 ---
 

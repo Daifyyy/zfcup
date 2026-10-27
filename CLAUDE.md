@@ -6,8 +6,9 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 
 ## Technický stack
 - **Frontend:** React 18 + Vite 6, TypeScript (`npm run typecheck`); **Styling:** CSS tokeny + Tailwind 3 — viz „Design systém“
+- **Testy:** Vitest (`npm test`) — `src/lib/__tests__/` (tabulky, rozpisy, stav zápasu, historie, polling a integrační test všech 12 formátů play-off s paměťovou „DB“). Změna výpočtů = spustit testy.
 - **Backend:** Supabase (PostgreSQL + RLS + Realtime + Auth); **Hosting:** Vercel
-- **Fonty:** Barlow Condensed (nadpisy, skóre — `var(--font-display)`), Inter (text — `var(--font-body)`)
+- **Fonty:** Barlow Condensed (nadpisy, skóre — `var(--font-display)`), Inter (text — `var(--font-body)`) — hostované s aplikací (`@fontsource`, `src/fonts.ts`, jen latin + latin-ext), **ne Google Fonts** (GDPR, CSP je bez Google domén)
 - **Ikony:** `lucide-react` + vlastní sportovní ikony `SportDef.Icon` (`src/components/ui/icons/SportIcons.tsx`). **Žádná emoji v UI.**
 - **`@supabase/supabase-js` přesně `2.49.1`** — nepovyšovat! Verze 2.99+ neodesílá `apikey` header pro mutace → 400 Bad Request
 - `createClient` musí mít explicitní `global: { headers: { apikey: supabaseAnonKey } }` (viz `src/lib/supabase.ts`)
@@ -62,7 +63,7 @@ Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'foo
 - **Auth → "Allow new users to sign up" = VYPNUTO** — nové účty přes Supabase dashboard → Invite user
 
 ## RLS a DB záloha
-Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–11_*.sql`.
+Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–12_*.sql` (12 = indexy `tournament_id`).
 - **Čtení**: SELECT pro všechny (anon) — diváci bez přihlášení.
 - **Zápis (migrace 11)**: `can_edit_tournament(tournament_id)` = vlastník turnaje (`tournament.owner_id`) nebo správce platformy (`is_platform_admin()`); soutěže/kluby/osoby přes `can_edit_competition`. Storage: `can_edit_storage_path(name)` — nové soubory ukládat pod `tournaments/{turnajId}/…` (`src/lib/storage.ts`: `tournamentAssetPath`, `uploadAsset`, `removeAssetByUrl`).
 - **Frontend**: `useAuthRole()` (`session`, `isPlatformAdmin`, `canEditTournament(ownerId)`); `App.tsx` `canEdit` řídí admin panel (cizí turnaj → „Bez oprávnění“). Výběr soutěže pro nový ročník jen z vlastních.
@@ -87,8 +88,9 @@ Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–1
 **Hooky:**
 - Každá entita má hook v `src/hooks/`; všechny přijímají `tournamentId: string` jako 1. param — bez něj nefetchují (`if (!tournamentId) return`)
 - Výjimky: `useTournament(tournamentId?)`, `useTips(tipsterId, tournamentId)`, `useBracketTips(tipsterId, tournamentId)`, `useSpecialTips(tipsterId, tournamentId)`
-- Realtime přes `src/lib/realtimeManager.ts` (singleton, sdílený kanál `app-realtime`) — hooky volají `subscribeTable(table, handler)`
-- Polling intervaly: dynamic data 120s, tipy 180s; Page Visibility API zastaví polling při `document.hidden`
+- Realtime přes `src/lib/realtimeManager.ts` (jeden sdílený kanál) — hooky volají `subscribeTable(table, handler, byTournament(tournamentId))`. **Vždy s filtrem** na turnaj (`tournament_id=eq.…`, u `tournament` `id=eq.…`, u tipů `tipster_id=eq.…`), jinak každá změna v jakémkoli turnaji vyvolá refetch u všech diváků. DELETE nejde filtrovat → manager má na tabulku jeden nefiltrovaný odběr DELETE. Kanál se přestaví jen při změně sady filtrů; po obnovení spojení se vše jednou refetchne.
+- Polling přes `onPoll(handler, ms?)` (`src/lib/poller.ts`): jeden časovač na interval (data 120 s, tipy 180 s), skrytá karta = žádné dotazy, návrat na kartu = obnova rozložená do 1,5 s. **Nepoužívat vlastní `setInterval`/`visibilitychange` v hookách.**
+- Přepnutí turnaje: efekt hooku na začátku vyprázdní stav (`setX([])`, `setLoading(true)`) a fetch má příznak `cancelled` (opožděná odpověď starého turnaje se zahodí). `App.tsx` ukazuje `TournamentSkeleton`, dokud `tournament.id !== tournamentId` nebo se načítají týmy/skupiny/zápasy.
 - `refetch()` exponovat přes `useRef` pattern (viz useMatches, useBracket) — pro okamžitý UI update po save
 
 **Bezpečnost a správnost:**

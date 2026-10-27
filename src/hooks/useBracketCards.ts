@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { subscribeTable } from '../lib/realtimeManager'
+import { subscribeTable, byTournament } from '../lib/realtimeManager'
+import { onPoll } from '../lib/poller'
 
 export type CardType = 'yellow' | 'red' | 'yellow_red'
 
@@ -28,21 +29,14 @@ export function useBracketCards(tournamentId: string) {
     fetchRef.current = fetch
     fetch()
 
-    const unsub = subscribeTable('bracket_cards', () => fetchRef.current())
+    const unsub = subscribeTable('bracket_cards', () => fetchRef.current(), byTournament(tournamentId))
 
-    let poll: ReturnType<typeof setInterval> | null = null
-    const startPoll = () => { poll = setInterval(() => fetchRef.current(), 120_000) }
-    const stopPoll = () => { if (poll) clearInterval(poll); poll = null }
-    const onVisibility = () => document.hidden ? stopPoll() : (fetchRef.current(), startPoll())
-
-    startPoll()
-    document.addEventListener('visibilitychange', onVisibility)
+    const unpoll = onPoll(() => fetchRef.current())
 
     return () => {
       cancelled = true
       unsub()
-      stopPoll()
-      document.removeEventListener('visibilitychange', onVisibility)
+      unpoll()
     }
   }, [tournamentId])
 
