@@ -16,7 +16,10 @@ import type { BracketRound, BracketSlot } from '../../../hooks/useBracket'
 import type { Tournament } from '../../../hooks/useTournament'
 import type { Referee } from '../../../hooks/useReferees'
 import { calcGroupStandings } from '../../../lib/standings'
-import { exportSchedule, exportRefCards } from '../../../lib/exportExcel'
+import { exportSchedule } from '../../../lib/exportExcel'
+import { lazyComponent } from '../../../lib/lazyComponent'
+
+const MatchSheets = lazyComponent(() => import('../MatchSheets'))
 import { checkGroupSpecialTips, checkLeagueTournamentWinner } from '../../../lib/tipsEval'
 import { getSportDef, sportHasOvertime } from '../../../lib/sports'
 import { changed, diffCounts } from '../../../lib/eventDiff'
@@ -567,6 +570,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
   const [form, setForm] = useState<MatchForm>(DEF_FORM)
   const [inlineEditId, setInlineEditId] = useState<string | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
+  const [sheetsOpen, setSheetsOpen] = useState(false)
   const sportDef = getSportDef(tournament?.sport)
 
   const isLeague = tournament?.format === 'league'
@@ -650,22 +654,24 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
         </div>
       )}
 
+      {sheetsOpen && <MatchSheets onClose={() => setSheetsOpen(false)} />}
+
       {/* Export tlačítka */}
       {matches.length > 0 && (
         <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
           <button
             type="button"
             className="btn btn-d btn-sm"
-            onClick={() => exportSchedule(matches, groups, teams, tournament?.num_pitches ?? 2, tournament ? { match_duration: tournament.match_duration ?? 20, round_break: tournament.round_break ?? 5 } : undefined, sportDef.terms.pitchLabel)}
+            onClick={() => exportSchedule(matches, groups, teams, tournament?.num_pitches ?? 2, tournament ? { match_duration: tournament.match_duration ?? 20, round_break: tournament.round_break ?? 5 } : undefined, sportDef.terms.pitchLabel, { bracketRounds, bracketSlots, fileBase: tournament?.name || 'turnaj' })}
           >
             Exportovat rozpis (Excel)
           </button>
           <button
             type="button"
             className="btn btn-d btn-sm"
-            onClick={() => exportRefCards(matches, groups, teams, players)}
+            onClick={() => setSheetsOpen(true)}
           >
-            Karty rozhodčího (Excel)
+            Zápisy o utkání (tisk / PDF)
           </button>
         </div>
       )}

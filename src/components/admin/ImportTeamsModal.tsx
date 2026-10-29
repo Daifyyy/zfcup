@@ -1,4 +1,4 @@
-import { ArrowLeft, X } from 'lucide-react'
+import { ArrowLeft, Download, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
@@ -39,12 +39,42 @@ function parseNumber(raw: unknown): number | null {
   return !isNaN(n) && n > 0 ? Math.round(n) : null
 }
 
+/** Vzorový soubor k vyplnění (varianta A — jeden list), stáhne se jako Excel. */
+function downloadTemplate() {
+  const rows = [
+    ['Tým', 'Hráč', 'Číslo', 'Role'],
+    ['FC Příklad', 'Jan Novák', 1, 'B'],
+    ['FC Příklad', 'Petr Svoboda', 7, 'K'],
+    ['FC Příklad', 'Tomáš Dvořák', 10, ''],
+    ['SK Vzor', 'Martin Černý', 1, 'KB'],
+    ['SK Vzor', 'Lukáš Procházka', 9, ''],
+  ]
+  const ws = XLSX.utils.aoa_to_sheet(rows)
+  ws['!cols'] = [{ wch: 24 }, { wch: 26 }, { wch: 8 }, { wch: 8 }]
+  const help = XLSX.utils.aoa_to_sheet([
+    ['Jak vyplnit'],
+    ['List „Soupisky“: jeden řádek = jeden hráč. Sloupec Tým určuje, do kterého týmu hráč patří.'],
+    ['Číslo dresu je nepovinné. Role: K = kapitán, B = brankář, KB = obojí, prázdné = žádná.'],
+    ['Řádky s ukázkovými týmy smažte a doplňte vlastní. Soubor pak nahrajte v Admin → Týmy → Import.'],
+  ])
+  help['!cols'] = [{ wch: 100 }]
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Soupisky')
+  XLSX.utils.book_append_sheet(wb, help, 'Návod')
+  XLSX.writeFile(wb, 'vzor-import-tymu.xlsx')
+}
+
 function parseSheets(wb: XLSX.WorkBook, fileName: string): ImportedTeam[] {
   const teams: ImportedTeam[] = []
+  // Listy s návodem (vzorový soubor) se nečtou
+  const dataSheets = wb.SheetNames.filter(n => !/^(návod|navod|instrukce|help)$/i.test(n.trim()))
+  // Varianta A, když je jen jeden datový list, nebo když první list má sloupec Tým
+  const firstHeader = (XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[dataSheets[0]], { header: 1 })[0] ?? []).map(String)
+  const singleList = dataSheets.length === 1 || firstHeader.some(h => /^(tým|tym|team)$/i.test(h.trim()))
 
-  if (wb.SheetNames.length === 1) {
+  if (singleList) {
     // Varianta A: jeden list — sloupce Tým | Hráč | Číslo | Role
-    const sheet = wb.Sheets[wb.SheetNames[0]]
+    const sheet = wb.Sheets[dataSheets[0]]
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
     const teamMap = new Map<string, ImportedPlayer[]>()
 
@@ -73,7 +103,7 @@ function parseSheets(wb: XLSX.WorkBook, fileName: string): ImportedTeam[] {
 
   } else {
     // Varianta B: každý list = jeden tým — sloupce Hráč | Číslo | Role
-    for (const sheetName of wb.SheetNames) {
+    for (const sheetName of dataSheets) {
       const sheet = wb.Sheets[sheetName]
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
       const players: ImportedPlayer[] = []
@@ -197,6 +227,9 @@ export default function ImportTeamsModal({ open, existingTeams, tournamentId, on
                   <strong>Varianta B — více listů:</strong> každý list = tým, sloupce <code>Hráč | Číslo | Role</code><br />
                   Role: <code>K</code>=kapitán, <code>B</code>=brankář, <code>KB</code>=oboje, prázdné=žádná
                 </div>
+                <button type="button" className="btn btn-s btn-sm" style={{ marginTop: '.55rem' }} onClick={downloadTemplate}>
+                  <Download size={13} /> Stáhnout vzorový soubor (Excel)
+                </button>
               </div>
               <input
                 ref={fileRef}

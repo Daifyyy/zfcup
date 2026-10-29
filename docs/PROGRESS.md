@@ -125,6 +125,13 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Opraveno: zmenšování obrázků při nahrání + cache 1 rok (přenosy na turnaj ~1,1 GB → ~0,2 GB), polling podle stavu realtime (10 min / 30 s) + uvolnění spojení skryté karty, automatická obnova po nasazení nové verze, DOMPurify/TipTap (npm audit 34 → 6), heslo min. 8, migrace 17 (napsaná).
 - Doplněno: rozložení špičky po živé změně (dávka 250 ms + náhodně do 1 s), gesto Zpět zavře admin (ne turnaj), iOS bez přibližování při psaní (16 px vč. editoru + `maximum-scale=1` jen iOS), vyhledávání ukazuje i vlastní soukromé turnaje („Vesnická vřava“ byla v DB celá, jen soukromá).
 
+### Úpravy administrace a provozu (2026-10-30)
+- Mazání: všechna mazací tlačítka mají potvrzení; „Čistý start“ a „Vymazat data turnaje“ (jen tento turnaj) se potvrzují opsáním názvu. Knihovna klubů: potvrzovací okna místo dvojkliku.
+- Admin: Zápasy a Play-off nahoře, s rozpisem se otevře na Zápasech. Přehled: O turnaji nad čísly.
+- Ukládání výsledku: jen změny, hromadně, paralelně (uložení zápasu změřeno 0,4 s, 1 zápis beze změn událostí; dřív 40+ požadavků), překryv „Ukládám…“ blokuje vše; tipovačka jen když je zapnutá.
+- Tlačítko vlevo nahoře = skutečné Zpět v turnaji (na Přehledu ikona domu).
+- Zápis o utkání (tisk/PDF, kapesní A6 skládací, 15 hráčů) místo Excel karet; vzorový soubor pro import týmů; export rozpisu s listem Play-off a názvem souboru podle turnaje.
+
 ### Kde navázat
 1. **Uživatel:** rozhodnout tarify (doporučeno Vercel Pro + Supabase Pro); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
 2. Pak Fáze 9 — registrace organizátorů a obchodní model.

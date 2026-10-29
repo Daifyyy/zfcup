@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx'
 import type { Match } from '../hooks/useMatches'
 import type { Group } from '../hooks/useGroups'
 import type { Team } from '../hooks/useTeams'
-import type { Player } from '../hooks/usePlayers'
+import type { BracketRound, BracketSlot } from '../hooks/useBracket'
 
 function teamName(id: string, teams: Team[]) {
   return teams.find(t => t.id === id)?.name ?? '?'
@@ -22,7 +22,31 @@ export function exportSchedule(
   numPitches: number = 2,
   tournament?: { match_duration: number; round_break: number },
   pitchLabel: string = 'Hřiště',
+  opts: { bracketRounds?: BracketRound[]; bracketSlots?: BracketSlot[]; fileBase?: string } = {},
 ) {
+  const base = slugFile(opts.fileBase ?? 'turnaj')
+  // List Play-off (pokud existuje): Kolo | Čas | Domácí | Hosté | Výsledek
+  const addPlayoff = (wb: XLSX.WorkBook) => {
+    const rounds = [...(opts.bracketRounds ?? [])].sort((a, b) => a.position - b.position)
+    const slots = opts.bracketSlots ?? []
+    if (!rounds.length || !slots.length) return
+    const rows: string[][] = [['Kolo', 'Datum', 'Čas', 'Domácí', 'Hosté', 'Výsledek']]
+    for (const r of rounds) {
+      for (const sl of slots.filter(x => x.round_id === r.id).sort((a, b) => a.position - b.position)) {
+        rows.push([
+          r.name,
+          sl.match_date ? sl.match_date.split('-').reverse().join('.') : '',
+          sl.scheduled_time || '',
+          sl.home_id ? teamName(sl.home_id, teams) : 'Určí se',
+          sl.away_id ? teamName(sl.away_id, teams) : 'Určí se',
+          sl.played ? `${sl.home_score}:${sl.away_score}` : '',
+        ])
+      }
+    }
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 7 }, { wch: 24 }, { wch: 24 }, { wch: 9 }]
+    XLSX.utils.book_append_sheet(wb, ws, 'Play-off')
+  }
   // Sezónní rozpis (zápasy s datem): po kolech — Kolo / Datum / Čas / Domácí / Hosté / Výsledek
   if (matches.some(m => m.match_date)) {
     const rows: string[][] = [['Kolo', 'Datum', 'Čas', 'Domácí', 'Hosté', 'Výsledek']]
@@ -39,7 +63,8 @@ export function exportSchedule(
     ws['!cols'] = [{ wch: 10 }, { wch: 12 }, { wch: 7 }, { wch: 24 }, { wch: 24 }, { wch: 9 }]
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Rozpis')
-    XLSX.writeFile(wb, 'rozpis-sezony.xlsx')
+    addPlayoff(wb)
+    XLSX.writeFile(wb, `${base}-rozpis.xlsx`)
     return
   }
 
@@ -104,119 +129,10 @@ export function exportSchedule(
 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Rozpis')
-  XLSX.writeFile(wb, 'zf-cup-rozpis.xlsx')
+  addPlayoff(wb)
+  XLSX.writeFile(wb, `${base}-rozpis.xlsx`)
 }
 
-// A6 landscape: 148 × 105 mm
-// Usable width with 5mm margins: ~138mm ≈ 52 char units
-// Usable height with 6mm margins: ~93mm ≈ 24 rows at 11pt
-//
-// Column layout (7 cols, total 51 wch):
-//   [14] home_name | [7] home_role | [4] home_goals | [1] sep
-//   [14] away_name | [7] away_role | [4] away_goals
-//
-// Row structure per card:
-//   row 0: "Čas: HH:MM"             (14pt)
-//   row 1: "Tým domácí" · "Tým hosté"  (14pt)
-//   row 2: col headers               (10pt)
-//   rows 3..N: players side by side  (11pt each)
-//   → manual page break after row N
-
-export function exportRefCards(matches: Match[], groups: Group[], teams: Team[], players: Player[]) {
-  type Row = (string | number)[]
-  const allRows: Row[] = []
-  const rowHeights: XLSX.RowInfo[] = []
-  // Page break row indices (0-based, break inserted AFTER this row)
-  const pageBreakRows: number[] = []
-  let ri = 0  // current row index
-
-  const sorted = [...matches].sort((a, b) =>
-    (a.scheduled_time || '').localeCompare(b.scheduled_time || '')
-  )
-
-  for (let mi = 0; mi < sorted.length; mi++) {
-    const m = sorted[mi]
-    const hn = teamName(m.home_id, teams)
-    const an = teamName(m.away_id, teams)
-    const time = m.scheduled_time || '—'
-
-    const homePl = players
-      .filter(p => p.team_id === m.home_id)
-      .sort((a, b) => a.name.localeCompare(b.name, 'cs'))
-    const awayPl = players
-      .filter(p => p.team_id === m.away_id)
-      .sort((a, b) => a.name.localeCompare(b.name, 'cs'))
-    const maxLen = Math.max(homePl.length, awayPl.length, 1)
-
-    // Čas
-    allRows.push([`Čas: ${time}`, '', '', '', ''])
-    rowHeights.push({ hpt: 14 })
-    ri++
-
-    // Team names
-    allRows.push([hn, '', '', an, ''])
-    rowHeights.push({ hpt: 14 })
-    ri++
-
-    // Column headers
-    allRows.push(['Hráč', 'Góly', '', 'Hráč', 'Góly'])
-    rowHeights.push({ hpt: 10 })
-    ri++
-
-    // Player rows
-    for (let i = 0; i < maxLen; i++) {
-      const hp = homePl[i]
-      const ap = awayPl[i]
-      allRows.push([
-        hp?.name ?? '', '',
-        '',
-        ap?.name ?? '', '',
-      ])
-      rowHeights.push({ hpt: 11 })
-      ri++
-    }
-
-    // Page break after each card except the last
-    if (mi < sorted.length - 1) {
-      pageBreakRows.push(ri - 1)
-    }
-  }
-
-  const ws = XLSX.utils.aoa_to_sheet(allRows)
-
-  // Column widths: 24 + 6 + 1 + 24 + 6 = 61 wch → fits A6 landscape
-  ws['!cols'] = [
-    { wch: 24 }, { wch: 6 }, { wch: 1 },
-    { wch: 24 }, { wch: 6 },
-  ]
-
-  ws['!rows'] = rowHeights
-
-  // A6 = paperSize 70, landscape orientation
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(ws as any)['!pageSetup'] = {
-    paperSize: 70,
-    orientation: 'landscape',
-    scale: 90,
-    horizontalDpi: 200,
-    verticalDpi: 200,
-  }
-
-  // Narrow margins (inches): left/right 0.2", top/bottom 0.24", header/footer 0.1"
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(ws as any)['!margins'] = {
-    left: 0.2, right: 0.2,
-    top: 0.24, bottom: 0.24,
-    header: 0.1, footer: 0.1,
-  }
-
-  // Manual row page breaks — format: array of { man: 1, id: rowIndex }
-  if (pageBreakRows.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(ws as any)['!rowBreaks'] = pageBreakRows.map(id => ({ man: 1, id }))
-  }
-
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Karty rozhodčích')
-  XLSX.writeFile(wb, 'zf-cup-karty.xlsx')
+function slugFile(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'turnaj'
 }

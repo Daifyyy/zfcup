@@ -227,7 +227,10 @@ Všechny togglované v Admin → Nastavení → Volitelné moduly; řídí `tour
 - **Sdílecí grafiky**: `src/components/share/` (šablony 1080×1080 / 1080×1920, `html-to-image`, líně přes `share/lazy.tsx`); tlačítka Sdílet v Zápasech, Tabulce, Statistikách. Obrázky v šablonách musí mít `crossOrigin="anonymous"`.
 - **Náhledy odkazů (OG)**: `api/og.ts` (Vercel Edge, `@vercel/og`, 1200×630) + `middleware.ts` vrací robotům sociálních sítí na `/{uuid}` HTML s OG meta. `vercel.json` rewrite vynechává `/api/`. Lokálně na Windows `@vercel/og` nejde spustit (chyba cest) — ověřovat po deployi.
   - Kapacita bez scrollování: ~6–9 log na stranu (závisí na výšce monitoru)
-- **Import CSV/Excel**: `src/components/admin/ImportTeamsModal.tsx`; balíček `xlsx`; List "Sheet1" se importuje pokud `players.length > 0`
+- **Import CSV/Excel**: `src/components/admin/ImportTeamsModal.tsx`; balíček `xlsx`; tlačítko „Stáhnout vzorový soubor“ (list Soupisky + Návod; list Návod se při importu přeskočí, list se sloupcem Tým = varianta A)
+- **Zápis o utkání** (dřív Excel karty rozhodčích): `src/components/admin/MatchSheets.tsx` — tisk/PDF, A4 → 2× A5 na šířku → přeložit na kapesní A6 (domácí | hosté), 15–22 řádků, výběr skupina/play-off/jen neodehrané; tlačítko v Admin → Zápasy
+- **Ukládání výsledku**: jen změny a hromadně (`src/lib/eventDiff.ts`), vše paralelně; během ukládání `withBusy` + `BusyOverlay` (`src/lib/busy.ts`) blokuje kliknutí, zavření adminu i Zpět. Nové kritické zápisy dělat stejně.
+- **Tlačítko vlevo nahoře v turnaji** = Zpět v rámci turnaje (`history.state.tdepth`, `headerBack` v `App.tsx`); na Přehledu bez historie ikona domu → všechny turnaje.
 - **Fotky hráčů**: `players.avatar_url`; Storage `team-logos/players/{id}.png|.jpg`; max 200 KB, pouze PNG/JPG; zobrazují se v záložkách Týmy (32px kruh) i Statistiky (36px kruh vedle jména)
 - **Tisknutelný bulletin**: `src/components/public/PrintBulletin.tsx`; `window.print()` po 400ms
 
