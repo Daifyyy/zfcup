@@ -204,6 +204,10 @@ export default function App() {
     setScoreboard(false)
   }, [tournamentId])
 
+  // Nová stránka (turnaj, soutěž, klub, právní) vždy od začátku — SPA jinak drží posun
+  // z předchozí stránky (seznam turnajů je dole na úvodní stránce)
+  useEffect(() => { window.scrollTo(0, 0) }, [tournamentId, competitionSlug, clubSlug, legalDoc])
+
   // ── Historie prohlížeče (tlačítko Zpět, i na Androidu) ──
   // Jediný handler: turnaj / soutěž podle URL, záložka podle history state.
   useEffect(() => {
@@ -232,6 +236,7 @@ export default function App() {
     const depth = Number(window.history.state?.tdepth ?? 0)
     window.history.pushState({ tab: t, tdepth: depth + 1 }, '')
     setTab(t)
+    window.scrollTo(0, 0)
   }, [])
 
 

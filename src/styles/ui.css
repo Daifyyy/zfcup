@@ -22,7 +22,11 @@
   width: 6px; height: 6px; border-radius: 50%; background: currentColor;
   animation: ui-pulse 1.4s ease-in-out infinite;
 }
-@keyframes ui-pulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+@keyframes ui-pulse { 0%,100% { opacity: 1; transform: scale(1) } 50% { opacity: .3; transform: scale(.75) } }
+@media (prefers-reduced-motion: reduce) { .ui-live-dot { animation: none; } }
+/* Živý zápas: pulzující tečka u skóre */
+.ui-match__score { position: relative; }
+.ui-match__live-dot { position: absolute; top: -5px; left: 50%; margin-left: -4px; width: 8px; height: 8px; color: var(--live); box-shadow: 0 0 0 2px var(--surface-1); }
 
 /* Section header */
 .ui-sec {

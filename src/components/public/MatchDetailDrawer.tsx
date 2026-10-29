@@ -148,6 +148,7 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
           <div className="md-score">
             {showScore ? (
               <div className="md-score__nums">
+                {state === 'live' && <span className="ui-live-dot md-score__dot" aria-label="Živě" />}
                 <span>{md.home_score}</span><i>:</i><span>{md.away_score}</span>
               </div>
             ) : (

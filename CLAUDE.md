@@ -137,7 +137,7 @@ Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–1
 ## Důležité chování / known issues
 - **Mazání skupiny**: nejdříve DELETE matches, pak skupinu — cascade nefunguje jak se čeká
 - **Trigger `after_match_result`**: UPDATE tipsters musí mít `WHERE id IN (SELECT tipster_id FROM tips WHERE match_id = NEW.id)` — bez WHERE Supabase rollbackne i původní UPDATE matches
-- **`played` flag**: auto-set na `true` při ukládání pokud home_score > 0 nebo away_score > 0
+- **`played` flag**: skóre > 0 pole „Odehrán“ v editoru zaškrtne automaticky jen dokud na něj organizátor nesáhl; ukládá se přesně stav pole (živé zadávání = odškrtnout). Neodehraný zápas se skóre je v den turnaje **Živě** i po plánovaném konci (`getMatchState`).
 - **Admin panel backdrop drag**: mousedown uvnitř → mouseup venku by zavřel panel; fix: `mouseDownOnBackdrop = useRef(false)` v `AdminPanel.tsx`
 - **BracketTab SlotEditor.saveAll**: chyba gólů/asistencí/kartiček neblokuje `onSave()` — auto-advance proběhne i při částečném selhání
 - **Race conditions**: `generateLeague()` a `seedPlayoff()` mají `if (loading) return` guard — nelze použít `disabled`, guard musí být uvnitř funkce

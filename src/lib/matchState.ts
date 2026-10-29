@@ -10,6 +10,8 @@ interface MatchLike {
   played: boolean
   scheduled_time?: string | null
   match_date?: string | null
+  home_score?: number | null
+  away_score?: number | null
 }
 
 interface TournamentLike {
@@ -43,8 +45,12 @@ export function getMatchState(
   const day = matchDay(match, tournament)
   if (!day || day !== todayISO(now)) return 'scheduled'
   const start = parseHHMM(match.scheduled_time)
+  const minutesNow = now.getHours() * 60 + now.getMinutes()
+  // Rozehraný zápas (admin zapisuje skóre, ale ještě neoznačil konec) zůstává živý
+  // i po uplynutí plánovaného času — typicky zpoždění v programu.
+  const scored = (match.home_score ?? 0) + (match.away_score ?? 0) > 0
+  if (scored && (start === null || minutesNow >= start)) return 'live'
   if (start === null) return 'scheduled'
   const duration = tournament?.match_duration || 20
-  const minutesNow = now.getHours() * 60 + now.getMinutes()
   return minutesNow >= start && minutesNow < start + duration ? 'live' : 'scheduled'
 }

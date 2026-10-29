@@ -361,6 +361,8 @@ button.md-side:focus-visible { outline: 2px solid var(--chrome-ink); outline-off
 }
 .md-score__nums i { font-style: normal; color: var(--chrome-muted); font-size: 2.4rem; }
 .md-board--live .md-score__nums span { color: var(--live); }
+.md-score__nums { position: relative; }
+.md-score__dot { position: absolute; top: -10px; left: 50%; margin-left: -5px; width: 10px; height: 10px; color: var(--live); }
 .md-score__vs { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; color: var(--chrome-muted); padding: .4rem 0; }
 .md-score__note { font-size: .72rem; color: var(--chrome-muted); }
 .md-facts {

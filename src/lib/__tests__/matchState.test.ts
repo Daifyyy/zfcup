@@ -61,3 +61,20 @@ describe('parseHHMM / matchDay', () => {
     expect(matchDay({ played: false }, null)).toBeNull()
   })
 })
+
+describe('getMatchState — rozehraný zápas', () => {
+  const t = { tips_lock_from: '2026-10-30', match_duration: 20 }
+  const at = (h: number, m: number) => new Date(2026, 9, 30, h, m)
+  it('se skóre zůstává živý i po plánovaném konci', () => {
+    expect(getMatchState({ played: false, scheduled_time: '10:00', home_score: 1, away_score: 0 }, t, at(10, 45))).toBe('live')
+  })
+  it('bez skóre po konci okna není živý', () => {
+    expect(getMatchState({ played: false, scheduled_time: '10:00', home_score: 0, away_score: 0 }, t, at(10, 45))).toBe('scheduled')
+  })
+  it('se skóre před začátkem není živý (zadaný omylem dopředu)', () => {
+    expect(getMatchState({ played: false, scheduled_time: '10:00', home_score: 1, away_score: 0 }, t, at(9, 30))).toBe('scheduled')
+  })
+  it('odehraný je vždy konec', () => {
+    expect(getMatchState({ played: true, scheduled_time: '10:00', home_score: 1, away_score: 0 }, t, at(10, 5))).toBe('final')
+  })
+})

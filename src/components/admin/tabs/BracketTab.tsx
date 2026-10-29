@@ -135,10 +135,12 @@ function SlotEditor({
   const removePenalty = (pid: string, index: number) =>
     setPenaltyData(p => ({ ...p, [pid]: (p[pid] ?? []).filter((_, i) => i !== index) }))
 
+  // Skóre zaškrtne „Odehrán“ automaticky jen dokud na pole organizátor nesáhl (živé zadávání = odškrtnout)
+  const playedTouched = useRef(false)
   const changeScore = (k: 'home_score' | 'away_score', delta: number) => {
     setS(x => {
       const next = Math.max(0, x[k] + delta)
-      return { ...x, [k]: next, played: next > 0 ? true : x.played }
+      return { ...x, [k]: next, played: next > 0 && !playedTouched.current ? true : x.played }
     })
   }
   const changeGoal = (pid: string, delta: number) =>
@@ -166,7 +168,7 @@ function SlotEditor({
 
   const saveAll = async () => {
     if (savingRef.current) return
-    const willBePlayed = s.played || s.home_score > 0 || s.away_score > 0
+    const willBePlayed = s.played
     if (willBePlayed && !sportDef.standings.allowDraws && s.home_score === s.away_score) {
       showToast('Zápas nemůže skončit nerozhodně — zadejte konečné skóre po prodloužení/nájezdech')
       return
@@ -213,7 +215,7 @@ function SlotEditor({
         } })
       }
 
-      const autoPlayed = s.played || s.home_score > 0 || s.away_score > 0
+      const autoPlayed = s.played // přesně stav pole
       const failed = await withBusy('Ukládám zápas…', async () => {
         const results = await Promise.all(tasks.map(t => Promise.resolve(t.run()).then(
           r => ({ label: t.label, error: r.error }),
@@ -355,7 +357,7 @@ function SlotEditor({
       {/* Odehrán + čas */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '.65rem', flexWrap: 'wrap' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.82rem' }}>
-          <input type="checkbox" checked={s.played} onChange={e => setS(x => ({ ...x, played: e.target.checked }))}
+          <input type="checkbox" checked={s.played} onChange={e => { playedTouched.current = true; const v = e.target.checked; setS(x => ({ ...x, played: v })) }}
             style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
           Odehrán {s.played && <Check size={14} style={{ color: 'var(--success)', verticalAlign: '-2px' }} />}
         </label>

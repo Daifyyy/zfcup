@@ -85,6 +85,8 @@ function InlineMatchEditor({
   const [homeScore, setHomeScore] = useState(match.home_score ?? 0)
   const [awayScore, setAwayScore] = useState(match.away_score ?? 0)
   const [played, setPlayed] = useState(Boolean(match.played))
+  // Skóre zaškrtne „Odehrán“ automaticky jen dokud na pole organizátor nesáhl (živé zadávání = odškrtnout)
+  const playedTouched = useRef(false)
   const [scheduledTime, setScheduledTime] = useState(match.scheduled_time || '')
   const isSeason = tournament?.schedule_mode === 'season'
   const [matchDate, setMatchDate] = useState(match.match_date || '')
@@ -173,17 +175,17 @@ function InlineMatchEditor({
     if (side === 'home') {
       const next = Math.max(0, homeScore + delta)
       setHomeScore(next)
-      if (next > 0) setPlayed(true)
+      if (next > 0 && !playedTouched.current) setPlayed(true)
     } else {
       const next = Math.max(0, awayScore + delta)
       setAwayScore(next)
-      if (next > 0) setPlayed(true)
+      if (next > 0 && !playedTouched.current) setPlayed(true)
     }
   }
 
   const saveAll = async () => {
     if (savingRef.current) return
-    const autoPlayed = played || homeScore > 0 || awayScore > 0
+    const autoPlayed = played // přesně stav pole (rozehraný zápas = neodehraný)
 
     if (autoPlayed && !sportDef.standings.allowDraws && homeScore === awayScore) {
       showToast('Zápas nemůže skončit nerozhodně — zadejte konečné skóre po prodloužení/nájezdech')
@@ -351,7 +353,7 @@ function InlineMatchEditor({
       {/* Odehrán + čas — jeden řádek */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '.65rem', flexWrap: 'wrap' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '.35rem', cursor: 'pointer', fontSize: '.82rem' }}>
-          <input type="checkbox" checked={played} onChange={e => setPlayed(e.target.checked)}
+          <input type="checkbox" checked={played} onChange={e => { playedTouched.current = true; setPlayed(e.target.checked) }}
             style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
           Odehrán {played && <Check size={14} style={{ color: 'var(--success)', verticalAlign: '-2px' }} />}
         </label>

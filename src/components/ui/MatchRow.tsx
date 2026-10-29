@@ -47,6 +47,7 @@ export function MatchRow({ home, away, homeScore, awayScore, state, decidedIn, m
         {home && <TeamLogo team={home} size={logoSize} />}
       </div>
       <div className="ui-match__score">
+        {state === 'live' && <span className="ui-live-dot ui-match__live-dot" aria-label="Živě" />}
         {showScore ? (
           <>
             <span className="ui-match__score-box">{hs}</span>

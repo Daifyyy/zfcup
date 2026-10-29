@@ -171,7 +171,7 @@ function GroupMatchesSubCol({ groupName, matches, teams, tournament }: { groupNa
           }}>
             {/* Čas */}
             <div style={{ fontSize: S.label, color: m.played ? C.muted : C.accent, fontWeight: m.played ? 400 : 700, flexShrink: 0, minWidth: '3em', textAlign: 'center' }}>
-              {live ? <span className="sb-live-tag">Živě</span> : (m.scheduled_time || '')}
+              {live ? <span className="sb-live-tag"><span className="ui-live-dot" />Živě</span> : (m.scheduled_time || '')}
             </div>
             {/* Home */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.2rem', minWidth: 0, overflow: 'hidden' }}>
@@ -396,7 +396,7 @@ function LeagueMatchesCol({ matches, teams, numPitches = 2, tournament }: { matc
           }}>
             {/* Čas */}
             <div style={{ fontSize: S.label, color: allPlayed ? C.muted : C.accent, fontWeight: allPlayed ? 400 : 700, flexShrink: 0, minWidth: '3.1em', textAlign: 'center' }}>
-              {live ? <span className="sb-live-tag">Živě</span> : (time || '—')}
+              {live ? <span className="sb-live-tag"><span className="ui-live-dot" />Živě</span> : (time || '—')}
             </div>
             {/* N hřišť */}
             {'ABCD'.slice(0, numPitches).split('').map((letter, i) => (

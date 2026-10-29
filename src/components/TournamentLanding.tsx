@@ -325,13 +325,19 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
                 </button>
               )}
             </div>
-            <div className="lp-hero__sports">
-              {SPORTS.map(s => {
-                const Icon = s.Icon
-                return <span key={s.id}><Icon size={16} />{s.label}</span>
+            {/* Informace, ne tlačítka: sporty v textu, bez rámečků */}
+            <p className="lp-hero__sports">
+              Pro turnaje a ligy ve sportech
+              {SPORTS.map((sp, i) => {
+                const Icon = sp.Icon
+                return (
+                  <span key={sp.id} className="lp-hero__sport">
+                    {i > 0 && <span className="lp-hero__and">{i === SPORTS.length - 1 ? 'a' : ','}</span>}
+                    <Icon size={18} />{sp.label.toLowerCase()}
+                  </span>
+                )
               })}
-              <span className="lp-hero__soon">další sporty brzy</span>
-            </div>
+            </p>
           </div>
 
           {/* Ukázka výsledkové tabule */}
@@ -365,7 +371,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
         <div className="lp-wrap">
           <div className="lp-section__head">
             <h2>Vše, co pořadatel potřebuje</h2>
-            <p>Od rozlosování po vyhlášení vítěze — bez tabulek v Excelu a bez instalace.</p>
+            <p>Od rozlosování po vyhlášení vítěze — pro {SPORTS.map(sp => sp.label.toLowerCase()).join(' i ')}, bez tabulek v Excelu a bez instalace.</p>
           </div>
           <div className="lp-features">
             {FEATURES.map(f => {
