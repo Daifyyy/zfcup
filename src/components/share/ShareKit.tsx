@@ -5,7 +5,8 @@ import type { Sponsor } from '../../hooks/useSponsors'
 import type { Tournament } from '../../hooks/useTournament'
 import type { StandingRow } from '../../lib/standings'
 import ShareModal from './ShareModal'
-import { MatchGraphic, ScorersGraphic, TableGraphic } from './templates'
+import type { SideEvents } from '../../lib/details'
+import { LeadersGraphic, MatchGraphic, TableGraphic, type LeaderRow } from './templates'
 
 interface Base {
   tournament: Tournament | null
@@ -21,6 +22,8 @@ function slug(s: string): string {
 export function ShareMatch(p: Base & {
   home?: Team; away?: Team; homeScore: number; awayScore: number; label: string
   decidedIn?: 'regulation' | 'ot' | 'so' | null
+  live?: boolean
+  events?: { home: SideEvents; away: SideEvents }
 }) {
   const title = `${p.home?.name ?? '—'} ${p.homeScore}:${p.awayScore} ${p.away?.name ?? '—'}`
   return (
@@ -46,14 +49,14 @@ export function ShareTable(p: Base & { groupName: string; rows: StandingRow[]; t
   )
 }
 
-export function ShareScorers(p: Base & { title: string; rows: { name: string; team?: Team; value: number }[] }) {
+export function ShareLeaders(p: Base & { title: string; unit?: string; rows: LeaderRow[] }) {
   return (
     <ShareModal
       title={p.title}
       fileName={slug(p.title)}
       onClose={p.onClose}
       showToast={p.showToast}
-      render={format => <ScorersGraphic format={format} {...p} />}
+      render={format => <LeadersGraphic format={format} {...p} />}
     />
   )
 }

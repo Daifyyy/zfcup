@@ -341,3 +341,19 @@
   .ui-sec > div:last-child:not(:first-child) { flex-shrink: 1 !important; min-width: 0; max-width: 100%; }
   .ui-sec select { max-width: 100%; }
 }
+
+/* ── Nabídka Sdílet (ShareButton) ───────────────────────── */
+.shm { position: fixed; z-index: 3000; width: 240px; padding: .35rem; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel); display: flex; flex-direction: column; animation: shm-in .12s ease-out; }
+@keyframes shm-in { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: none } }
+.shm__item { display: flex; align-items: center; gap: .65rem; width: 100%; padding: .55rem .6rem; border: 0; border-radius: var(--radius); background: none; font: inherit; font-size: .88rem; font-weight: 600; color: var(--ink); text-decoration: none; text-align: left; cursor: pointer; }
+.shm__item:hover, .shm__item:focus-visible { background: var(--surface-2); outline: none; }
+.shm__icon { width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--surface-2); color: var(--ink); font-family: var(--font-display); font-weight: 800; font-size: .95rem; }
+.shm__sep { height: 1px; background: var(--line); margin: .3rem .2rem; }
+.shm__url { margin: .3rem .2rem; font-size: .8rem !important; }
+.shm__hint { margin: .3rem .5rem .2rem; font-size: .72rem; color: var(--ink-muted); line-height: 1.4; }
+
+/* ── Ikony událostí zápasu (EventIcons) ─────────────────── */
+.ev-mark { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 20px; height: 20px; border-radius: 50%; font-family: var(--font-display); font-weight: 800; font-size: .8rem; line-height: 1; }
+.ev-mark--goal { color: var(--ink); }
+.ev-mark--assist { background: var(--brand-soft, var(--surface-2)); color: var(--brand); border: 1px solid var(--brand-line, var(--line)); }
+.ev-mark--pim { min-width: 28px; padding: 0 .3rem; border-radius: 4px; background: var(--loss); color: #fff; font-size: .75rem; }

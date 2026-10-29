@@ -182,6 +182,7 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `partners.ts` | úrovně partnerů, `isMissingColumnError` | — | App, Sponsors, Media, admin |
 | `theme.ts` | `applyTournamentTheme` (WCAG kontrast) | — | App, BrandingSection |
 | `legal.ts` | **údaje provozovatele `OPERATOR`** (vyplňuje uživatel), `LEGAL_EFFECTIVE_DATE`, `SUBPROCESSORS`, `LEGAL_DOCS`, `detectLegalDocFromUrl`, `missingOperatorFields` | brand | App, LegalPage, SiteFooter, Tips |
+| `share.ts` | sdílení odkazů: `prefersNativeShare`, `nativeShare`, `shareTargets` (FB, X, WhatsApp, LinkedIn, e-mail), `copyText`, `matchUrl`/`teamUrl` | — | ShareButton, detaily, Overview |
 | `dataExport.ts` | `exportTournamentData` (JSON všech tabulek turnaje, bez PINů), `downloadJson` | supabase | SettingsTab |
 | `storage.ts` | cesty a upload do Storage (`tournaments/{id}/…`) | supabase | TeamsTab, SponsorsTab |
 | `exportExcel.ts` / `exportPress.ts` | XLSX rozpis, kartičky rozhodčích / tiskový servis | standings, sports, `xlsx` (líně) | MatchesTab / Media |

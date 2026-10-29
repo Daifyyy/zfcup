@@ -7,6 +7,8 @@ import type { Sponsor } from '../../hooks/useSponsors'
 import type { Tournament } from '../../hooks/useTournament'
 import type { StandingRow } from '../../lib/standings'
 import { BRAND } from '../../lib/brand'
+import { getSportDef } from '../../lib/sports'
+import type { SideEvents } from '../../lib/details'
 
 export type ShareFormat = 'square' | 'story'
 export const FORMAT_SIZE: Record<ShareFormat, { w: number; h: number }> = {
@@ -91,7 +93,48 @@ function Frame({ format, tournament, kicker, sponsors, children }: {
   )
 }
 
-export function MatchGraphic({ format, tournament, sponsors, home, away, homeScore, awayScore, label, decidedIn }: {
+// Barvy karet a pódia (sdílecí šablony mají vlastní paletu — výjimka z pravidla tokenů)
+const YELLOW = '#facc15'
+const RED = '#dc2626'
+const PODIUM = ['#f5b301', '#c3ccd8', '#cd7f32']
+
+function CardShape({ kind, h = 26 }: { kind: 'yellow' | 'red' | 'yellow_red'; h?: number }) {
+  const card = (c: string, ml = 0) => <span style={{ display: 'inline-block', width: h * 0.72, height: h, background: c, borderRadius: 3, marginLeft: ml, boxShadow: '0 2px 6px rgba(0,0,0,.35)' }} />
+  return <span style={{ display: 'inline-flex', flexShrink: 0 }}>{kind === 'yellow_red' ? <>{card(YELLOW)}{card(RED, -8)}</> : card(kind === 'yellow' ? YELLOW : RED)}</span>
+}
+
+type EventLine = { key: string; mark: ReactNode; name: string; extra?: string }
+
+/** Události jedné strany jako řádky: góly, asistence, karty, tresty (do limitu). */
+function eventLines(side: SideEvents | undefined, tournament: Tournament | null, limit: number): EventLine[] {
+  if (!side) return []
+  const GoalIcon = getSportDef(tournament?.sport).GoalIcon
+  const lines: EventLine[] = [
+    ...side.goals.map(g => ({ key: `g${g.player.id}`, mark: <GoalIcon size={28} strokeWidth={2} />, name: g.player.name, extra: g.value > 1 ? `${g.value}×` : undefined })),
+    ...side.assists.map(a => ({ key: `a${a.player.id}`, mark: <span style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid var(--brand-2)', color: 'var(--brand-2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: DISPLAY, fontWeight: 800, fontSize: 20 }}>A</span>, name: a.player.name, extra: a.value > 1 ? `${a.value}×` : undefined })),
+    ...side.cards.map((c, i) => ({ key: `c${c.player.id}${i}`, mark: <CardShape kind={c.type} />, name: c.player.name })),
+    ...side.penalties.map(p => ({ key: `p${p.player.id}`, mark: <span style={{ background: RED, color: '#fff', borderRadius: 4, padding: '0 6px', fontFamily: DISPLAY, fontWeight: 800, fontSize: 22 }}>{p.value}′</span>, name: p.player.name })),
+  ]
+  if (lines.length > limit) return [...lines.slice(0, limit - 1), { key: 'more', mark: <span />, name: `+ ${lines.length - limit + 1} další` }]
+  return lines
+}
+
+function EventColumn({ lines, big }: { lines: EventLine[]; big?: boolean }) {
+  if (!lines.length) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: '100%' }}>
+      {lines.map(l => (
+        <div key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: big ? 34 : 26, fontWeight: 600, maxWidth: '100%', color: INK }}>
+          {l.mark}
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{l.name}</span>
+          {l.extra && <span style={{ color: MUTED, fontWeight: 700 }}>{l.extra}</span>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export function MatchGraphic({ format, tournament, sponsors, home, away, homeScore, awayScore, label, decidedIn, live, events }: {
   format: ShareFormat
   tournament: Tournament | null
   sponsors: Sponsor[]
@@ -101,20 +144,26 @@ export function MatchGraphic({ format, tournament, sponsors, home, away, homeSco
   awayScore: number
   label: string
   decidedIn?: 'regulation' | 'ot' | 'so' | null
+  live?: boolean
+  events?: { home: SideEvents; away: SideEvents }
 }) {
-  const logo = format === 'story' ? 300 : 230
+  const story = format === 'story'
+  const hasEvents = !!events && [events.home, events.away].some(e => e.goals.length + e.assists.length + e.cards.length + e.penalties.length > 0)
+  const logo = story ? (hasEvents ? 220 : 300) : (hasEvents ? 170 : 230)
+  const limit = story ? 6 : 4
   const suffix = decidedIn === 'ot' ? 'po prodloužení' : decidedIn === 'so' ? 'po nájezdech' : ''
-  const team = (t: Team | undefined, won: boolean) => (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, width: 330 }}>
+  const team = (t: Team | undefined, won: boolean, side?: SideEvents) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: hasEvents ? 20 : 28, width: story ? 760 : 330 }}>
       <Logo team={t} size={logo} />
       <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 52, lineHeight: 1, textAlign: 'center', textTransform: 'uppercase', opacity: won ? 1 : .72 }}>{t?.name ?? '—'}</div>
+      {hasEvents && <EventColumn lines={eventLines(side, tournament, limit)} big={story} />}
     </div>
   )
   return (
-    <Frame format={format} tournament={tournament} kicker={`Výsledek · ${label}`} sponsors={sponsors}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: format === 'story' ? 'column' : 'row', gap: format === 'story' ? 56 : 0 }}>
-        {team(home, homeScore >= awayScore)}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+    <Frame format={format} tournament={tournament} kicker={`${live ? 'Průběžný stav' : 'Výsledek'} · ${label}`} sponsors={sponsors}>
+      <div style={{ display: 'flex', alignItems: story || !hasEvents ? 'center' : 'flex-start', justifyContent: 'space-between', flexDirection: story ? 'column' : 'row', gap: story ? 44 : 0 }}>
+        {team(home, homeScore >= awayScore, events?.home)}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, marginTop: story || !hasEvents ? 0 : logo / 2 - 100 }}>
           <div style={{ display: 'flex', gap: 10 }}>
             {[homeScore, awayScore].map((v, i) => (
               <div key={i} style={{
@@ -126,9 +175,9 @@ export function MatchGraphic({ format, tournament, sponsors, home, away, homeSco
               }}>{v}</div>
             ))}
           </div>
-          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: MUTED }}>Konec{suffix && ` · ${suffix}`}</div>
+          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: live ? RED : MUTED }}>{live ? 'Živě' : 'Konec'}{suffix && !live && ` · ${suffix}`}</div>
         </div>
-        {team(away, awayScore >= homeScore)}
+        {team(away, awayScore >= homeScore, events?.away)}
       </div>
     </Frame>
   )
@@ -176,27 +225,76 @@ export function TableGraphic({ format, tournament, sponsors, groupName, rows, te
   )
 }
 
-export function ScorersGraphic({ format, tournament, sponsors, title, rows }: {
+export interface LeaderRow {
+  name: string
+  team?: Team
+  avatar?: string | null
+  /** Hlavní hodnota (číslo nebo „12′“) */
+  value: string
+  /** Karty (Disciplína) — místo čísla se ukážou kartičky */
+  cards?: { yellow: number; yellowRed: number; red: number }
+}
+
+/** Žebříček (střelci, asistence, body, karty, tresty): TOP 3 na pódiu, pak další řádky. */
+export function LeadersGraphic({ format, tournament, sponsors, title, unit, rows }: {
   format: ShareFormat
   tournament: Tournament | null
   sponsors: Sponsor[]
   title: string
-  rows: { name: string; team?: Team; value: number }[]
+  /** Popisek hodnoty, např. „gólů“ */
+  unit?: string
+  rows: LeaderRow[]
 }) {
-  const list = rows.slice(0, format === 'story' ? 10 : 5)
+  const story = format === 'story'
+  const top = rows.slice(0, 3)
+  const rest = rows.slice(3, story ? 10 : 5)
+  const value = (r: LeaderRow, size: number) => r.cards ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      {([['yellow', r.cards.yellow], ['yellow_red', r.cards.yellowRed], ['red', r.cards.red]] as const).filter(([, n]) => n > 0).map(([k, n]) => (
+        <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <CardShape kind={k} h={size * 0.5} />
+          <span style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: size * 0.55 }}>{n}</span>
+        </span>
+      ))}
+    </div>
+  ) : <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: size, lineHeight: 1 }}>{r.value}</div>
+  const face = (r: LeaderRow, size: number) => r.avatar
+    ? <img src={r.avatar} crossOrigin="anonymous" alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '4px solid rgba(255,255,255,.85)', flexShrink: 0 }} />
+    : <Logo team={r.team} size={size} />
   return (
     <Frame format={format} tournament={tournament} kicker={title} sponsors={sponsors}>
-      {list.map((r, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 26, padding: i === 0 ? '26px 28px' : '18px 28px', marginBottom: 10, background: i === 0 ? 'var(--brand)' : 'rgba(255,255,255,.05)', borderRadius: 12 }}>
-          <div style={{ width: 56, fontFamily: DISPLAY, fontWeight: 800, fontSize: i === 0 ? 64 : 48, opacity: i === 0 ? 1 : .7 }}>{i + 1}</div>
-          <Logo team={r.team} size={i === 0 ? 100 : 76} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: i === 0 ? 46 : 36, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-            {r.team && <div style={{ fontSize: 24, color: i === 0 ? 'rgba(255,255,255,.8)' : MUTED }}>{r.team.name}</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: story ? 22 : 14 }}>
+        {top.map((r, i) => {
+          const big = i === 0
+          const h = story ? (big ? 190 : 160) : (big ? 150 : 124)
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 26, height: h, padding: '0 30px 0 0', background: big ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.05)', borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ width: 96, alignSelf: 'stretch', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: PODIUM[i], color: '#0b1220', fontFamily: DISPLAY, fontWeight: 800, fontSize: big ? 84 : 68, clipPath: 'polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%)' }}>{i + 1}</div>
+              {face(r, h - 44)}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: big ? 50 : 42, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+                {r.team && <div style={{ fontSize: 26, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.team.name}</div>}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                {value(r, big ? 104 : 84)}
+                {unit && !r.cards && <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: MUTED }}>{unit}</div>}
+              </div>
+            </div>
+          )
+        })}
+        {rest.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
+            {rest.map((r, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 22, padding: '10px 30px 10px 0', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+                <div style={{ width: 96, flexShrink: 0, textAlign: 'center', fontFamily: DISPLAY, fontWeight: 800, fontSize: 40, color: MUTED }}>{i + 4}</div>
+                <Logo team={r.team} size={52} />
+                <div style={{ flex: 1, minWidth: 0, fontSize: 32, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+                <div style={{ flexShrink: 0 }}>{value(r, 48)}</div>
+              </div>
+            ))}
           </div>
-          <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: i === 0 ? 110 : 76, lineHeight: 1 }}>{r.value}</div>
-        </div>
-      ))}
+        )}
+      </div>
     </Frame>
   )
 }

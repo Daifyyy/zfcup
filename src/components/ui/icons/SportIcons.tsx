@@ -29,4 +29,15 @@ export function HockeyIcon({ size = 20, strokeWidth = 1.75, className, style }: 
   )
 }
 
+/** Puk (hokejový gól) — plný válec v barvě textu */
+export function PuckIcon({ size = 20, strokeWidth = 1.75, className, style }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} style={style} aria-hidden="true">
+      <path d="M3 10v4c0 1.9 4 3.5 9 3.5s9-1.6 9-3.5v-4" fill="currentColor" fillOpacity=".25" />
+      <ellipse cx="12" cy="10" rx="9" ry="3.5" fill="currentColor" fillOpacity=".55" />
+    </svg>
+  )
+}
+
 export type SportIconComponent = (props: IconProps) => JSX.Element

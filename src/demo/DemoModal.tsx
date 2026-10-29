@@ -95,7 +95,7 @@ export default function DemoModal({ initial, onClose }: Props) {
                 {detail && (
                   <div className="dm-overlay">
                     {detail.kind === 'team'
-                      ? <TeamDetailDrawer teamId={detail.id} onClose={() => setDetail(null)} />
+                      ? <TeamDetailDrawer teamId={detail.id} onClose={() => setDetail(null)} allowLink={false} />
                       : <MatchDetailDrawer matchId={detail.id} onClose={() => setDetail(null)} allowLink={false} />}
                   </div>
                 )}

@@ -101,6 +101,11 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Audit 375 px (všechny veřejné záložky 3 turnajů, detail zápasu, admin 11 záložek, úvod, soutěž, právní stránky). Jediný viník: hlavička úvodní stránky u přihlášeného organizátora (tlačítka 426 px) — Chrome ořízl, iOS Safari roztáhl celou stránku. Tlačítka na mobilu jen ikony.
 - Pojistky: `overflow-x: clip` na html/body (Safari `hidden` nerespektuje), `text-size-adjust: 100%` (iOS nezvětšuje písmo na šířku). Ověřit na iPhonu po nasazení.
 
+### Blok C — sdílení (2026-10-29)
+- `lib/share.ts` + `share/ShareButton.tsx`: dotykové zařízení → systémová nabídka (Facebook, Instagram, WhatsApp, Kopírovat…); počítač → nabídka Facebook, X, WhatsApp, LinkedIn, E-mail, Kopírovat. V detailu zápasu (+ Grafika výsledku), detailu týmu a v hero Přehledu („Sdílet turnaj“).
+- Statistiky: grafika TOP 3 na pódiu (zlatá/stříbrná/bronzová, foto hráče) pro střelce, kanadské body, nahrávače, disciplínu (kartičky) a trestné minuty (`LeadersGraphic`, `ShareLeaders`).
+- Detail zápasu: ikony gólu (`SportDef.GoalIcon` — míč / nový `PuckIcon`), asistence „A“, trestné minuty (`ui/EventIcons.tsx`); grafika výsledku nově se střelci, asistencemi a kartami, u živého zápasu „Průběžný stav“. Partneři do grafik přes `TournamentData.sponsors`.
+
 ### Kde navázat
 1. **Uživatel doplní** `OPERATOR` v `src/lib/legal.ts` (jméno, IČO, adresa, e-mail, zápis v rejstříku). Pak vyzkoušet export a „Vymazat vše“ na testovacím turnaji. Teprve potom vypnout maintenance.
 2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.

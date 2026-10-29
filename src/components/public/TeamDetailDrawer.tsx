@@ -7,6 +7,8 @@ import { MatchRow } from '../ui/MatchRow'
 import { getMatchState } from '../../lib/matchState'
 import { formatDateShort } from '../../lib/dates'
 import { getSportDef } from '../../lib/sports'
+import ShareButton from '../share/ShareButton'
+import { teamUrl } from '../../lib/share'
 import { useTournamentData, useDetail } from '../../lib/TournamentDataContext'
 import { EMPTY_STATS, fixtureId, playerStats, rosterOf, statFlags, teamFixtures, teamRecord, type PlayerStats } from '../../lib/details'
 
@@ -41,7 +43,7 @@ export function StatBadges({ s, showAssists, showCards, showPenalties }: { s: Pl
 }
 
 /** Detail týmu: bilance, zápasy (skupiny i play-off), soupiska se statistikami. */
-export default function TeamDetailDrawer({ teamId, onClose }: { teamId: string; onClose: () => void }) {
+export default function TeamDetailDrawer({ teamId, onClose, allowLink = true }: { teamId: string; onClose: () => void; /** Ukázka bez vlastní adresy → bez sdílení */ allowLink?: boolean }) {
   const data = useTournamentData()
   const { openMatch } = useDetail()
   const { tournament, teams, players } = data
@@ -92,6 +94,14 @@ export default function TeamDetailDrawer({ teamId, onClose }: { teamId: string; 
               {clubSlug && <> · <a className="tm-drawer__club" href={`/k/${clubSlug}`}>Profil klubu<ExternalLink size={12} /></a></>}
             </div>
           </div>
+          {allowLink && (
+            <ShareButton
+              className="tm-drawer__close"
+              iconSize={20}
+              title="Sdílet tým"
+              data={{ title: team.name, text: data.tournament.name, url: teamUrl(data.tournament.id, team.id) }}
+            />
+          )}
           <button type="button" className="tm-drawer__close" onClick={onClose} aria-label="Zavřít"><X size={20} /></button>
         </header>
 

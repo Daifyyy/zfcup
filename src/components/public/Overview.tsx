@@ -12,6 +12,7 @@ import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Sponsor } from '../../hooks/useSponsors'
 import QRCode from '../ui/QRCode'
+import ShareButton from '../share/ShareButton'
 import { sanitizeHtml } from '../../lib/sanitize'
 import { getSportDef } from '../../lib/sports'
 import { calcGroupStandings } from '../../lib/standings'
@@ -138,6 +139,14 @@ export default function Overview({
               <span>Presented by</span>
               <img src={presentedBy.logo_url} alt={presentedBy.name} />
             </div>
+          )}
+          {tournament && tournamentUrl && (
+            <ShareButton
+              className="ui-btn ui-btn--chrome ui-btn--sm"
+              label="Sdílet"
+              title="Sdílet turnaj"
+              data={{ title: tournament.name, text: [tournament.date, tournament.venue].filter(Boolean).join(' · ') || undefined, url: tournamentUrl }}
+            />
           )}
           <div className="ov-hero__qr desktop-only">
             <QRCode size={72} url={tournamentUrl} />

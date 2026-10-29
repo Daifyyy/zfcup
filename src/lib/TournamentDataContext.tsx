@@ -16,6 +16,7 @@ import type { BracketAssist } from '../hooks/useBracketAssists'
 import type { BracketCard } from '../hooks/useBracketCards'
 import type { BracketPenalty } from '../hooks/useBracketPenalties'
 import type { Referee } from '../hooks/useReferees'
+import type { Sponsor } from '../hooks/useSponsors'
 
 export interface TournamentData {
   tournament: Tournament
@@ -34,6 +35,8 @@ export interface TournamentData {
   bracketCards: BracketCard[]
   bracketPenalties: BracketPenalty[]
   referees: Referee[]
+  /** Partneři pro sdílecí grafiky (jen při zapnutém modulu, seřazení dle úrovně) */
+  sponsors?: Sponsor[]
   /** Play-off se ještě načítá (App čeká jen na týmy/skupiny/zápasy) */
   bracketLoading: boolean
 }

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { Share2 } from 'lucide-react'
 import type { Sponsor } from '../../hooks/useSponsors'
-import { ShareScorersDialog } from '../share/lazy'
+import { ShareLeadersDialog } from '../share/lazy'
+import type { LeaderRow } from '../share/templates'
 import type { Goal } from '../../hooks/useGoals'
 import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { Assist } from '../../hooks/useAssists'
@@ -52,8 +53,10 @@ function PlayerCell({ player, team }: { player?: Player; team?: Team }) {
 
 interface BoardRow { id: string; cells: ReactNode[]; primary: ReactNode }
 
-function Leaderboard({ title, columns, rows, players, teams, footer, onShare }: {
+function Leaderboard({ title, columns, rows, players, teams, footer, onShare, shareMenu }: {
   onShare?: () => void
+  /** Více grafik k jedné tabulce (např. góly / kanadské body) */
+  shareMenu?: { label: string; onClick: () => void }[]
   title: string
   columns: string[]
   rows: BoardRow[]
@@ -65,8 +68,11 @@ function Leaderboard({ title, columns, rows, players, teams, footer, onShare }: 
     <Card padded={false} title={title} actions={
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}>
         {onShare && (
-          <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" title="Sdílet grafiku" onClick={onShare}><Share2 size={14} /></button>
+          <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" title="Sdílet grafiku TOP 3" onClick={onShare}><Share2 size={14} /></button>
         )}
+        {shareMenu && shareMenu.map(m => (
+          <button key={m.label} type="button" className="ui-btn ui-btn--ghost ui-btn--sm" title={`Sdílet grafiku: ${m.label}`} onClick={m.onClick}><Share2 size={14} />{m.label === 'Kanadské body' ? 'Body' : 'Góly'}</button>
+        ))}
         <span className="ui-badge">{rows.length}</span>
       </span>
     }>
@@ -99,7 +105,7 @@ function Leaderboard({ title, columns, rows, players, teams, footer, onShare }: 
 }
 
 export default function Statistics({ goals, bracketGoals, assists, bracketAssists, cards, bracketCards, penalties, bracketPenalties, players, teams, tournament, sponsors = [], showToast }: Props) {
-  const [shareScorers, setShareScorers] = useState(false)
+  const [share, setShare] = useState<{ title: string; unit?: string; rows: LeaderRow[] } | null>(null)
   const showAssists = tournament?.assists_enabled ?? false
   const showCards = tournament?.cards_enabled ?? false
   const showPenalties = tournament?.penalty_minutes_enabled ?? false
@@ -145,6 +151,19 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
     ? Object.entries(penaltyAgg).map(([id, minutes]) => ({ id, minutes })).sort((a, b) => b.minutes - a.minutes)
     : []
 
+  // Řádky sdílecí grafiky (TOP 3 na pódiu + další)
+  const leaderRow = (id: string, value: string, cards?: LeaderRow['cards']): LeaderRow => {
+    const p = playerById.get(id)
+    return { name: p?.name ?? '', team: p ? teamById.get(p.team_id) : undefined, avatar: p?.avatar_url, value, cards }
+  }
+  const byGoals = [...scorers].filter(s => s.goals > 0).sort((a, b) => b.goals - a.goals)
+  const byPoints = [...scorers].filter(s => s.goals + s.assists > 0).sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists) || b.goals - a.goals)
+  const shareGoals = () => setShare({ title: `Nejlepší ${sportDef.terms.scorersLabel.toLowerCase()}`, unit: 'gólů', rows: byGoals.map(s => leaderRow(s.id, String(s.goals))) })
+  const sharePoints = () => setShare({ title: 'Kanadské body', unit: 'bodů', rows: byPoints.map(s => leaderRow(s.id, String(s.goals + s.assists))) })
+  const shareAssists = () => setShare({ title: 'Nejlepší nahrávači', unit: 'asistencí', rows: assisters.map(a => leaderRow(a.id, String(a.assists))) })
+  const shareCards = () => setShare({ title: 'Disciplína', rows: discipline.map(r => leaderRow(r.id, '', { yellow: r.yellow, yellowRed: r.yellowRed, red: r.red })) })
+  const sharePim = () => setShare({ title: 'Trestné minuty', unit: 'minut', rows: penaltyBoard.map(r => leaderRow(r.id, `${r.minutes}′`)) })
+
   const hasAnyData = scorers.length > 0 || assisters.length > 0 || discipline.length > 0 || penaltyBoard.length > 0
   if (!hasAnyData) return <Empty text="Statistiky se zobrazí po prvních odehraných zápasech." />
 
@@ -162,7 +181,8 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
             players={playerById}
             teams={teamById}
             footer={showAssists ? <span>G = góly · A = asistence · B = kanadské body</span> : undefined}
-            onShare={() => setShareScorers(true)}
+            onShare={showAssists ? undefined : shareGoals}
+            shareMenu={showAssists ? [{ label: 'Střelci (góly)', onClick: shareGoals }, { label: 'Kanadské body', onClick: sharePoints }] : undefined}
           />
         )}
 
@@ -173,6 +193,7 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
             rows={assisters.map(a => ({ id: a.id, cells: [], primary: a.assists }))}
             players={playerById}
             teams={teamById}
+            onShare={shareAssists}
           />
         )}
 
@@ -193,6 +214,7 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
             }))}
             players={playerById}
             teams={teamById}
+            onShare={shareCards}
             footer={<>
               <span><CardChip kind="yellow" />žlutá</span>
               <span><CardChip kind="yellow_red" />druhá žlutá → červená</span>
@@ -208,20 +230,19 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
             rows={penaltyBoard.map(r => ({ id: r.id, cells: [], primary: `${r.minutes}′` }))}
             players={playerById}
             teams={teamById}
+            onShare={sharePim}
           />
         )}
       </div>
 
-      {shareScorers && (
-        <ShareScorersDialog
+      {share && (
+        <ShareLeadersDialog
           tournament={tournament}
           sponsors={sponsors}
-          title={`Nejlepší ${sportDef.terms.scorersLabel.toLowerCase()}`}
-          rows={[...scorers].sort((a, b) => b.goals - a.goals).filter(s => s.goals > 0).map(s => {
-            const p = playerById.get(s.id)
-            return { name: p?.name ?? '', team: p ? teamById.get(p.team_id) : undefined, value: s.goals }
-          })}
-          onClose={() => setShareScorers(false)}
+          title={share.title}
+          unit={share.unit}
+          rows={share.rows}
+          onClose={() => setShare(null)}
           showToast={showToast}
         />
       )}

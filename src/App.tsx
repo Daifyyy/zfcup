@@ -218,8 +218,9 @@ export default function App() {
     tournament, teams, players, groups, matches, goals, assists, cards, penalties,
     bracketRounds, bracketSlots, bracketGoals, bracketAssists, bracketCards, bracketPenalties,
     referees, bracketLoading,
+    sponsors: tournament.sponsors_enabled ? sortByTier(sponsors) : [],
   } : null), [tournament, teams, players, groups, matches, goals, assists, cards, penalties,
-    bracketRounds, bracketSlots, bracketGoals, bracketAssists, bracketCards, bracketPenalties, referees, bracketLoading])
+    bracketRounds, bracketSlots, bracketGoals, bracketAssists, bracketCards, bracketPenalties, referees, bracketLoading, sponsors])
 
   const shared = { teams, players, groups, matches, goals, bracketRounds, bracketSlots, announcements, ruleItems, showToast }
   const showBracket = !(tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true))

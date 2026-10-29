@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, Check, Clock, Gavel, Link2, MapPin, X } from 'lucide-react'
+import { CalendarDays, Clock, Gavel, ImageDown, MapPin, X } from 'lucide-react'
 import { TeamLogo } from '../ui/TeamLogo'
 import { CardChip } from '../ui/CardChip'
 import { MatchStatusBadge } from '../ui/Badge'
 import { getMatchState } from '../../lib/matchState'
 import { formatDateWeekday } from '../../lib/dates'
-import { getSportDef } from '../../lib/sports'
+import { getSportDef, type SportDef } from '../../lib/sports'
+import { GoalMark, AssistMark, PimMark } from '../ui/EventIcons'
+import ShareButton from '../share/ShareButton'
+import { ShareMatchDialog } from '../share/lazy'
+import { matchUrl } from '../../lib/share'
 import { useTournamentData, useDetail } from '../../lib/TournamentDataContext'
 import { findMatchDetail, matchEvents, type SideEvents } from '../../lib/details'
 import type { Team } from '../../hooks/useTeams'
@@ -27,16 +31,16 @@ function TeamSide({ team, align, onOpen }: { team?: Team; align: 'home' | 'away'
   )
 }
 
-function EventList({ side, align, scorersLabel }: { side: SideEvents; align: 'home' | 'away'; scorersLabel: string }) {
+function EventList({ side, align, sport }: { side: SideEvents; align: 'home' | 'away'; sport: SportDef }) {
   const empty = !side.goals.length && !side.assists.length && !side.cards.length && !side.penalties.length
   if (empty) return <div className={`md-events__col md-events__col--${align} md-events__none`}>—</div>
   return (
     <div className={`md-events__col md-events__col--${align}`}>
       {side.goals.length > 0 && (
-        <div className="md-ev">
-          <div className="md-ev__title">{scorersLabel}</div>
+        <div className="md-ev" aria-label={sport.terms.scorersLabel}>
           {side.goals.map(g => (
             <div key={g.player.id} className="md-ev__row">
+              <GoalMark sport={sport} />
               <span className="md-ev__name">{g.player.name}</span>
               {g.value > 1 && <span className="md-ev__val">{g.value}×</span>}
             </div>
@@ -44,10 +48,10 @@ function EventList({ side, align, scorersLabel }: { side: SideEvents; align: 'ho
         </div>
       )}
       {side.assists.length > 0 && (
-        <div className="md-ev">
-          <div className="md-ev__title">Asistence</div>
+        <div className="md-ev" aria-label="Asistence">
           {side.assists.map(a => (
             <div key={a.player.id} className="md-ev__row">
+              <AssistMark />
               <span className="md-ev__name">{a.player.name}</span>
               {a.value > 1 && <span className="md-ev__val">{a.value}×</span>}
             </div>
@@ -55,8 +59,7 @@ function EventList({ side, align, scorersLabel }: { side: SideEvents; align: 'ho
         </div>
       )}
       {side.cards.length > 0 && (
-        <div className="md-ev">
-          <div className="md-ev__title">Karty</div>
+        <div className="md-ev" aria-label="Karty">
           {side.cards.map((c, i) => (
             <div key={`${c.player.id}-${i}`} className="md-ev__row">
               <CardChip kind={c.type} />
@@ -66,12 +69,11 @@ function EventList({ side, align, scorersLabel }: { side: SideEvents; align: 'ho
         </div>
       )}
       {side.penalties.length > 0 && (
-        <div className="md-ev">
-          <div className="md-ev__title">Trestné minuty</div>
+        <div className="md-ev" aria-label="Trestné minuty">
           {side.penalties.map(p => (
             <div key={p.player.id} className="md-ev__row">
+              <PimMark minutes={p.value} />
               <span className="md-ev__name">{p.player.name}</span>
-              <span className="md-ev__val md-ev__val--pim">{p.value}′</span>
             </div>
           ))}
         </div>
@@ -84,8 +86,7 @@ function EventList({ side, align, scorersLabel }: { side: SideEvents; align: 'ho
 export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }: { matchId: string; onClose: () => void; /** Ukázka bez vlastní adresy → bez kopírování odkazu */ allowLink?: boolean }) {
   const data = useTournamentData()
   const { openTeam } = useDetail()
-  const [copied, setCopied] = useState(false)
-  const [linkFallback, setLinkFallback] = useState('')
+  const [graphic, setGraphic] = useState(false)
   const { tournament, teams } = data
   const sport = getSportDef(tournament.sport)
   const md = useMemo(() => findMatchDetail(data, matchId), [data, matchId])
@@ -121,18 +122,9 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
     md.referee && { key: 'ref', icon: <Gavel size={15} />, text: md.referee },
   ].filter(Boolean) as { key: string; icon: JSX.Element; text: string }[]
   const title = `${home?.name ?? 'Určí se'} – ${away?.name ?? 'Určí se'}`
-
-  const copyLink = async () => {
-    const url = `${window.location.origin}/${tournament.id}?zapas=${md.id}`
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Bez přístupu ke schránce (např. http) — ukázat odkaz k ručnímu zkopírování
-      setLinkFallback(url)
-    }
-  }
+  const shareText = showScore
+    ? `${home?.name ?? '—'} ${md.home_score}:${md.away_score} ${away?.name ?? '—'} · ${tournament.name}`
+    : `${md.label || 'Zápas'} · ${tournament.name}`
 
   return (
     <div className="tm-drawer" onClick={onClose}>
@@ -140,9 +132,13 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
         <header className="tm-drawer__head md-head">
           <div className="md-head__label">{md.label || (md.kind === 'playoff' ? 'Play-off' : 'Zápas')}</div>
           {allowLink && (
-            <button type="button" className="tm-drawer__close" onClick={copyLink} title="Zkopírovat odkaz na zápas" aria-label="Zkopírovat odkaz">
-              {copied ? <Check size={20} /> : <Link2 size={20} />}
-            </button>
+            <ShareButton
+              className="tm-drawer__close"
+              iconSize={20}
+              title="Sdílet zápas"
+              data={{ title, text: shareText, url: matchUrl(tournament.id, md.id) }}
+              extras={showScore ? [{ key: 'graphic', label: 'Grafika výsledku', icon: <ImageDown size={15} />, onClick: () => setGraphic(true) }] : []}
+            />
           )}
           <button type="button" className="tm-drawer__close" onClick={onClose} aria-label="Zavřít"><X size={20} /></button>
         </header>
@@ -165,11 +161,6 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
           <TeamSide team={away} align="away" onOpen={openTeam} />
         </div>
 
-        {linkFallback && (
-          <div className="tm-drawer__sec">
-            <input className="field-input" readOnly value={linkFallback} onFocus={e => e.currentTarget.select()} aria-label="Odkaz na zápas" />
-          </div>
-        )}
 
         {facts.length > 0 && (
           <ul className="md-facts">
@@ -182,8 +173,8 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
             <h3>Průběh</h3>
             {anyEvent ? (
               <div className="md-events ui-card">
-                <EventList side={events.home} align="home" scorersLabel={sport.terms.scorersLabel} />
-                <EventList side={events.away} align="away" scorersLabel={sport.terms.scorersLabel} />
+                <EventList side={events.home} align="home" sport={sport} />
+                <EventList side={events.away} align="away" sport={sport} />
               </div>
             ) : (
               <p className="md-note" style={{ marginTop: 0 }}>
@@ -199,6 +190,24 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
           </section>
         )}
       </aside>
+      {graphic && (
+        // portál do <body>, ale React události by probublaly až sem a zavřely detail
+        <div onClick={e => e.stopPropagation()}>
+          <ShareMatchDialog
+            tournament={tournament}
+            sponsors={data.sponsors ?? []}
+            home={home}
+            away={away}
+            homeScore={md.home_score}
+            awayScore={md.away_score}
+            label={md.label || (md.kind === 'playoff' ? 'Play-off' : 'Zápas')}
+            decidedIn={md.decided_in}
+            live={state === 'live'}
+            events={events}
+            onClose={() => setGraphic(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }
