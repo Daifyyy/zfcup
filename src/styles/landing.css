@@ -5,7 +5,8 @@
 
 .lp-nav { position: sticky; top: 0; z-index: 50; background: var(--chrome); border-bottom: 1px solid var(--chrome-line); }
 .lp-nav__inner { display: flex; align-items: center; justify-content: space-between; min-height: 60px; gap: 1rem; }
-.lp-nav__actions { display: flex; align-items: center; gap: .5rem; }
+.lp-nav__actions { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.lp-nav__inner .lp-brand { min-width: 0; }
 .lp-nav__user { font-size: .78rem; color: var(--chrome-muted); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lp-brand { display: flex; align-items: center; gap: .6rem; }
 .lp-brand__mark {

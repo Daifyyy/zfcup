@@ -97,6 +97,10 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Spodní lišta: Přehled, Zápasy, Tabulka, Pavouk (+ Více). Dema zúžená na 4; oprava překryvu popisu a náhledu na mobilu (grid → flex, ukázka přes celou obrazovku, popis nahoře). „Chci turnaj“ v hero, v pásu pod funkcemi a v patičce (`contactHref()`). Dlaždice Přehledu klikací, 4. dlaždice = nejlepší střelec.
 - Plán dalších bloků: `C:/Users/denis/.claude/plans/shiny-tinkering-robin.md` (B mobil přetékání, C sdílení, D soukromé turnaje + vyhledávání, E historie soutěže).
 
+### Blok B — mobil, přetékání do strany (2026-10-29)
+- Audit 375 px (všechny veřejné záložky 3 turnajů, detail zápasu, admin 11 záložek, úvod, soutěž, právní stránky). Jediný viník: hlavička úvodní stránky u přihlášeného organizátora (tlačítka 426 px) — Chrome ořízl, iOS Safari roztáhl celou stránku. Tlačítka na mobilu jen ikony.
+- Pojistky: `overflow-x: clip` na html/body (Safari `hidden` nerespektuje), `text-size-adjust: 100%` (iOS nezvětšuje písmo na šířku). Ověřit na iPhonu po nasazení.
+
 ### Kde navázat
 1. **Uživatel doplní** `OPERATOR` v `src/lib/legal.ts` (jméno, IČO, adresa, e-mail, zápis v rejstříku). Pak vyzkoušet export a „Vymazat vše“ na testovacím turnaji. Teprve potom vypnout maintenance.
 2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.

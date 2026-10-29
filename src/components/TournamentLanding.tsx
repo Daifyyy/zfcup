@@ -218,17 +218,17 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
               <>
                 <span className="lp-nav__user hide-mobile">{session.user.email}</span>
                 {isPlatformAdmin && (
-                  <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={() => { setShowPlatform(true); setPlatformError('') }}>
+                  <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={() => { setShowPlatform(true); setPlatformError('') }} title="Platforma" aria-label="Platforma">
                     <Settings2 size={15} /><span className="hide-mobile">Platforma</span>
                   </button>
                 )}
-                <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={() => setShowClubs(true)}>
+                <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={() => setShowClubs(true)} title="Moje kluby" aria-label="Moje kluby">
                   <Shield size={15} /><span className="hide-mobile">Moje kluby</span>
                 </button>
-                <button type="button" className="ui-btn ui-btn--primary ui-btn--sm" onClick={() => { setShowCreate(true); setCreateError('') }}>
-                  <Plus size={15} />Nový turnaj
+                <button type="button" className="ui-btn ui-btn--primary ui-btn--sm" onClick={() => { setShowCreate(true); setCreateError('') }} title="Nový turnaj" aria-label="Nový turnaj">
+                  <Plus size={15} /><span className="hide-mobile">Nový turnaj</span>
                 </button>
-                <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={handleLogout}>
+                <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={handleLogout} title="Odhlásit" aria-label="Odhlásit">
                   <LogOut size={15} /><span className="hide-mobile">Odhlásit</span>
                 </button>
               </>

@@ -141,7 +141,9 @@
 
 /* ── Base ────────────────────────────────────────────── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { min-height: 100%; background: var(--bg); overflow-x: hidden; max-width: 100vw; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* clip = skutečné oříznutí i v Safari (hidden tam stránku nezúží); hidden jako záloha pro starší prohlížeče */
+html, body { min-height: 100%; background: var(--bg); overflow-x: hidden; overflow-x: clip; max-width: 100vw; }
 body {
   font-family: var(--font-body);
   color: var(--text);
