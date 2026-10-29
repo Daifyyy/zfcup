@@ -132,7 +132,15 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Tlačítko vlevo nahoře = skutečné Zpět v turnaji (na Přehledu ikona domu).
 - Zápis o utkání (tisk/PDF, kapesní A6 skládací, 15 hráčů) místo Excel karet; vzorový soubor pro import týmů; export rozpisu s listem Play-off a názvem souboru podle turnaje.
 
+### Navigace, Můj prostor, sdílení obrázků, TV v barvách (2026-10-30)
+- Turnaj/stránka se otevře nahoře; Odehrán respektuje ruční odškrtnutí (rozehraný zápas se skóre = Živě i po plánovaném konci); pulzující tečka u živého skóre; sporty na úvodu jako text.
+- TV tabule a TV režim v tmavých odstínech barvy turnaje.
+- Soutěž dědí viditelnost z ročníků — **migrace 19** (spouští uživatel); stránka soutěže nabízí přístupový kód.
+- Sdílení: hotový obrázek (mobil → Instagram/FB/WhatsApp přes systémovou nabídku, počítač stáhnout/kopírovat), nová grafika turnaje s QR.
+- **Můj prostor** `/moje` pro organizátora; úvodní stránka jen pro diváky.
+
 ### Kde navázat
+0. **Uživatel:** spustit migraci 19 (`db-backup/19_competition_visibility.sql`).
 1. **Uživatel:** rozhodnout tarify (doporučeno Vercel Pro + Supabase Pro); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
 2. Pak Fáze 9 — registrace organizátorů a obchodní model.
 3. P2 z auditu: menší hlavní balík, sloučení startovních dotazů do RPC, hlášení chyb, `xlsx` z cdn.sheetjs.com.

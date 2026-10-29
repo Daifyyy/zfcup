@@ -39,6 +39,7 @@ Výjimky s vlastními hooky: `TournamentLanding`, `CompetitionPage`, `Competitio
 | `/{uuid}?kiosk=1` | `KioskMode` (+ `Scoreboard` přes tlačítko) | stav `kiosk` |
 | `/s/{slug}` | `CompetitionPage` (síň vítězů, věčná tabulka, rekordy, hráči) | `detectCompetitionSlugFromUrl()` |
 | `/k/{slug}` | `ClubPage` (turnaje a umístění, vzájemné zápasy, hráči, soupiska) | `detectClubSlugFromUrl()` |
+| `/moje` | `OrganizerHome` — Můj prostor organizátora (turnaje, soutěže, knihovna klubů, nový turnaj, platforma) | `isOrganizerUrl()` |
 | `/pravni/{doc}` | `LegalPage` — `podminky`, `ochrana-osobnich-udaju`, `cookies`, `provozovatel` | `detectLegalDocFromUrl()` (`lib/legal.ts`) |
 | `/{uuid}?zapas={id}` / `?tym={id}` | turnaj s otevřeným detailem zápasu (i play-off slotu) / týmu | `DetailHost` |
 

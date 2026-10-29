@@ -77,14 +77,15 @@ Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'foo
 | Správce platformy | Supabase Auth + řádek v `platform_admins` → smí vše, ovládá `platform_settings` (vypínač tipovačky) |
 
 ### Routing
-- **`/`** → `TournamentLanding` (seznam + admin login + create)
+- **`/`** → `TournamentLanding` (pro diváky: vyhledávání, právě probíhá, soutěže, ukázky; přihlášení pořadatele → `/moje`)
+- **`/moje`** → `OrganizerHome` (Můj prostor: Nový turnaj, Moje turnaje se Spravovat/Otevřít, Soutěže a ročníky, Knihovna klubů, Platforma); `CreateTournamentModal`, `PlatformModal` v `src/components/organizer/`; `/{id}?admin=1` otevře turnaj rovnou v administraci
 - **`/{tournamentId}`** → konkrétní turnaj (UUID z `window.location.pathname`)
 - `src/lib/TournamentContext.tsx` — `TournamentProvider` + `useTournamentId()` hook
 - Reset hesla: `onAuthStateChange` event `PASSWORD_RECOVERY` → `PasswordResetOverlay`
 - **Auth → "Allow new users to sign up" = VYPNUTO** — nové účty přes Supabase dashboard → Invite user
 
 ## RLS a DB záloha
-Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–18_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje, 16 = odstranění cizích politik čtení, 17+18 = vypnutí anonymních zápisů tipovačky). Pozor: živá DB obsahovala politiky s jinými názvy než v db-backup — nové migrace mažou podle role/příkazu (`pg_policies`), ne podle názvu. **Žádné další SELECT politiky na tabulkách turnaje nevytvářet** (ani v dashboardu) — sčítají se a obešly by soukromí.
+Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–19_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje, 16 = odstranění cizích politik čtení, 17+18 = vypnutí anonymních zápisů tipovačky, 19 = soutěž dědí viditelnost z ročníků). Pozor: živá DB obsahovala politiky s jinými názvy než v db-backup — nové migrace mažou podle role/příkazu (`pg_policies`), ne podle názvu. **Žádné další SELECT politiky na tabulkách turnaje nevytvářet** (ani v dashboardu) — sčítají se a obešly by soukromí.
 - **Čtení**: SELECT pro všechny (anon) u veřejných turnajů; soukromé jen s kódem / vlastník (migrace 15).
 - **Zápis (migrace 11)**: `can_edit_tournament(tournament_id)` = vlastník turnaje (`tournament.owner_id`) nebo správce platformy (`is_platform_admin()`); soutěže/kluby/osoby přes `can_edit_competition`. Storage: `can_edit_storage_path(name)` — nové soubory ukládat pod `tournaments/{turnajId}/…` (`src/lib/storage.ts`: `tournamentAssetPath`, `uploadAsset`, `removeAssetByUrl`).
 - **Frontend**: `useAuthRole()` (`session`, `isPlatformAdmin`, `canEditTournament(ownerId)`); `App.tsx` `canEdit` řídí admin panel (cizí turnaj → „Bez oprávnění“). Výběr soutěže pro nový ročník jen z vlastních.
@@ -223,7 +224,8 @@ Všechny togglované v Admin → Nastavení → Volitelné moduly; řídí `tour
   - CSS `.sponsor-sidebar { display: none }` → `display: flex` jen při ≥1500px; sidebary mají `left/right: 0`, `top: HEADER_HEIGHT_DESKTOP + 8`, `bottom: 0`, `overflowY: auto`
 - **Branding turnaje**: `tournament.brand_primary/secondary` (hex) + `brand_style` (`subtle`/`bold`, migrace 14; bez ní jen Jemná); `applyTournamentTheme()` (`src/lib/theme.ts`) přepíše `--brand*`, `--brand-on-dark` (značka na tmavých plochách, kontrast ≥ 4,5:1), u Výrazné i `--chrome`/`--chrome-2` (tmavý odstín značky, bílý text ≥ 10:1) a `--brand-stripe` (doplňková barva); admin Nastavení → Vzhled turnaje (`BrandingSection.tsx`, živý náhled hlavičky, Přehledu a TV)
 - **Média**: veřejná záložka `media` (`Media.tsx`, jen `press_enabled`) — kontakt, loga ke stažení, XLSX výsledkový servis (`src/lib/exportPress.ts`, xlsx načítán dynamicky), bulletin; admin Info → Média a tisk (`MediaSection.tsx`)
-- **Sdílení odkazů**: `ShareButton` (`src/components/share/`, logika `src/lib/share.ts`) — na mobilu systémová nabídka, na počítači nabídka sítí; doplňky (např. Grafika výsledku) přes `extras`. V detailech, které jsou uvnitř `tm-drawer`, obalit portálové dialogy `onClick={e => e.stopPropagation()}`.
+- **Sdílení = hotový obrázek**: `ShareModal` (kompaktní, náhled = výsledný PNG; mobil „Sdílet obrázek“ → systémová nabídka, počítač Stáhnout / Kopírovat obrázek / Kopírovat odkaz). Detail zápasu (i před zápasem), Přehled (`TournamentGraphic` s QR), tabulka, statistiky. TV tabule v odstínech barvy turnaje (`--tv-bg/--tv-col/--tv-panel` v index.css).
+- **Sdílení odkazů**: `ShareButton` (jen detail týmu) (`src/components/share/`, logika `src/lib/share.ts`) — na mobilu systémová nabídka, na počítači nabídka sítí; doplňky (např. Grafika výsledku) přes `extras`. V detailech, které jsou uvnitř `tm-drawer`, obalit portálové dialogy `onClick={e => e.stopPropagation()}`.
 - **Sdílecí grafiky**: `src/components/share/` (šablony 1080×1080 / 1080×1920, `html-to-image`, líně přes `share/lazy.tsx`); tlačítka Sdílet v Zápasech, Tabulce, Statistikách. Obrázky v šablonách musí mít `crossOrigin="anonymous"`.
 - **Náhledy odkazů (OG)**: `api/og.ts` (Vercel Edge, `@vercel/og`, 1200×630) + `middleware.ts` vrací robotům sociálních sítí na `/{uuid}` HTML s OG meta. `vercel.json` rewrite vynechává `/api/`. Lokálně na Windows `@vercel/og` nejde spustit (chyba cest) — ověřovat po deployi.
   - Kapacita bez scrollování: ~6–9 log na stranu (závisí na výšce monitoru)

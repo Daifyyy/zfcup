@@ -58,6 +58,7 @@ const PrintBulletin = lazyComponent(() => import('./components/public/PrintBulle
 const AdminPanel = lazyComponent(() => import('./components/admin/AdminPanel'))
 const KioskMode = lazyComponent(() => import('./components/kiosk/KioskMode'))
 const LegalPage = lazyComponent(() => import('./components/legal/LegalPage'))
+const OrganizerHome = lazyComponent(() => import('./components/organizer/OrganizerHome'))
 const Scoreboard = lazyComponent(() => import('./components/public/Scoreboard'))
 const CompetitionPage = lazyComponent(() => import('./components/competition/CompetitionPage'))
 const ClubPage = lazyComponent(() => import('./components/club/ClubPage'))
@@ -80,8 +81,13 @@ function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
 // E.g. /abc123 → 'abc123'; / → ''
 function detectTournamentIdFromUrl(): string {
   const segments = window.location.pathname.split('/').filter(Boolean)
-  if (segments[0] === 's' || segments[0] === 'k' || segments[0] === 'pravni') return ''
+  if (segments[0] === 's' || segments[0] === 'k' || segments[0] === 'pravni' || segments[0] === 'moje') return ''
   return segments[0] ?? ''
+}
+
+// /moje → Můj prostor organizátora
+function isOrganizerUrl(): boolean {
+  return window.location.pathname.split('/').filter(Boolean)[0] === 'moje'
 }
 
 // /s/{slug} → stránka soutěže
@@ -104,6 +110,7 @@ export default function App() {
   const [competitionSlug, setCompetitionSlug] = useState<string>(() => detectCompetitionSlugFromUrl())
   const [clubSlug, setClubSlug] = useState<string>(() => detectClubSlugFromUrl())
   const [legalDoc, setLegalDoc] = useState<LegalDoc | ''>(() => detectLegalDocFromUrl())
+  const [organizer, setOrganizer] = useState(() => isOrganizerUrl())
   const [tab, setTab] = useState<Tab>('overview')
   const [adminOpen, setAdminOpen] = useState(false)
   const adminOpenRef = useRef(false)
@@ -137,7 +144,7 @@ export default function App() {
   const { sponsors, refetch: refetchSponsors } = useSponsors(tournamentId)
   const { competitions } = useCompetitions()
   const { editions: competitionEditions } = useCompetitionEditions(tournament?.id === tournamentId ? (tournament?.competition_id ?? '') : '')
-  const { session, isPlatformAdmin, canEditTournament } = useAuthRole()
+  const { session, isPlatformAdmin, canEditTournament, ready: authReady } = useAuthRole()
   const platform = usePlatformSettings()
   // Organizátor spravuje jen své turnaje, správce platformy všechny
   const canEdit = !!tournament && canEditTournament(tournament.owner_id)
@@ -179,6 +186,16 @@ export default function App() {
     else setAdminOpen(false)
   }, [])
 
+  // ?admin=1 (z Mého prostoru → Spravovat): po načtení turnaje a přihlášení otevřít administraci
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('admin') !== '1' || !authReady || !tournament || tournament.id !== tournamentId) return
+    params.delete('admin')
+    const qs = params.toString()
+    window.history.replaceState(window.history.state, '', window.location.pathname + (qs ? `?${qs}` : ''))
+    if (canEdit) openAdmin()
+  }, [authReady, tournament, tournamentId, canEdit, openAdmin])
+
   // ── Keyboard shortcuts ────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -206,7 +223,7 @@ export default function App() {
 
   // Nová stránka (turnaj, soutěž, klub, právní) vždy od začátku — SPA jinak drží posun
   // z předchozí stránky (seznam turnajů je dole na úvodní stránce)
-  useEffect(() => { window.scrollTo(0, 0) }, [tournamentId, competitionSlug, clubSlug, legalDoc])
+  useEffect(() => { window.scrollTo(0, 0) }, [tournamentId, competitionSlug, clubSlug, legalDoc, organizer])
 
   // ── Historie prohlížeče (tlačítko Zpět, i na Androidu) ──
   // Jediný handler: turnaj / soutěž podle URL, záložka podle history state.
@@ -222,6 +239,7 @@ export default function App() {
       setCompetitionSlug(detectCompetitionSlugFromUrl())
       setClubSlug(detectClubSlugFromUrl())
       setLegalDoc(detectLegalDocFromUrl())
+      setOrganizer(isOrganizerUrl())
       setAdminOpen(!!e.state?.admin)
       const prev = e.state?.tab as Tab | undefined
       setTab(prev && VALID_TABS.includes(prev) ? prev : 'overview')
@@ -289,8 +307,21 @@ export default function App() {
     setCompetitionSlug('')
     setClubSlug('')
     setLegalDoc('')
+    setOrganizer(false)
     setTournamentId(id)
   }, [])
+
+  // Můj prostor organizátora (/moje)
+  const openOrganizer = useCallback(() => {
+    window.history.pushState({}, '', '/moje')
+    openTournament('')
+    setOrganizer(true)
+  }, [openTournament])
+  // Z Mého prostoru: turnaj, případně rovnou s administrací (?admin=1 → efekt níže)
+  const openTournamentFrom = useCallback((id: string, opts?: { admin?: boolean }) => {
+    window.history.pushState({ tournamentId: id }, '', `/${id}${opts?.admin ? '?admin=1' : ''}`)
+    openTournament(id)
+  }, [openTournament])
 
   const goHome = useCallback(() => {
     window.history.pushState({}, '', '/')
@@ -317,7 +348,16 @@ export default function App() {
     window.history.pushState({}, '', `/s/${slug}`)
     setTournamentId('')
     setClubSlug('')
+    setOrganizer(false)
     setCompetitionSlug(slug)
+  }
+
+  if (organizer) {
+    return (
+      <TournamentProvider tournamentId="">
+        <OrganizerHome onHome={goHome} onOpenTournament={openTournamentFrom} onOpenCompetition={openCompetition} />
+      </TournamentProvider>
+    )
   }
 
   if (legalDoc) {
@@ -361,7 +401,7 @@ export default function App() {
   if (!tournamentId) {
     return (
       <TournamentProvider tournamentId="">
-        <TournamentLanding onSelect={openTournament} onSelectCompetition={openCompetition} />
+        <TournamentLanding onSelect={openTournament} onSelectCompetition={openCompetition} onOpenOrganizer={openOrganizer} />
         {passwordRecovery && <PasswordResetOverlay onDone={() => setPasswordRecovery(false)} />}
       </TournamentProvider>
     )

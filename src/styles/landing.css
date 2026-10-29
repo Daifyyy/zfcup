@@ -319,3 +319,30 @@
   .dm .dm-panel { width: 100%; height: 100%; max-height: none; border-radius: 0; }
   .dm-stage { padding: .6rem .4rem; }
 }
+
+/* ── Můj prostor (/moje) ─────────────────────────────── */
+.org-brand { background: none; border: 0; padding: 0; cursor: pointer; }
+.org-hero { background: var(--chrome); color: #fff; padding: 2rem 0 2.2rem; }
+.org-hero__title { font-size: clamp(2rem, 5vw, 2.8rem); text-transform: uppercase; font-weight: 800; line-height: 1; margin-bottom: 1.3rem; }
+.org-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .8rem; }
+.org-tile { display: flex; flex-direction: column; gap: .3rem; padding: 1rem 1.05rem; border-radius: var(--radius-lg); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: #fff; text-align: left; font: inherit; cursor: pointer; text-decoration: none; transition: background .15s, border-color .15s; }
+.org-tile:hover { background: rgba(255,255,255,.1); border-color: var(--brand-on-dark); }
+.org-tile svg { color: var(--brand-on-dark); }
+.org-tile b { font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; text-transform: uppercase; line-height: 1.1; }
+.org-tile span { font-size: .78rem; color: var(--chrome-muted); }
+.org-tile--primary { background: var(--brand); border-color: var(--brand); }
+.org-tile--primary svg, .org-tile--primary span { color: #fff; }
+.org-tile--primary:hover { background: var(--brand-hov); }
+.org-main { padding-top: 1.5rem; padding-bottom: 3rem; }
+.org-sec { margin-bottom: 2rem; scroll-margin-top: 80px; }
+.org-sec__title { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; margin-bottom: .8rem; }
+.org-empty { color: var(--ink-muted); font-size: .9rem; }
+.org-list { display: flex; flex-direction: column; gap: .6rem; }
+.org-item { display: flex; align-items: center; gap: .9rem; padding: .8rem 1rem; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-lg); min-width: 0; }
+.org-item__body { flex: 1; min-width: 0; }
+.org-item__actions { display: flex; gap: .4rem; flex-shrink: 0; }
+@media (max-width: 600px) {
+  .org-item { flex-wrap: wrap; }
+  .org-item__actions { width: 100%; }
+  .org-item__actions .ui-btn { flex: 1; justify-content: center; }
+}
