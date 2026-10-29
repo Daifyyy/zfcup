@@ -227,17 +227,11 @@ export default function App() {
   const sponsorsEnabled = tournament?.sponsors_enabled ?? false
   const mediaEnabled = tournament?.press_enabled ?? false
   const currentCompetition = competitions.find(c => c.id === tournament?.competition_id) ?? null
-  // Předchozí / další ročník soutěže (podle čísla ročníku)
-  const editionNav = (() => {
-    const eds = competitionEditions.filter(e => e.edition != null).sort((a, b) => (a.edition ?? 0) - (b.edition ?? 0))
-    const i = eds.findIndex(e => e.id === tournament?.id)
-    if (i < 0) return undefined
-    const label = (e: (typeof eds)[number]) => `${e.edition}. ročník · ${e.name}`
-    return {
-      prev: i > 0 ? { id: eds[i - 1].id, label: label(eds[i - 1]) } : undefined,
-      next: i < eds.length - 1 ? { id: eds[i + 1].id, label: label(eds[i + 1]) } : undefined,
-    }
-  })()
+  // Ročníky soutěže pro rychlý přechod (hlavička, Přehled) — od nejnovějšího
+  const editionOptions = competitionEditions
+    .filter(e => e.edition != null)
+    .sort((a, b) => (b.edition ?? 0) - (a.edition ?? 0))
+    .map(e => ({ id: e.id, edition: e.edition as number, label: `${e.edition}. ročník${e.season_label ? ` · ${e.season_label}` : ''}`, name: e.name }))
   // Partneři seřazení podle úrovně; generální partner = „presented by“
   const sortedSponsors = sortByTier(sponsors)
   const presentedBy = sponsorsEnabled ? getTitlePartner(sponsors) : null
@@ -373,7 +367,7 @@ export default function App() {
         mediaEnabled={mediaEnabled}
         competition={currentCompetition}
         onOpenCompetition={openCompetition}
-        editionNav={editionNav}
+        editionOptions={editionOptions}
         onOpenTournament={id => {
           window.history.pushState({ tournamentId: id }, '', `/${id}`)
           openTournament(id)
@@ -387,7 +381,7 @@ export default function App() {
         </aside>
       )}
       <main className="page-main" style={{ maxWidth: 1180, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
-        {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} teams={teams} players={players} groups={groups} matches={matches} goals={goals} bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots} sponsors={sponsorsEnabled ? sortedSponsors : []} presentedBy={presentedBy} />}
+        {tab === 'overview'  && <Overview tournament={tournament} announcements={announcements} onTab={navigateTab} teams={teams} players={players} groups={groups} matches={matches} goals={goals} bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots} sponsors={sponsorsEnabled ? sortedSponsors : []} presentedBy={presentedBy} competition={currentCompetition} editionOptions={editionOptions} onOpenCompetition={openCompetition} onOpenTournament={id => { window.history.pushState({ tournamentId: id }, '', `/${id}`); openTournament(id) }} />}
         {tab === 'teams'     && <Teams teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} assists={assists} bracketAssists={bracketAssists} cards={cards} bracketCards={bracketCards} penalties={penalties} bracketPenalties={bracketPenalties} tournament={tournament} matches={matches} />}
         {tab === 'results'   && <Results matches={matches} teams={teams} tournament={tournament} referees={referees} sponsors={sponsorsEnabled ? sortedSponsors : []} showToast={showToast} />}
         {tab === 'standings' && <Standings groups={groups} matches={matches} teams={teams} tournament={tournament} sponsors={sponsorsEnabled ? sortedSponsors : []} showToast={showToast} />}

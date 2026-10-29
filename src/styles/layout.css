@@ -274,12 +274,19 @@
 /* Navigace mezi ročníky soutěže v hlavičce */
 .hdr__comp-row { display: flex; align-items: center; gap: .15rem; min-width: 0; margin-top: 2px; }
 .hdr__comp-row .hdr__comp { margin-top: 0; min-width: 0; }
-.hdr__ed {
-  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 20px; height: 18px; padding: 0;
-  background: var(--chrome-line); border: none; border-radius: var(--radius-sm); color: var(--brand-on-dark); cursor: pointer;
+.hdr__comp-row .hdr__comp { display: inline-flex; align-items: center; gap: .25rem; }
+.hdr__comp-row .hdr__comp svg { flex-shrink: 0; }
+.hdr__edtxt { flex-shrink: 0; font-size: .72rem; font-weight: 700; color: var(--chrome-ink); margin-right: .35rem; }
+.hdr__edsel { position: relative; flex-shrink: 0; display: inline-flex; align-items: center; margin-right: .4rem; color: var(--chrome-ink); }
+.hdr__edsel select {
+  appearance: none; -webkit-appearance: none; cursor: pointer; max-width: 170px; text-overflow: ellipsis;
+  padding: .1rem 1.3rem .1rem .45rem; border: 1px solid var(--chrome-line); border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.06); color: var(--chrome-ink); font: inherit; font-size: .72rem; font-weight: 700; /* mobil: 16px z pravidla v index.css — iOS jinak při otevření přiblíží stránku */
 }
-.hdr__ed:hover { color: #fff; background: rgba(255,255,255,.16); }
-.hdr__ed:focus-visible { outline: 2px solid var(--brand-on-dark); outline-offset: 1px; }
+.hdr__edsel select:hover { background: rgba(255,255,255,.12); }
+.hdr__edsel select:focus-visible { outline: 2px solid var(--brand-on-dark); outline-offset: 1px; }
+.hdr__edsel select option { color: var(--ink); background: var(--surface-1); }
+.hdr__edsel svg { position: absolute; right: .35rem; pointer-events: none; }
 
 /* Admin → Oznámení */
 .an-types { display: inline-flex; padding: 3px; gap: 3px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); flex-wrap: wrap; }

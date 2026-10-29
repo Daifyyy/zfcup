@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { summarizeEditions, allTimeTable, normalizeName, isPlacementRound, clubKeyOf } from '../history'
+import { summarizeEditions, allTimeTable, normalizeName, isPlacementRound, clubKeyOf, competitionHighlights, allTimePlayers, computeRecords } from '../history'
 import { getSportDef } from '../sports'
 import type { CompetitionHistoryData } from '../../hooks/useCompetitions'
 
@@ -134,5 +134,21 @@ describe('pomocné funkce', () => {
   it('clubKeyOf preferuje club_id', () => {
     expect(clubKeyOf({ club_id: 'x', name: 'A' })).toBe('club:x')
     expect(clubKeyOf({ club_id: null, name: 'Á b' } as any)).toBe('name:a b')
+  })
+})
+
+describe('competitionHighlights', () => {
+  it('úřadující vítěz = poslední ročník s vítězem, nejúspěšnější klub podle titulů', () => {
+    const d = twoEditions()
+    const sums = summarizeEditions(d, hockey)
+    const table = allTimeTable(d, hockey, sums)
+    const hl = competitionHighlights(sums, table, allTimePlayers(d), computeRecords(d, table))
+    expect(hl.champion?.edition).toBe(2)
+    expect(hl.champion?.team.name).toBe(sums[1].champion?.name)
+    expect(hl.mostTitles?.titles).toBeGreaterThanOrEqual(1)
+  })
+  it('bez dat nic nevymýšlí', () => {
+    const hl = competitionHighlights([], [], [], {})
+    expect(hl).toEqual({ champion: undefined, mostTitles: undefined, topScorer: undefined, biggestWin: undefined })
   })
 })

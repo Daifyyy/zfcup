@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Medal, Trophy } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Crown, Medal, Swords, Target, Trophy } from 'lucide-react'
 import { useCompetitionHistory } from '../../hooks/useCompetitions'
 import { getSportDef, sportHasOvertime } from '../../lib/sports'
 import { BRAND } from '../../lib/brand'
-import { allTimePlayers, allTimeTable, computeRecords, summarizeEditions, type HistoryRecord, type PlayerHistoryRow } from '../../lib/history'
+import { allTimePlayers, allTimeTable, competitionHighlights, computeRecords, summarizeEditions, type HistoryRecord, type PlayerHistoryRow } from '../../lib/history'
 import { Tabs } from '../ui/Tabs'
 import { Card, SectionHeader } from '../ui/Card'
 import { Badge } from '../ui/Badge'
@@ -33,6 +33,7 @@ export default function CompetitionPage({ slug, onOpenTournament, onHome }: Prop
   const table = useMemo(() => allTimeTable(h, sport, summaries, { includePlayoff }), [h, sport, summaries, includePlayoff])
   const records = useMemo(() => computeRecords(h, allTimeTable(h, sport, summaries)), [h, sport, summaries])
   const players = useMemo(() => allTimePlayers(h), [h])
+  const highlights = useMemo(() => competitionHighlights(summaries, allTimeTable(h, sport, summaries), players, records), [h, sport, summaries, players, records])
 
   if (h.loading) {
     return (
@@ -56,7 +57,6 @@ export default function CompetitionPage({ slug, onOpenTournament, onHome }: Prop
 
   const c = h.competition
   const finished = summaries.filter(s => s.champion)
-  const latest = [...summaries].reverse().find(s => s.champion)
   const totalMatches = summaries.reduce((s, e) => s + e.matchesPlayed, 0)
   const totalGoals = summaries.reduce((s, e) => s + e.goals, 0)
   const showOt = sportHasOvertime(sport)
@@ -97,26 +97,68 @@ export default function CompetitionPage({ slug, onOpenTournament, onHome }: Prop
       </header>
 
       <main className="lp-wrap cp-main">
-        {/* Souhrn */}
-        <div className="ov-kpis" style={{ marginBottom: '1.25rem' }}>
-          <div className="ov-kpi"><b>{summaries.length}</b><span>Ročníků</span></div>
-          <div className="ov-kpi"><b>{table.length}</b><span>Klubů</span></div>
-          <div className="ov-kpi"><b>{totalMatches}</b><span>Odehraných zápasů</span></div>
-          <div className="ov-kpi"><b>{totalGoals}</b><span>Gólů</span></div>
+        {/* Úvodní přehled — vždy nahoře */}
+        <section className="cp-hl" aria-label="Přehled soutěže">
+          <button type="button" className="cp-hl__tile cp-hl__tile--champ" onClick={() => setTab('editions')}>
+            <span className="cp-hl__label"><Trophy size={14} />Úřadující vítěz</span>
+            {highlights.champion ? (
+              <span className="cp-hl__main">
+                <TeamLogo team={highlights.champion.team} size={40} />
+                <span className="cp-hl__text"><b>{highlights.champion.team.name}</b><small>{highlights.champion.edition}. ročník</small></span>
+              </span>
+            ) : <span className="cp-hl__empty">Zatím bez vítěze</span>}
+          </button>
+          <button type="button" className="cp-hl__tile" onClick={() => setTab('table')}>
+            <span className="cp-hl__label"><Crown size={14} />Nejúspěšnější klub</span>
+            {highlights.mostTitles ? (
+              <span className="cp-hl__main">
+                <TeamLogo team={{ name: highlights.mostTitles.name, color: highlights.mostTitles.color, logo_url: highlights.mostTitles.logo_url }} size={40} />
+                <span className="cp-hl__text"><b>{highlights.mostTitles.name}</b><small>{titlesLabel(highlights.mostTitles.titles)}</small></span>
+              </span>
+            ) : <span className="cp-hl__empty">—</span>}
+          </button>
+          <button type="button" className="cp-hl__tile" onClick={() => { setPlayerSort('goals'); setTab('players') }}>
+            <span className="cp-hl__label"><Target size={14} />Nejlepší střelec historie</span>
+            {highlights.topScorer ? (
+              <span className="cp-hl__main">
+                {highlights.topScorer.avatar_url
+                  ? <img className="cp-hl__avatar" src={highlights.topScorer.avatar_url} alt="" />
+                  : <span className="cp-hl__num">{highlights.topScorer.goals}</span>}
+                <span className="cp-hl__text"><b>{highlights.topScorer.name}</b><small>{highlights.topScorer.goals} gólů{highlights.topScorer.clubs[0] ? ` · ${highlights.topScorer.clubs[0]}` : ''}</small></span>
+              </span>
+            ) : <span className="cp-hl__empty">—</span>}
+          </button>
+          <button type="button" className="cp-hl__tile" onClick={() => setTab('records')}>
+            <span className="cp-hl__label"><Swords size={14} />Nejvyšší výhra</span>
+            {highlights.biggestWin ? (
+              <span className="cp-hl__main">
+                <span className="cp-hl__num">{highlights.biggestWin.homeScore}:{highlights.biggestWin.awayScore}</span>
+                <span className="cp-hl__text"><b>{highlights.biggestWin.home} – {highlights.biggestWin.away}</b><small>{highlights.biggestWin.edition}. ročník</small></span>
+              </span>
+            ) : <span className="cp-hl__empty">—</span>}
+          </button>
+        </section>
+
+        <div className="cp-kpis">
+          <span><b>{summaries.length}</b> ročníků</span>
+          <span><b>{table.length}</b> klubů</span>
+          <span><b>{totalMatches}</b> zápasů</span>
+          <span><b>{totalGoals}</b> gólů</span>
         </div>
+
+        {/* Rychlý přechod na ročník */}
+        {summaries.length > 0 && (
+          <nav className="cp-edchips" aria-label="Ročníky">
+            {[...summaries].reverse().map(s => (
+              <button key={s.tournament.id} type="button" className={`cp-edchip${s.status === 'in_progress' ? ' cp-edchip--live' : ''}`} onClick={() => onOpenTournament(s.tournament.id)} title={s.tournament.name}>
+                <b>{s.edition}.</b>{s.tournament.season_label || s.tournament.name}
+              </button>
+            ))}
+          </nav>
+        )}
 
         {tab === 'editions' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {latest?.champion && (
-              <div className="brk-champion">
-                <Trophy size={28} />
-                <TeamLogo team={latest.champion} size={44} />
-                <div>
-                  <div className="brk-champion__label">Úřadující vítěz · {latest.edition}. ročník</div>
-                  <div className="brk-champion__name">{latest.champion.name}</div>
-                </div>
-              </div>
-            )}
             <SectionHeader title="Síň vítězů" subtitle={`${finished.length} ${finished.length === 1 ? 'dokončený ročník' : 'dokončených ročníků'}`} />
             <div className="cp-editions">
               {[...summaries].reverse().map(s => (
@@ -351,4 +393,8 @@ function RecordTile({ label, rec, unit }: { label: string; rec?: HistoryRecord; 
       ) : <div className="cp-record__detail">Zatím bez záznamu</div>}
     </div>
   )
+}
+
+function titlesLabel(n: number): string {
+  return `${n} ${n === 1 ? 'titul' : n < 5 ? 'tituly' : 'titulů'}`
 }

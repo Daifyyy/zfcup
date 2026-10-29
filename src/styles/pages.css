@@ -498,3 +498,12 @@ button.md-side:focus-visible { outline: 2px solid var(--chrome-ink); outline-off
 .site-foot__links a:hover { text-decoration: underline; color: #fff; }
 .site-foot--inline { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1.2rem; font-size: .74rem; color: var(--ink-muted); }
 .site-foot--inline .site-foot__links a:hover { color: var(--ink); }
+
+/* Přehled — karta Historie soutěže (ročník soutěže) */
+.ov-history { margin-top: 1.25rem; padding: 1rem 1.1rem .4rem; background: var(--surface-1); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: var(--radius-lg); }
+.ov-history__head { display: flex; align-items: center; gap: .9rem; flex-wrap: wrap; margin-bottom: .7rem; }
+.ov-history__head > div { flex: 1; }
+.ov-history__icon { color: var(--gold); flex-shrink: 0; }
+.ov-history__kicker { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-muted); }
+.ov-history__name { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; text-transform: uppercase; line-height: 1.1; overflow-wrap: anywhere; }
+.ov-history__text { margin: .15rem 0 0; font-size: .82rem; color: var(--ink-muted); }

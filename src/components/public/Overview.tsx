@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, ChevronRight, Hourglass, MapPin, Radio } from 'lucide-react'
+import { CalendarDays, ChevronRight, Hourglass, Landmark, MapPin, Radio } from 'lucide-react'
 import type { Tab } from '../../App'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Announcement } from '../../hooks/useAnnouncements'
@@ -42,6 +42,11 @@ interface Props {
   bracketSlots?: BracketSlot[]
   sponsors?: Sponsor[]
   presentedBy?: Sponsor | null
+  /** Turnaj je ročníkem soutěže → karta Historie soutěže */
+  competition?: { name: string; slug: string } | null
+  editionOptions?: { id: string; edition: number; label: string; name: string }[]
+  onOpenCompetition?: (slug: string) => void
+  onOpenTournament?: (id: string) => void
 }
 
 /** Překreslí komponentu každou minutu (stav „Živě“ podle hodin). */
@@ -66,6 +71,7 @@ export default function Overview({
   tournament, announcements, onTab,
   teams = [], players = [], groups = [], matches = [], goals = [], bracketGoals = [],
   bracketRounds = [], bracketSlots = [], sponsors = [], presentedBy,
+  competition, editionOptions = [], onOpenCompetition, onOpenTournament,
 }: Props) {
   useMinuteTick()
   const { openTeam, openMatch } = useDetail()
@@ -292,6 +298,33 @@ export default function Overview({
           </aside>
         )}
       </div>
+
+      {competition && onOpenCompetition && (
+        <section className="ov-history">
+          <div className="ov-history__head">
+            <Landmark size={22} className="ov-history__icon" />
+            <div style={{ minWidth: 0 }}>
+              <div className="ov-history__kicker">Historie soutěže</div>
+              <h3 className="ov-history__name">{competition.name}</h3>
+              <p className="ov-history__text">
+                {editionOptions.length > 1 ? `${editionOptions.length} ročníků — ` : ''}síň vítězů, věčná tabulka, rekordy a nejlepší hráči.
+              </p>
+            </div>
+            <button type="button" className="ui-btn ui-btn--primary ui-btn--sm" onClick={() => onOpenCompetition(competition.slug)}>
+              Síň slávy<ChevronRight size={14} />
+            </button>
+          </div>
+          {editionOptions.length > 1 && onOpenTournament && (
+            <nav className="cp-edchips" aria-label="Ročníky">
+              {editionOptions.map(o => (
+                <button key={o.id} type="button" className={`cp-edchip${o.id === tournament?.id ? ' cp-edchip--live' : ''}`} onClick={() => o.id !== tournament?.id && onOpenTournament(o.id)} title={o.name} aria-current={o.id === tournament?.id ? 'page' : undefined}>
+                  <b>{o.edition}.</b>{o.label.replace(/^\d+\. ročník( · )?/, '') || o.name}
+                </button>
+              ))}
+            </nav>
+          )}
+        </section>
+      )}
 
       {sponsors.length > 0 && (
         <div className="ov-partners">

@@ -420,3 +420,31 @@ export function computeRecords(d: CompetitionHistoryData, table: AllTimeRow[]): 
 
   return rec
 }
+
+export interface CompetitionHighlights {
+  /** Poslední ročník s vítězem */
+  champion?: { team: Team; edition: number }
+  /** Klub s nejvíc tituly (jen když má aspoň jeden) */
+  mostTitles?: { name: string; color: string; logo_url: string | null; titles: number }
+  /** Nejlepší střelec napříč ročníky */
+  topScorer?: { name: string; avatar_url: string | null; goals: number; clubs: string[] }
+  biggestWin?: MatchRecord
+}
+
+/** Úvodní přehled stránky soutěže: úřadující vítěz, nejúspěšnější klub, nejlepší střelec, nejvyšší výhra. */
+export function competitionHighlights(
+  summaries: EditionSummary[],
+  table: AllTimeRow[],
+  players: PlayerHistoryRow[],
+  records: CompetitionRecords,
+): CompetitionHighlights {
+  const latest = [...summaries].reverse().find(s => s.champion)
+  const best = [...table].sort((a, b) => b.titles - a.titles || b.finals - a.finals || b.pts - a.pts)[0]
+  const scorer = [...players].sort((a, b) => b.goals - a.goals || b.points - a.points || a.name.localeCompare(b.name, 'cs'))[0]
+  return {
+    champion: latest?.champion ? { team: latest.champion, edition: latest.edition } : undefined,
+    mostTitles: best && best.titles > 0 ? { name: best.name, color: best.color, logo_url: best.logo_url, titles: best.titles } : undefined,
+    topScorer: scorer && scorer.goals > 0 ? { name: scorer.name, avatar_url: scorer.avatar_url, goals: scorer.goals, clubs: scorer.clubs } : undefined,
+    biggestWin: records.biggestWin,
+  }
+}

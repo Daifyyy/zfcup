@@ -126,6 +126,33 @@
 
 /* ── Stránka soutěže ─────────────────────────────────────────────────── */
 .cp-main { padding-top: 1.5rem; padding-bottom: 4rem; }
+/* Úvodní přehled soutěže */
+.cp-hl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+.cp-hl__tile { font: inherit; color: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: .55rem; min-width: 0; padding: .9rem 1rem; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--radius-lg); transition: border-color .15s, box-shadow .15s; }
+.cp-hl__tile:hover { border-color: var(--brand-line); box-shadow: var(--shadow-lg); }
+.cp-hl__tile:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.cp-hl__tile--champ { background: var(--chrome); color: var(--chrome-ink); border-color: var(--chrome); }
+.cp-hl__tile--champ .cp-hl__label { color: var(--chrome-muted); }
+.cp-hl__tile--champ .cp-hl__label svg { color: var(--gold); }
+.cp-hl__tile--champ .cp-hl__text small { color: var(--chrome-muted); }
+.cp-hl__label { display: inline-flex; align-items: center; gap: .35rem; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-muted); }
+.cp-hl__label svg { color: var(--brand); flex-shrink: 0; }
+.cp-hl__main { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.cp-hl__text { display: flex; flex-direction: column; min-width: 0; }
+.cp-hl__text b { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; text-transform: uppercase; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-hl__text small { font-size: .76rem; color: var(--ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-hl__num { flex-shrink: 0; min-width: 40px; font-family: var(--font-display); font-weight: 800; font-size: 1.9rem; line-height: 1; color: var(--brand); font-variant-numeric: tabular-nums; }
+.cp-hl__avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.cp-hl__empty { font-size: .9rem; color: var(--ink-faint); }
+.cp-kpis { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; margin: .9rem 0 .6rem; font-size: .8rem; color: var(--ink-muted); }
+.cp-kpis b { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--ink); }
+.cp-edchips { display: flex; gap: .45rem; overflow-x: auto; padding: .2rem 0 .6rem; margin-bottom: .9rem; scrollbar-width: thin; }
+.cp-edchip { flex-shrink: 0; display: inline-flex; align-items: baseline; gap: .35rem; padding: .4rem .8rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-1); font: inherit; font-size: .82rem; font-weight: 600; color: var(--ink); cursor: pointer; white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.cp-edchip b { font-family: var(--font-display); font-weight: 800; color: var(--brand); }
+.cp-edchip:hover { border-color: var(--brand-line); }
+.cp-edchip--live { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+@media (max-width: 900px) { .cp-hl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .cp-hl { grid-template-columns: minmax(0, 1fr); } }
 .cp-editions { display: flex; flex-direction: column; gap: .7rem; }
 .cp-edition {
   display: flex; align-items: center; gap: 1rem; padding: .9rem 1rem; text-align: left; cursor: pointer;

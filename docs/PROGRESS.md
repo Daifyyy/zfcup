@@ -106,6 +106,10 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Statistiky: grafika TOP 3 na pódiu (zlatá/stříbrná/bronzová, foto hráče) pro střelce, kanadské body, nahrávače, disciplínu (kartičky) a trestné minuty (`LeadersGraphic`, `ShareLeaders`).
 - Detail zápasu: ikony gólu (`SportDef.GoalIcon` — míč / nový `PuckIcon`), asistence „A“, trestné minuty (`ui/EventIcons.tsx`); grafika výsledku nově se střelci, asistencemi a kartami, u živého zápasu „Průběžný stav“. Partneři do grafik přes `TournamentData.sponsors`.
 
+### Blok E — historie soutěže (2026-10-29)
+- Stránka soutěže: nahoře vždy přehled (úřadující vítěz, nejúspěšnější klub, nejlepší střelec historie, nejvyšší výhra — klikací na záložky), souhrnná čísla a řada ročníků (`competitionHighlights` v `lib/history.ts`, test).
+- Turnaj v soutěži: v hlavičce rozbalovací výběr ročníku (místo šipek) + odkaz na historii; na Přehledu karta „Historie soutěže“ (Síň slávy + ročníky). Minulý vítěz na kartě není — vyžadoval by načtení celé historie.
+
 ### Kde navázat
 1. **Uživatel doplní** `OPERATOR` v `src/lib/legal.ts` (jméno, IČO, adresa, e-mail, zápis v rejstříku). Pak vyzkoušet export a „Vymazat vše“ na testovacím turnaji. Teprve potom vypnout maintenance.
 2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.
