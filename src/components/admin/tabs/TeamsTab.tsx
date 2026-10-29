@@ -174,6 +174,7 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
   }
 
   const removeAvatar = async (playerId: string) => {
+    if (!await confirmDialog('Smazat fotku hráče?', { danger: true })) return
     const oldUrl = players.find(p => p.id === playerId)?.avatar_url
     const { error } = await supabase.from('players').update({ avatar_url: null }).eq('id', playerId)
     if (error) { showToast('Chyba: ' + error.message); return }

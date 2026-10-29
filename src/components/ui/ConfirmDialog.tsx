@@ -2,7 +2,7 @@
 // i automatizované testy a nevypadá jako aplikace).
 // Použití: if (!(await confirmDialog('Smazat tým?', { danger: true }))) return
 // <ConfirmHost /> musí být jednou v aplikaci (App.tsx).
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertTriangle, HelpCircle } from 'lucide-react'
 import { useBackClose } from '../../lib/useBackClose'
@@ -15,6 +15,8 @@ export interface ConfirmOptions {
   cancelLabel?: string
   /** Nevratná / mazací akce → červené tlačítko */
   danger?: boolean
+  /** Hromadné nevratné akce: potvrdit až po opsání tohoto textu (např. názvu turnaje) */
+  requireText?: string
 }
 
 interface Pending extends ConfirmOptions { message: string; resolve: (ok: boolean) => void }
@@ -45,12 +47,16 @@ export function ConfirmHost() {
     () => current,
   )
   const okRef = useRef<HTMLButtonElement>(null)
+  const [typed, setTyped] = useState('')
+  useEffect(() => { setTyped('') }, [pending])
+  const norm = (x: string) => x.trim().replace(/\s+/g, ' ').toLowerCase()
+  const textOk = !pending?.requireText || norm(typed) === norm(pending.requireText)
   // Zpět (gesto / tlačítko) = Zrušit
   useBackClose(!!pending, () => close(false), 'confirm')
 
   useEffect(() => {
     if (!pending) return
-    okRef.current?.focus()
+    if (!pending.requireText) okRef.current?.focus()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(false) }
     }
@@ -69,13 +75,21 @@ export function ConfirmHost() {
           <h2 id="cfm-title" className="cfm__title">{pending.title ?? (pending.danger ? 'Opravdu?' : 'Potvrzení')}</h2>
         </div>
         <p id="cfm-msg" className="cfm__msg">{pending.message}</p>
+        {pending.requireText && (
+          <div className="cfm__confirm">
+            <label className="field-label" htmlFor="cfm-text">Pro potvrzení napište: <strong>{pending.requireText}</strong></label>
+            <input id="cfm-text" className="field-input" value={typed} onChange={e => setTyped(e.target.value)} autoComplete="off" autoFocus
+              onKeyDown={e => { if (e.key === 'Enter' && textOk) close(true) }} />
+          </div>
+        )}
         <div className="cfm__actions">
           <button type="button" className="ui-btn ui-btn--secondary" onClick={() => close(false)}>{pending.cancelLabel ?? 'Zrušit'}</button>
           <button
             type="button"
             ref={okRef}
             className={`ui-btn ${pending.danger ? 'ui-btn--danger-solid' : 'ui-btn--primary'}`}
-            onClick={() => close(true)}
+            style={{ opacity: textOk ? 1 : 0.45 }}
+            onClick={() => { if (textOk) close(true) }}
           >
             {pending.confirmLabel ?? (pending.danger ? 'Smazat' : 'Potvrdit')}
           </button>

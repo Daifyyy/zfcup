@@ -325,6 +325,8 @@
 .cfm__panel--danger .cfm__icon { color: var(--loss); }
 .cfm__title { font-size: 1.35rem; text-transform: uppercase; font-weight: 800; line-height: 1.1; }
 .cfm__msg { font-size: .92rem; color: var(--ink); line-height: 1.5; margin: 0 0 1.2rem; white-space: pre-line; overflow-wrap: anywhere; }
+.cfm__confirm { margin: -.4rem 0 1.1rem; }
+.cfm__confirm strong { overflow-wrap: anywhere; }
 .cfm__actions { display: flex; justify-content: flex-end; gap: .5rem; flex-wrap: wrap; }
 .ui-btn--danger-solid { background: var(--loss); color: #fff; }
 .ui-btn--danger-solid:hover { filter: brightness(.92); }

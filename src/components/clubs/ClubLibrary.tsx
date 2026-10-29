@@ -11,6 +11,7 @@ import {
   type LibraryClub, type LibraryPerson,
 } from '../../lib/clubs'
 import { normalizeName } from '../../lib/history'
+import { confirmDialog } from '../ui/ConfirmDialog'
 
 interface Props { ownerId: string; onClose: () => void }
 
@@ -21,17 +22,6 @@ const ROLE_OPTIONS = [
   { value: 'both', label: 'Kapitán + brankář' },
 ]
 
-/** Dvojklikové potvrzení místo confirm() (blokuje i automatizaci) */
-function useArm() {
-  const [armed, setArmed] = useState<string | null>(null)
-  useEffect(() => {
-    if (!armed) return
-    const t = setTimeout(() => setArmed(null), 4000)
-    return () => clearTimeout(t)
-  }, [armed])
-  return { armed, arm: setArmed, isArmed: (k: string) => armed === k }
-}
-
 export default function ClubLibrary({ ownerId, onClose }: Props) {
   const [available, setAvailable] = useState<boolean | null>(null)
   const [clubs, setClubs] = useState<LibraryClub[]>([])
@@ -41,7 +31,6 @@ export default function ClubLibrary({ ownerId, onClose }: Props) {
   const [newName, setNewName] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null)
-  const { arm, isArmed } = useArm()
 
   const load = useCallback(async () => {
     try {
@@ -151,8 +140,6 @@ export default function ClubLibrary({ ownerId, onClose }: Props) {
                   ownerId={ownerId}
                   busy={busy}
                   run={run}
-                  arm={arm}
-                  isArmed={isArmed}
                   setMsg={setMsg}
                   onDeleted={() => setSelectedId(null)}
                 />
@@ -176,13 +163,11 @@ interface DetailProps {
   ownerId: string
   busy: string | null
   run: (label: string, fn: () => Promise<string | void>) => Promise<void>
-  arm: (k: string | null) => void
-  isArmed: (k: string) => boolean
   setMsg: (m: { text: string; error?: boolean } | null) => void
   onDeleted: () => void
 }
 
-function ClubDetail({ club, roster, others, ownerId, busy, run, arm, isArmed, setMsg, onDeleted }: DetailProps) {
+function ClubDetail({ club, roster, others, ownerId, busy, run, setMsg, onDeleted }: DetailProps) {
   const [name, setName] = useState(club.name)
   const [color, setColor] = useState(club.color ?? '#1d4ed8')
   const [mergeId, setMergeId] = useState('')
@@ -230,10 +215,8 @@ function ClubDetail({ club, roster, others, ownerId, busy, run, arm, isArmed, se
   })
 
   // Odebrání ze soupisky klubu: osoba zůstává (historie hráče), jen bez klubu
-  const removePerson = (p: LibraryPerson) => {
-    const k = `rm-${p.id}`
-    if (!isArmed(k)) { arm(k); return }
-    arm(null)
+  const removePerson = async (p: LibraryPerson) => {
+    if (!await confirmDialog(`Odebrat hráče ${p.name} ze soupisky klubu? Jeho historie zůstane zachována.`, { danger: true, confirmLabel: 'Odebrat' })) return
     run('person', async () => {
       const { error } = await supabase.from('persons').update({ club_id: null }).eq('id', p.id)
       if (error) throw new Error(error.message)
@@ -241,11 +224,10 @@ function ClubDetail({ club, roster, others, ownerId, busy, run, arm, isArmed, se
     })
   }
 
-  const merge = () => {
+  const merge = async () => {
     const other = others.find(o => o.id === mergeId)
     if (!other) { setMsg({ text: 'Vyber klub ke sloučení', error: true }); return }
-    if (!isArmed('merge')) { arm('merge'); return }
-    arm(null)
+    if (!await confirmDialog(`Sloučit klub „${other.name}“ do „${club.name}“? Jeho týmy, historie a hráči přejdou sem a „${other.name}“ zanikne.\n\nTuto akci nelze vrátit.`, { danger: true, title: 'Sloučit kluby', confirmLabel: 'Sloučit' })) return
     run('merge', async () => {
       const res = await mergeClubs(club.id, other.id)
       setMergeId('')
@@ -253,9 +235,8 @@ function ClubDetail({ club, roster, others, ownerId, busy, run, arm, isArmed, se
     })
   }
 
-  const remove = () => {
-    if (!isArmed('delete')) { arm('delete'); return }
-    arm(null)
+  const remove = async () => {
+    if (!await confirmDialog(`Smazat klub „${club.name}“ z knihovny? Týmy v turnajích zůstanou, jen se odpojí od klubu.\n\nTuto akci nelze vrátit.`, { danger: true, title: 'Smazat klub' })) return
     run('delete', async () => {
       const { error } = await supabase.from('clubs').delete().eq('id', club.id)
       if (error) throw new Error(error.message)
@@ -307,8 +288,8 @@ function ClubDetail({ club, roster, others, ownerId, busy, run, arm, isArmed, se
             <select className="field-input field-select cl-person__role" value={p.role ?? ''} onChange={e => updatePerson(p, { role: e.target.value || null })} aria-label={`Role — ${p.name}`}>
               {ROLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <button type="button" className={`ui-btn ui-btn--sm ${isArmed(`rm-${p.id}`) ? 'ui-btn--danger' : 'ui-btn--ghost'}`} onClick={() => removePerson(p)} title="Odebrat ze soupisky">
-              {isArmed(`rm-${p.id}`) ? 'Opravdu?' : <Trash2 size={14} />}
+            <button type="button" className="ui-btn ui-btn--sm ui-btn--ghost" onClick={() => removePerson(p)} title="Odebrat ze soupisky" aria-label={`Odebrat ${p.name} ze soupisky`}>
+              <Trash2 size={14} />
             </button>
           </div>
         ))}
@@ -324,12 +305,12 @@ function ClubDetail({ club, roster, others, ownerId, busy, run, arm, isArmed, se
           <h3 className="cl-h3">Sloučit duplicitu</h3>
           <p className="cl-hint">Vznikl stejný klub dvakrát (např. z různých soutěží)? Vybraný klub se sloučí do tohoto: jeho týmy, historie a hráči přejdou sem, hráči se stejným jménem se spojí.</p>
           <div className="cl-row">
-            <select className="field-input field-select" value={mergeId} onChange={e => { setMergeId(e.target.value); arm(null) }} aria-label="Klub ke sloučení">
+            <select className="field-input field-select" value={mergeId} onChange={e => setMergeId(e.target.value)} aria-label="Klub ke sloučení">
               <option value="">Vyber klub…</option>
               {others.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
             </select>
-            <button type="button" className={`ui-btn ui-btn--sm ${isArmed('merge') ? 'ui-btn--danger' : 'ui-btn--secondary'}`} onClick={merge} style={{ opacity: mergeId && !busy ? 1 : 0.5 }}>
-              <Merge size={14} />{isArmed('merge') ? 'Opravdu sloučit?' : 'Sloučit sem'}
+            <button type="button" className="ui-btn ui-btn--sm ui-btn--secondary" onClick={merge} style={{ opacity: mergeId && !busy ? 1 : 0.5 }}>
+              <Merge size={14} />Sloučit sem
             </button>
           </div>
         </>
@@ -337,7 +318,7 @@ function ClubDetail({ club, roster, others, ownerId, busy, run, arm, isArmed, se
 
       <div className="cl-danger">
         <button type="button" className="ui-btn ui-btn--danger ui-btn--sm" onClick={remove} style={{ opacity: busy ? 0.6 : 1 }}>
-          <Trash2 size={14} />{isArmed('delete') ? 'Opravdu smazat klub?' : 'Smazat klub'}
+          <Trash2 size={14} />Smazat klub
         </button>
         <span className="cl-hint">Týmy v turnajích zůstanou, jen se odpojí od klubu.</span>
       </div>

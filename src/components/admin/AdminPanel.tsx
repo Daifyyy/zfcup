@@ -40,7 +40,13 @@ import type { LucideIcon } from 'lucide-react'
 type ATab = 'info' | 'announcements' | 'rules' | 'teams' | 'referees' | 'groups' | 'matches' | 'scorers' | 'bracket' | 'tips' | 'sponsors' | 'settings'
 
 // Pořadí odpovídá CLAUDE.md (Info → … → Nastavení), jen seskupené do bloků.
+// Průběh turnaje první — Zápasy a Play-off potřebuje organizátor během turnaje okamžitě
 const ADMIN_NAV: { group: string; items: { id: ATab; label: string; icon: LucideIcon }[] }[] = [
+  { group: 'Průběh turnaje', items: [
+    { id: 'matches', label: 'Zápasy',    icon: CalendarClock },
+    { id: 'bracket', label: 'Play-off',  icon: GitBranch },
+    { id: 'tips',    label: 'Tipovačka', icon: Target },
+  ] },
   { group: 'Obsah', items: [
     { id: 'info',          label: 'Info',      icon: Info },
     { id: 'announcements', label: 'Oznámení',  icon: Megaphone },
@@ -51,11 +57,6 @@ const ADMIN_NAV: { group: string; items: { id: ATab; label: string; icon: Lucide
     { id: 'referees', label: 'Rozhodčí', icon: Gavel },
     { id: 'groups',   label: 'Skupiny',  icon: Layers },
     { id: 'scorers',  label: 'Střelci',  icon: Trophy },
-  ] },
-  { group: 'Průběh turnaje', items: [
-    { id: 'matches', label: 'Zápasy',    icon: CalendarClock },
-    { id: 'bracket', label: 'Play-off',  icon: GitBranch },
-    { id: 'tips',    label: 'Tipovačka', icon: Target },
   ] },
   { group: 'Komerce', items: [
     { id: 'sponsors', label: 'Partneři', icon: Handshake },
@@ -119,7 +120,8 @@ interface Props {
 
 export default function AdminPanel(props: Props) {
   const { session, canEdit, onClose, showToast, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals } = props
-  const [aTab, setATab] = useState<ATab>('info')
+  // Turnaj s rozpisem → rovnou Zápasy; nový turnaj → Info
+  const [aTab, setATab] = useState<ATab>(() => props.matches.length > 0 ? 'matches' : 'info')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)

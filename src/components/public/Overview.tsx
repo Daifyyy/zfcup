@@ -161,6 +161,13 @@ export default function Overview({
         </div>
       </section>
 
+      {/* ── O turnaji (nad čísly) ─────────────────────── */}
+      {tournament?.description && (
+        <Card title="O turnaji" className="ov-about">
+          <div className="rich-content" dangerouslySetInnerHTML={{ __html: sanitizeHtml(tournament.description) }} />
+        </Card>
+      )}
+
       {/* ── Klíčová čísla ─────────────────────────────── */}
       {hasBoard && (
         <div className="ov-kpis">
@@ -256,12 +263,6 @@ export default function Overview({
           {recent.length > 0 && (
             <Card padded={false} title="Poslední výsledky" actions={<MoreLink onClick={onTab && (() => onTab('results'))}>Všechny výsledky</MoreLink>}>
               {recent.map(renderRow)}
-            </Card>
-          )}
-
-          {tournament?.description && (
-            <Card title="O turnaji">
-              <div className="rich-content" dangerouslySetInnerHTML={{ __html: sanitizeHtml(tournament.description) }} />
             </Card>
           )}
 

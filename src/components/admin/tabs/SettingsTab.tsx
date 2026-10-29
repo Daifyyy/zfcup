@@ -129,11 +129,11 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
 
   const resetTournamentData = async () => {
     if (!tournament) return
-    if (!await confirmDialog('Smažou se zápasy, skupiny, play-off, góly a tipy. Týmy a hráči zůstanou.\n\nTuto akci nelze vrátit.', { danger: true, title: 'Čistý start', confirmLabel: 'Smazat výsledky' })) return
+    if (!await confirmDialog(`Smažou se zápasy, skupiny, play-off, góly, asistence, karty a tipy turnaje „${tournament.name}“. Týmy a hráči zůstanou. Jiné turnaje se nemění.\n\nTuto akci nelze vrátit.`, { danger: true, title: 'Čistý start', confirmLabel: 'Smazat výsledky', requireText: tournament.name || 'SMAZAT' })) return
 
     const tid = tournament.id
-    // Soft tables: ignore errors (may not exist or have missing RLS)
-    const softTables = ['bracket_goals', 'bracket_slots', 'bracket_rounds', 'bracket_tips', 'special_tips']
+    // Soft tables: ignore errors (may not exist or have missing RLS); události před zápasy/sloty
+    const softTables = ['assists', 'cards', 'penalties', 'bracket_assists', 'bracket_cards', 'bracket_penalties', 'bracket_goals', 'bracket_slots', 'bracket_rounds', 'bracket_tips', 'special_tips']
     // Hard tables: must succeed
     const hardTables = ['goals', 'tips', 'matches', 'groups']
     for (const table of softTables) {
@@ -151,7 +151,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
 
   const resetData = async () => {
     if (!tournament) return
-    if (!await confirmDialog('Smažou se VŠECHNA data turnaje včetně týmů, hráčů a jejich fotek, rozhodčích a tipérů.\n\nTuto akci nelze vrátit. Data si můžete předtím stáhnout tlačítkem Export dat turnaje.', { danger: true, title: 'Smazat vše', confirmLabel: 'Smazat vše' })) return
+    if (!await confirmDialog(`Smažou se VŠECHNA data turnaje „${tournament.name}“ včetně týmů, hráčů a jejich fotek, rozhodčích a tipérů. Jiné turnaje se nemění.\n\nTuto akci nelze vrátit. Data si můžete předtím stáhnout tlačítkem Export dat turnaje.`, { danger: true, title: 'Vymazat celý turnaj', confirmLabel: 'Smazat vše', requireText: tournament.name || 'SMAZAT' })) return
 
     const tid = tournament.id
     // Záznamy navázané na hráče/zápasy (chybějící tabulka nebo migrace nevadí)
@@ -534,7 +534,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
         Jako organizátor jste správcem osobních údajů hráčů, rozhodčích a tipérů svého turnaje. Export obsahuje všechna
         data turnaje ve formátu JSON (bez PINů tipérů) — hodí se pro archiv nebo pro vyřízení žádosti hráče o jeho údaje.
-        Jednotlivého hráče smažete v záložce Týmy, celý turnaj tlačítkem Vymazat vše níže.
+        Jednotlivého hráče smažete v záložce Týmy, celý turnaj tlačítkem Vymazat data turnaje níže.
       </p>
       <button type="button" className="btn btn-s" onClick={exportData} style={{ opacity: exporting ? 0.6 : 1 }}>
         {exporting ? 'Připravuji…' : 'Export dat turnaje (JSON)'}
@@ -543,7 +543,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       <hr className="divider" />
       <div className="sub-title">Nebezpečná zóna</div>
       <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
-        Tyto akce jsou nevratné.
+        Tyto akce jsou nevratné a týkají se <strong>jen tohoto turnaje</strong> — ostatní turnaje na platformě zůstanou beze změny. Pro potvrzení bude potřeba opsat název turnaje.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
         <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .9rem' }}>
@@ -561,9 +561,9 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           </button>
         </div>
         <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .9rem' }}>
-          <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>Vymazat úplně vše</div>
+          <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>Vymazat celý tento turnaj</div>
           <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.55rem' }}>
-            Smaže veškerá data včetně týmů, hráčů a jejich fotek, rozhodčích a tipérů. Váš účet organizátora zůstane zachován.
+            Smaže veškerá data tohoto turnaje včetně týmů, hráčů a jejich fotek, rozhodčích a tipérů. Váš účet organizátora i ostatní turnaje zůstanou zachovány.
           </div>
           <button
             type="button"
@@ -571,7 +571,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
             style={{ border: '1px solid var(--border)' }}
             onClick={resetData}
           >
-            Vymazat vše
+            Vymazat data turnaje
           </button>
         </div>
       </div>
