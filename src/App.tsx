@@ -152,7 +152,7 @@ export default function App() {
   }
   useEffect(() => {
     if (!privateViewer) return
-    return onPoll(() => refetchLiveRef.current(), 30_000)
+    return onPoll(() => refetchLiveRef.current(), 30_000, true)
   }, [privateViewer])
 
   // ── Auth ──────────────────────────────────────────────

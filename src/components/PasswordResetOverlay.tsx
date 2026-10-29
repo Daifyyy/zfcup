@@ -15,7 +15,7 @@ export default function PasswordResetOverlay({ onDone }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (password.length < 6) { setErr('Heslo musí mít alespoň 6 znaků.'); return }
+    if (password.length < 8) { setErr('Heslo musí mít alespoň 8 znaků.'); return }
     if (password !== confirm) { setErr('Hesla se neshodují.'); return }
     setSaving(true); setErr('')
     const { error } = await supabase.auth.updateUser({ password })
@@ -56,7 +56,7 @@ export default function PasswordResetOverlay({ onDone }: Props) {
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
               <input
                 type="password"
-                placeholder="Nové heslo (min. 6 znaků)"
+                placeholder="Nové heslo (min. 8 znaků)"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 autoFocus

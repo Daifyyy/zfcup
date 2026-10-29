@@ -84,7 +84,7 @@ Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'foo
 - **Auth → "Allow new users to sign up" = VYPNUTO** — nové účty přes Supabase dashboard → Invite user
 
 ## RLS a DB záloha
-Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–16_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje, 16 = odstranění cizích politik čtení). **Žádné další SELECT politiky na tabulkách turnaje nevytvářet** (ani v dashboardu) — sčítají se a obešly by soukromí.
+Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–17_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje, 16 = odstranění cizích politik čtení, 17 = vypnutí anonymních zápisů tipovačky). **Žádné další SELECT politiky na tabulkách turnaje nevytvářet** (ani v dashboardu) — sčítají se a obešly by soukromí.
 - **Čtení**: SELECT pro všechny (anon) u veřejných turnajů; soukromé jen s kódem / vlastník (migrace 15).
 - **Zápis (migrace 11)**: `can_edit_tournament(tournament_id)` = vlastník turnaje (`tournament.owner_id`) nebo správce platformy (`is_platform_admin()`); soutěže/kluby/osoby přes `can_edit_competition`. Storage: `can_edit_storage_path(name)` — nové soubory ukládat pod `tournaments/{turnajId}/…` (`src/lib/storage.ts`: `tournamentAssetPath`, `uploadAsset`, `removeAssetByUrl`).
 - **Frontend**: `useAuthRole()` (`session`, `isPlatformAdmin`, `canEditTournament(ownerId)`); `App.tsx` `canEdit` řídí admin panel (cizí turnaj → „Bez oprávnění“). Výběr soutěže pro nový ročník jen z vlastních.
@@ -110,7 +110,7 @@ Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–1
 - Každá entita má hook v `src/hooks/`; všechny přijímají `tournamentId: string` jako 1. param — bez něj nefetchují (`if (!tournamentId) return`)
 - Výjimky: `useTournament(tournamentId?)`, `useTips(tipsterId, tournamentId)`, `useBracketTips(tipsterId, tournamentId)`, `useSpecialTips(tipsterId, tournamentId)`
 - Realtime přes `src/lib/realtimeManager.ts` (jeden sdílený kanál) — hooky volají `subscribeTable(table, handler, byTournament(tournamentId))`. **Vždy s filtrem** na turnaj (`tournament_id=eq.…`, u `tournament` `id=eq.…`, u tipů `tipster_id=eq.…`), jinak každá změna v jakémkoli turnaji vyvolá refetch u všech diváků. DELETE nejde filtrovat → manager má na tabulku jeden nefiltrovaný odběr DELETE. Kanál se přestaví jen při změně sady filtrů; po obnovení spojení se vše jednou refetchne.
-- Polling přes `onPoll(handler, ms?)` (`src/lib/poller.ts`): jeden časovač na interval (data 120 s, tipy 180 s), skrytá karta = žádné dotazy, návrat na kartu = obnova rozložená do 1,5 s. **Nepoužívat vlastní `setInterval`/`visibilitychange` v hookách.**
+- Polling přes `onPoll(handler, ms?, fixed?)` (`src/lib/poller.ts`): jeden časovač na interval (základ data 120 s, tipy 180 s), skrytá karta = žádné dotazy, návrat na kartu = obnova rozložená do 1,5 s. Interval se přizpůsobuje realtime (`isRealtimeHealthy` v `realtimeManager.ts`): připojený ×5 (10 min), výpadek ÷4 (min. 30 s); `fixed` = beze změny. Skrytá karta po 1 min uvolní realtime spojení (limit Free 200). **Nepoužívat vlastní `setInterval`/`visibilitychange` v hookách.**
 - Přepnutí turnaje: efekt hooku na začátku vyprázdní stav (`setX([])`, `setLoading(true)`) a fetch má příznak `cancelled` (opožděná odpověď starého turnaje se zahodí). `App.tsx` ukazuje `TournamentSkeleton`, dokud `tournament.id !== tournamentId` nebo se načítají týmy/skupiny/zápasy.
 - `refetch()` exponovat přes `useRef` pattern (viz useMatches, useBracket) — pro okamžitý UI update po save
 
@@ -118,6 +118,8 @@ Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–1
 - **`dangerouslySetInnerHTML` — vždy sanitizovat** přes `sanitizeHtml(html)` z `src/lib/sanitize.ts` (DOMPurify wrapper)
 - **`if (!error)` pattern** — hooky nesmí mazat state při selhání: `const { data, error } = await supabase...; if (!error) setState(data ?? [])`
 - Nikdy `service_role` key ve frontendu; chyby → toast (ne `console.error`)
+- Obrázky nahrávat jen přes `uploadAsset` (`src/lib/storage.ts`) — zmenší je a nastaví dlouhou cache. Nový `React.lazy` obalit `withReloadOnChunkError` (`src/lib/lazyComponent.tsx`), jinak po nasazení spadne.
+- Audit provozu: `docs/AUDIT-2026-10.md` (limity tarifů, měření, P0/P1/P2).
 
 **UI / formuláře:**
 - Všechny `<button>` musí mít `type="button"` — bez toho nechtěný form submit

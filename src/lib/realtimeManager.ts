@@ -24,6 +24,48 @@ let channelKeys = ''
 let buildTimer: ReturnType<typeof setTimeout> | null = null
 let wasSubscribed = false
 
+// ── Stav spojení (pro přizpůsobení pollingu, src/lib/poller.ts) ──
+let healthy = false
+const healthListeners = new Set<() => void>()
+function setHealthy(v: boolean) {
+  if (v === healthy) return
+  healthy = v
+  healthListeners.forEach(l => l())
+}
+/** Realtime je připojený a doručuje změny. */
+export function isRealtimeHealthy(): boolean { return healthy }
+export function onRealtimeHealthChange(cb: () => void): () => void {
+  healthListeners.add(cb)
+  return () => { healthListeners.delete(cb) }
+}
+
+// ── Skrytá karta uvolní spojení (Supabase Free: max. 200 souběžných) ──
+const HIDDEN_DISCONNECT_MS = 60_000
+let hiddenTimer: ReturnType<typeof setTimeout> | null = null
+let pausedForHidden = false
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hiddenTimer = setTimeout(() => {
+        hiddenTimer = null
+        if (!channel) return
+        pausedForHidden = true
+        supabase.removeChannel(channel)
+        channel = null
+        channelKeys = ''
+        setHealthy(false)
+      }, HIDDEN_DISCONNECT_MS)
+    } else {
+      if (hiddenTimer) { clearTimeout(hiddenTimer); hiddenTimer = null }
+      if (pausedForHidden) {
+        pausedForHidden = false
+        // Data obnoví poller při návratu na kartu; kanál se jen znovu připojí
+        scheduleRebuild()
+      }
+    }
+  })
+}
+
 const keyOf = (table: string, filter?: string) => `${table}|${filter ?? ''}`
 const splitKey = (key: string) => {
   const i = key.indexOf('|')
@@ -52,7 +94,8 @@ function buildChannel() {
     supabase.removeChannel(channel)
     channel = null
   }
-  if (keys.length === 0) return
+  setHealthy(false)
+  if (keys.length === 0 || pausedForHidden) return
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let ch: any = supabase.channel(`app-realtime-${Date.now()}`)
@@ -81,6 +124,10 @@ function buildChannel() {
       // Po výpadku spojení mohly změny utéct → jednou vše obnovit
       if (wasSubscribed) fire(Array.from(bindings.keys()))
       wasSubscribed = true
+      setHealthy(true)
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      // Výpadek nebo odmítnuté spojení (limit) → poller přejde na častější obnovu
+      setHealthy(false)
     }
   })
 }

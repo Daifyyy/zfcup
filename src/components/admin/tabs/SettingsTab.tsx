@@ -115,7 +115,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
   const changePassword = async () => {
     if (!p1) { showToast('Zadejte nové heslo'); return }
     if (p1 !== p2) { showToast('Hesla se neshodují'); return }
-    if (p1.length < 6) { showToast('Heslo musí mít alespoň 6 znaků'); return }
+    if (p1.length < 8) { showToast('Heslo musí mít alespoň 8 znaků'); return }
     setLoading(true)
     try {
       const { error } = await supabase.auth.updateUser({ password: p1 })
@@ -518,7 +518,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       <div className="sub-title">Změna hesla</div>
       <div className="field-group">
         <label className="field-label">Nové heslo</label>
-        <input className="field-input" type="password" value={p1} onChange={e => setP1(e.target.value)} placeholder="Nové heslo (min. 6 znaků)" />
+        <input className="field-input" type="password" value={p1} onChange={e => setP1(e.target.value)} placeholder="Nové heslo (min. 8 znaků)" />
       </div>
       <div className="field-group">
         <label className="field-label">Potvrdit heslo</label>

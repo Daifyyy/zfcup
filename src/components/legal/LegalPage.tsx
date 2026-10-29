@@ -382,6 +382,12 @@ function Cookies() {
               <td>pamatuje si přístupové kódy soukromých turnajů, které jste zadali</td>
               <td>do smazání dat webu (nejvýše 20 kódů)</td>
             </tr>
+            <tr>
+              <td><code>turnajnik_chunk_reload</code></td>
+              <td>úložiště relace (sessionStorage)</td>
+              <td>po nasazení nové verze aplikace zabrání opakovanému obnovování stránky</td>
+              <td>do zavření karty</td>
+            </tr>
           </tbody>
         </table>
       </div>

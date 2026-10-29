@@ -120,11 +120,14 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - **Validační pohár 2026** `/adcb7982-5716-407a-9f27-6fbae02346cb` (slug `validacni-pohar-2026`) — NEMAZAT, slouží k validacím. Fotbal, `groups_qf`, 16 týmů (dlouhé názvy, SVG loga, 4 bez loga), 176 hráčů (2 velmi dlouhá jména), 6 rozhodčích, 9 partnerů všech úrovní, 4 oznámení, 6 pravidel, média, Výrazný branding. Skupiny odehrané (skupina C = těsné výsledky na tiebreakery), čtvrtfinále + 1. semifinále odehrané, 2. semifinále, o 3. místo a finále naplánované. Skript `src/dev/seedValidation.ts` (spouští se v prohlížeči s přihlášením; nic ho neimportuje).
 - **Test soukromí po migraci 15 odhalil únik:** zápasy skryté správně, ale `tournament` (včetně `access_code`!), `players`, `goals` dál čitelné anonymně → v DB jsou navíc jiné politiky čtení (mimo db-backup). Oprava = **migrace 16** `db-backup/16_private_read_fix.sql` (smaže cizí SELECT/ALL politiky, zapne RLS, vypíše zbytek). **Migrace 16 spuštěna (2026-10-29), test zopakován:** bez kódu 0 řádků u turnaje i všech 16 tabulek, se správným kódem všechna data, se špatným 0, vlastník vidí bez kódu, ostatní veřejné turnaje čitelné. Soukromé turnaje lze používat. Validační turnaj je veřejný.
 
+### Audit připravenosti na ostrý provoz (2026-10-29)
+- Zpráva `docs/AUDIT-2026-10.md`. Verdikt: technicky připraveno na první turnaje (stovky diváků); **blokuje provoz/smlouvy**: Vercel Hobby zakazuje komerční použití, Supabase Free se po 7 dnech nečinnosti uspí a nemá zálohy.
+- Opraveno: zmenšování obrázků při nahrání + cache 1 rok (přenosy na turnaj ~1,1 GB → ~0,2 GB), polling podle stavu realtime (10 min / 30 s) + uvolnění spojení skryté karty, automatická obnova po nasazení nové verze, DOMPurify/TipTap (npm audit 34 → 6), heslo min. 8, migrace 17 (napsaná).
+
 ### Kde navázat
-1. **Uživatel doplní** `OPERATOR` v `src/lib/legal.ts` (jméno, IČO, adresa, e-mail, zápis v rejstříku). Pak vyzkoušet export a „Vymazat vše“ na testovacím turnaji. Teprve potom vypnout maintenance.
-2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.
-2. Před nasazením play-off v Cupu 2026 ověřit, že je nasazená oprava `groups_qf_full`.
-3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
+1. **Uživatel:** rozhodnout tarify (doporučeno Vercel Pro + Supabase Pro), spustit **migraci 17**, v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
+2. Pak Fáze 9 — registrace organizátorů a obchodní model.
+3. P2 z auditu: menší hlavní balík, sloučení startovních dotazů do RPC, hlášení chyb, `xlsx` z cdn.sheetjs.com.
 
 ### Otevřené body / nápady
 - **TanStack Query — potenciál do budoucna** (rozhodnutí uživatele 2026-10-27): dnes malý přínos (teplé načtení 0,2 s). Hodí se, až bude víc obrazovek sdílet stejná data (detail týmu/zápasu ve Fázi 4, knihovna klubů) — cache, deduplikace, okamžitý návrat na otevřený turnaj, jedno místo pro polling. Převádět hooky po jednom se zachováním API (`data`, `loading`, `refetch`); `poller.ts` a `realtimeManager.ts` pak jen invalidují dotazy.

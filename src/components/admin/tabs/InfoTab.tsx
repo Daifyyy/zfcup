@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
 import RichTextEditor from '../../ui/RichTextEditor'
 import MediaSection from './MediaSection'
+import { uploadAsset } from '../../../lib/storage'
 
 interface Props {
   tournament: Tournament | null
@@ -44,10 +45,9 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
     setUploading(true)
     // Každý turnaj má vlastní soubor (multi-tenant)
     const path = `tournaments/${tournament.id}/logo.png`
-    const { error: upErr } = await supabase.storage.from('team-logos').upload(path, file, { upsert: true })
-    if (upErr) { showToast('Chyba uploadu: ' + upErr.message); setUploading(false); return }
-    const { data } = supabase.storage.from('team-logos').getPublicUrl(path)
-    const urlWithTs = `${data.publicUrl}?v=${Date.now()}`
+    const up = await uploadAsset(path, file)
+    if ('error' in up) { showToast('Chyba uploadu: ' + up.error); setUploading(false); return }
+    const urlWithTs = up.url
     const { error } = await supabase.from('tournament').update({ logo_url: urlWithTs }).eq('id', tournament.id)
     setUploading(false)
     if (error) showToast('Chyba: ' + error.message)

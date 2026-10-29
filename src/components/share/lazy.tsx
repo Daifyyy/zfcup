@@ -1,8 +1,9 @@
 import { lazy, Suspense, type ComponentProps } from 'react'
+import { withReloadOnChunkError } from '../../lib/lazyComponent'
 
-const ShareMatchLazy = lazy(() => import('./ShareKit').then(m => ({ default: m.ShareMatch })))
-const ShareTableLazy = lazy(() => import('./ShareKit').then(m => ({ default: m.ShareTable })))
-const ShareLeadersLazy = lazy(() => import('./ShareKit').then(m => ({ default: m.ShareLeaders })))
+const ShareMatchLazy = lazy(withReloadOnChunkError(() => import('./ShareKit').then(m => ({ default: m.ShareMatch }))))
+const ShareTableLazy = lazy(withReloadOnChunkError(() => import('./ShareKit').then(m => ({ default: m.ShareTable }))))
+const ShareLeadersLazy = lazy(withReloadOnChunkError(() => import('./ShareKit').then(m => ({ default: m.ShareLeaders }))))
 
 type MatchProps = ComponentProps<typeof import('./ShareKit').ShareMatch>
 type TableProps = ComponentProps<typeof import('./ShareKit').ShareTable>
