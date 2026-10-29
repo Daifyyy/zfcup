@@ -37,6 +37,10 @@ export interface Tournament {
   brand_secondary?: string | null
   /** Intenzita brandingu: 'subtle' | 'bold' — migrace 14 */
   brand_style?: string | null
+  /** Migrace 15: 'public' | 'private'; bez migrace chybí (= veřejný) */
+  visibility?: 'public' | 'private'
+  /** Přístupový kód soukromého turnaje (vidí ho jen vlastník a ti, kdo ho zadali) */
+  access_code?: string | null
   press_enabled?: boolean
   press_contact_name?: string
   press_contact_email?: string

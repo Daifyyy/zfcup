@@ -42,6 +42,11 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 - **Sezónní režim** `tournament.schedule_mode = 'season'` (volí se při založení, pak read-only): zápasy mají `match_date`; rozpis `generateSeasonSchedule()` (`src/lib/leagueSchedule.ts`: Berger + Eulerova orientace doma/venku, 1×/2×); `round = 'N. kolo'` (`roundNumber()` pro řazení). `match_date` posílat do DB **jen v sezónním režimu** (bez migrace sloupec chybí).
 - **Datum v logice**: `getMatchState`/`matchDay` (`src/lib/matchState.ts`), zámek tipů `isMatchTimePassed(time, lockFromDate, matchDate)`, TV tabule/kiosk ukazují aktuální kolo (`currentSeasonRound` v `src/lib/fixtures.ts`), formátování `src/lib/dates.ts`.
 
+## Soukromé turnaje (migrace 15)
+- `tournament.visibility` (`public`|`private`) + `access_code`. RLS čtení přes `can_read_tournament(tid)`: veřejný, vlastník/správce, nebo kód v hlavičce `x-access-code` (posílá `src/lib/supabase.ts` z `src/lib/accessCodes.ts`, jen pro `/rest/v1/`). Realtime hlavičku nezná → divák s kódem má polling 30 s (`App.tsx`).
+- Nová tabulka s `tournament_id` = přidat ji do seznamu v migraci 15 (politika `public_read` s `can_read_tournament`). `visibility`/`access_code` posílat jen u soukromého turnaje (bez migrace sloupce chybí).
+- Úvodní stránka nezobrazuje všechny turnaje: vyhledávání + „Právě probíhá“ + „Moje turnaje“ (`src/lib/tournamentSearch.ts`).
+
 ## Knihovna klubů (migrace 13)
 - `clubs`/`persons` patří **organizátorovi** (`owner_id`), `competition_id` je nepovinné; `clubs.slug` globálně unikátní → veřejná stránka `/k/{slug}` (`ClubPage`, `useClubPage`, výpočty `src/lib/clubHistory.ts`). Soupiska klubu = `persons.club_id` (+ `number`, `role`).
 - `src/lib/clubs.ts`: `libraryAvailable()` (bez migrace → knihovna skrytá), `addClubToTournament`, `saveTeamToLibrary`, `mergeClubs`. `ensureIdentities` s migrací páruje kluby v knihovně vlastníka turnaje.
@@ -78,8 +83,8 @@ Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'foo
 - **Auth → "Allow new users to sign up" = VYPNUTO** — nové účty přes Supabase dashboard → Invite user
 
 ## RLS a DB záloha
-Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–12_*.sql` (12 = indexy `tournament_id`).
-- **Čtení**: SELECT pro všechny (anon) — diváci bez přihlášení.
+Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–15_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje).
+- **Čtení**: SELECT pro všechny (anon) u veřejných turnajů; soukromé jen s kódem / vlastník (migrace 15).
 - **Zápis (migrace 11)**: `can_edit_tournament(tournament_id)` = vlastník turnaje (`tournament.owner_id`) nebo správce platformy (`is_platform_admin()`); soutěže/kluby/osoby přes `can_edit_competition`. Storage: `can_edit_storage_path(name)` — nové soubory ukládat pod `tournaments/{turnajId}/…` (`src/lib/storage.ts`: `tournamentAssetPath`, `uploadAsset`, `removeAssetByUrl`).
 - **Frontend**: `useAuthRole()` (`session`, `isPlatformAdmin`, `canEditTournament(ownerId)`); `App.tsx` `canEdit` řídí admin panel (cizí turnaj → „Bez oprávnění“). Výběr soutěže pro nový ročník jen z vlastních.
 - **Tipovačka**: globální vypínač `platform_settings.tips_globally_enabled` (`usePlatformSettings()`, úvodní stránka → Platforma, jen správce); bez migrace = vypnuto. Zabezpečení tipovačky (PINy, anon zápisy) je **odloženo** — nezapínat ji globálně, dokud se nevyřeší.

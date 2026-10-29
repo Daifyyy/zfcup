@@ -49,6 +49,8 @@ import type { Session } from '@supabase/supabase-js'
 import type { Sponsor } from './hooks/useSponsors'
 import { lazyComponent } from './lib/lazyComponent'
 import { detectLegalDocFromUrl, type LegalDoc } from './lib/legal'
+import { consumeCodeFromUrl } from './lib/accessCodes'
+import { onPoll } from './lib/poller'
 import SiteFooter from './components/layout/SiteFooter'
 
 const PrintBulletin = lazyComponent(() => import('./components/public/PrintBulletin'))
@@ -97,7 +99,7 @@ export type Tab = 'overview' | 'teams' | 'results' | 'standings' | 'statistics' 
 const VALID_TABS: Tab[] = ['overview', 'teams', 'results', 'standings', 'statistics', 'bracket', 'info', 'rules', 'tips', 'sponsors', 'media']
 
 export default function App() {
-  const [tournamentId, setTournamentId] = useState<string>(() => detectTournamentIdFromUrl())
+  const [tournamentId, setTournamentId] = useState<string>(() => { consumeCodeFromUrl(); return detectTournamentIdFromUrl() })
   const [competitionSlug, setCompetitionSlug] = useState<string>(() => detectCompetitionSlugFromUrl())
   const [clubSlug, setClubSlug] = useState<string>(() => detectClubSlugFromUrl())
   const [legalDoc, setLegalDoc] = useState<LegalDoc | ''>(() => detectLegalDocFromUrl())
@@ -138,6 +140,20 @@ export default function App() {
   const canEdit = !!tournament && canEditTournament(tournament.owner_id)
   // Tipovačka: globální vypínač správce platformy AND přepínač turnaje
   const tipsOn = platform.tipsEnabled && (tournament?.tips_enabled ?? false)
+
+  // Soukromý turnaj přes přístupový kód: Realtime hlavičku s kódem nezná → živé události
+  // nechodí, proto častější obnova (vlastník/správce dostávají realtime normálně)
+  const privateViewer = tournament?.visibility === 'private' && !canEdit
+  const refetchLiveRef = useRef<() => void>(() => {})
+  refetchLiveRef.current = () => {
+    refetchTournament(); refetchMatches(); refetchGoals(); refetchAssists(); refetchBracketAssists()
+    refetchCards(); refetchBracketCards(); refetchPenalties(); refetchBracketPenalties()
+    refetchBracket(); refetchBracketGoals(); refetchAnnouncements()
+  }
+  useEffect(() => {
+    if (!privateViewer) return
+    return onPoll(() => refetchLiveRef.current(), 30_000)
+  }, [privateViewer])
 
   // ── Auth ──────────────────────────────────────────────
   useEffect(() => {

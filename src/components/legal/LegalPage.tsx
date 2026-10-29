@@ -376,10 +376,16 @@ function Cookies() {
               <td>pamatuje si přihlášeného tipéra na tomto zařízení</td>
               <td>do odhlášení z tipovačky</td>
             </tr>
+            <tr>
+              <td><code>turnajnik_access_codes</code></td>
+              <td>místní úložiště (localStorage)</td>
+              <td>pamatuje si přístupové kódy soukromých turnajů, které jste zadali</td>
+              <td>do smazání dat webu (nejvýše 20 kódů)</td>
+            </tr>
           </tbody>
         </table>
       </div>
-      <p>Návštěvník, který se nepřihlašuje, nemá v prohlížeči uloženo nic.</p>
+      <p>Návštěvník, který se nepřihlašuje a nezadává přístupový kód, nemá v prohlížeči uloženo nic.</p>
 
       <h2>Obsah třetích stran</h2>
       <p>

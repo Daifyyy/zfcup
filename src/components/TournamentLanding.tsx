@@ -10,8 +10,13 @@ import { formatColumns, getFormatDef } from '../lib/formats'
 import { lazyComponent } from '../lib/lazyComponent'
 import { FEATURES, type DemoKey } from '../demo/features'
 import SiteFooter from './layout/SiteFooter'
+import AccessCodeForm from './ui/AccessCodeForm'
+import { generateAccessCode } from '../lib/accessCodes'
+import { isOngoing, searchTournaments, shiftISO } from '../lib/tournamentSearch'
+import { todayISO } from '../lib/dates'
+import { isMissingColumnError } from '../lib/partners'
 import {
-  ArrowRight, CalendarDays, Shield, ChevronRight, Lock, LogOut, Mail, MapPin, Plus, Settings2, Trophy,
+  ArrowRight, CalendarDays, Globe, KeyRound, Search, Shield, ChevronRight, Lock, LogOut, Mail, MapPin, Plus, Settings2, Trophy,
 } from 'lucide-react'
 
 const contact = contactHref()
@@ -30,6 +35,9 @@ interface TournamentSummary {
   competition_id?: string | null
   edition?: number | null
   owner_id?: string | null
+  tips_lock_from?: string | null
+  schedule_mode?: 'day' | 'season' | null
+  visibility?: 'public' | 'private'
 }
 
 interface Props {
@@ -78,6 +86,11 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
   const [newSlug, setNewSlug] = useState('')
   const [newSport, setNewSport] = useState<SportId>('football')
   const [newMode, setNewMode] = useState<'day' | 'season'>('day')
+  const [newPrivate, setNewPrivate] = useState(false)
+  // Vyhledávání a přístupový kód
+  const [query, setQuery] = useState('')
+  const [showCode, setShowCode] = useState(false)
+  const [activeSeasons, setActiveSeasons] = useState<Set<string>>(new Set())
   // Další ročník soutěže: '' = samostatný turnaj
   const [newCompetitionId, setNewCompetitionId] = useState('')
   const [newCarryOver, setNewCarryOver] = useState(true)
@@ -96,6 +109,18 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
         setLoading(false)
       })
   }, [])
+
+  // Sezóny se zápasem v okně ±14 dní → „Právě probíhá“
+  useEffect(() => {
+    const seasonIds = tournaments.filter(t => t.schedule_mode === 'season').map(t => t.id)
+    if (!seasonIds.length) return
+    const today = todayISO()
+    supabase.from('matches').select('tournament_id').in('tournament_id', seasonIds)
+      .gte('match_date', shiftISO(today, -14)).lte('match_date', shiftISO(today, 14))
+      .then(({ data, error: err }) => {
+        if (!err) setActiveSeasons(new Set((data ?? []).map(m => m.tournament_id as string)))
+      })
+  }, [tournaments])
 
   function handleNameChange(val: string) {
     setNewName(val)
@@ -169,12 +194,18 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
           ...formatSettings,
           // Nové sloupce (migrace 09) posílat jen když jsou potřeba — bez migrace jde založit běžný turnaj
           ...(newMode === 'season' ? { schedule_mode: 'season' } : {}),
+          // Migrace 15 — posílat jen u soukromého (bez migrace jde založit veřejný turnaj)
+          ...(newPrivate ? { visibility: 'private', access_code: generateAccessCode() } : {}),
           ...(competition ? { competition_id: competition.id, edition } : {}),
         })
         .select('id')
         .single()
       if (res.error) {
-        setCreateError(res.error.message.includes('unique') ? 'Slug již existuje, zvol jiný.' : res.error.message)
+        setCreateError(
+          newPrivate && (isMissingColumnError(res.error, 'visibility') || isMissingColumnError(res.error, 'access_code'))
+            ? 'Soukromé turnaje vyžadují migraci 15 — založte turnaj jako veřejný.'
+            : res.error.message.includes('unique') ? 'Slug již existuje, zvol jiný.' : res.error.message,
+        )
         return
       }
       data = res.data
@@ -192,6 +223,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
     setNewSlug('')
     setNewSport('football')
     setNewMode('day')
+    setNewPrivate(false)
     setNewCompetitionId('')
     setSlugManual(false)
     window.history.pushState({ tournamentId: data.id }, '', `/${data.id}`)
@@ -202,7 +234,40 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
     await supabase.auth.signOut()
   }
 
-  const featured = tournaments[0]
+  function renderCard(t: TournamentSummary) {
+    const sport = getSportDef(t.sport)
+    const Icon = sport.Icon
+    return (
+      <button
+        key={t.id}
+        type="button"
+        className="lp-tcard"
+        onClick={() => {
+          window.history.pushState({ tournamentId: t.id }, '', `/${t.id}`)
+          onSelect(t.id)
+        }}
+      >
+        <div className="lp-tcard__crest">
+          {t.logo_url ? <img src={t.logo_url} alt="" /> : <Icon size={28} strokeWidth={1.5} />}
+        </div>
+        <div className="lp-tcard__body">
+          <div className="lp-tcard__sport">
+            <Icon size={12} />{sport.label}{t.edition && t.competition_id ? ` · ${t.edition}. ročník` : ''}
+            {t.visibility === 'private' && <span className="lp-tcard__mine"><Lock size={10} /> Soukromý</span>}
+            {canEditTournament(t.owner_id) && <span className="lp-tcard__mine">Spravujete</span>}
+          </div>
+          <div className="lp-tcard__name">{t.name || '(bez názvu)'}</div>
+          {t.subtitle && <div className="lp-tcard__sub">{t.subtitle}</div>}
+          <div className="lp-tcard__meta">
+            {t.date && <span><CalendarDays size={13} />{t.date}</span>}
+            {t.venue && <span><MapPin size={13} />{t.venue}</span>}
+          </div>
+        </div>
+        <ChevronRight size={18} className="lp-tcard__chev" />
+      </button>
+    )
+  }
+
 
   return (
     <div className="lp">
@@ -253,7 +318,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
             </p>
             <div className="lp-hero__cta">
               {contact && <a className="ui-btn ui-btn--primary" href={contact}><Mail size={16} />Chci turnaj</a>}
-              <a className={contact ? 'ui-btn ui-btn--chrome' : 'ui-btn ui-btn--primary'} href="#turnaje">Prohlédnout turnaje<ArrowRight size={16} /></a>
+              <a className={contact ? 'ui-btn ui-btn--chrome' : 'ui-btn ui-btn--primary'} href="#turnaje">Najít turnaj<ArrowRight size={16} /></a>
               {!session && (
                 <button type="button" className="ui-btn ui-btn--chrome" onClick={() => { setShowLogin(true); setLoginError('') }}>
                   Přihlášení pořadatele
@@ -359,13 +424,34 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
         </section>
       )}
 
-      {/* ── Turnaje ─────────────────────────────────── */}
+      {/* ── Turnaje: vyhledávání, právě probíhá, moje ── */}
       <section className="lp-section lp-section--alt" id="turnaje">
         <div className="lp-wrap">
           <div className="lp-section__head">
-            <h2>Turnaje</h2>
-            <p>{featured ? 'Vyberte turnaj a sledujte výsledky živě.' : 'Seznam turnajů na platformě.'}</p>
+            <h2>Najít turnaj</h2>
+            <p>Vyhledejte veřejný turnaj podle názvu nebo místa. Soukromý otevřete přístupovým kódem od pořadatele.</p>
           </div>
+
+          <div className="lp-find">
+            <label className="lp-find__search">
+              <Search size={18} />
+              <input
+                type="search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Název turnaje, místo…"
+                aria-label="Hledat turnaj"
+              />
+            </label>
+            <button type="button" className={showCode ? 'ui-btn ui-btn--primary' : 'ui-btn ui-btn--secondary'} onClick={() => setShowCode(v => !v)}>
+              <KeyRound size={16} />Mám přístupový kód
+            </button>
+          </div>
+          {showCode && (
+            <div className="lp-find__code">
+              <AccessCodeForm autoFocus onUnlocked={id => { window.history.pushState({ tournamentId: id }, '', `/${id}`); onSelect(id) }} />
+            </div>
+          )}
 
           {loading && (
             <div style={{ textAlign: 'center', color: 'var(--ink-muted)', padding: '2rem 0' }}>
@@ -376,46 +462,42 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
 
           {!loading && error && <div className="warn-box" style={{ textAlign: 'center' }}>{error}</div>}
 
-          {!loading && !error && tournaments.length === 0 && (
-            <div className="ui-empty"><div className="ui-empty__text">Zatím zde nejsou žádné turnaje.</div></div>
-          )}
+          {!loading && !error && (() => {
+            const q = query.trim()
+            if (q.length >= 2) {
+              const found = searchTournaments(tournaments, q)
+              return (
+                <div className="lp-tgroup">
+                  <h3 className="lp-tgroup__title">Výsledky hledání</h3>
+                  {found.length
+                    ? <div className="lp-tournaments">{found.map(renderCard)}</div>
+                    : <p className="lp-tgroup__empty">Nic jsme nenašli. Zkuste jiný název, nebo zadejte přístupový kód.</p>}
+                </div>
+              )
+            }
+            const today = todayISO()
+            const live = tournaments.filter(t => isOngoing(t, today, activeSeasons))
+            return (
+              <div className="lp-tgroup">
+                <h3 className="lp-tgroup__title"><span className="ui-live-dot" />Právě probíhá</h3>
+                {live.length
+                  ? <div className="lp-tournaments">{live.map(renderCard)}</div>
+                  : <p className="lp-tgroup__empty">Dnes se nehraje žádný veřejný turnaj. Vyhledejte turnaj podle názvu.</p>}
+              </div>
+            )
+          })()}
 
-          {!loading && !error && tournaments.length > 0 && (
-            <div className="lp-tournaments">
-              {tournaments.map(t => {
-                const sport = getSportDef(t.sport)
-                const Icon = sport.Icon
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className="lp-tcard"
-                    onClick={() => {
-                      window.history.pushState({ tournamentId: t.id }, '', `/${t.id}`)
-                      onSelect(t.id)
-                    }}
-                  >
-                    <div className="lp-tcard__crest">
-                      {t.logo_url ? <img src={t.logo_url} alt="" /> : <Icon size={28} strokeWidth={1.5} />}
-                    </div>
-                    <div className="lp-tcard__body">
-                      <div className="lp-tcard__sport">
-                        <Icon size={12} />{sport.label}{t.edition && t.competition_id ? ` · ${t.edition}. ročník` : ''}
-                        {canEditTournament(t.owner_id) && <span className="lp-tcard__mine">Spravujete</span>}
-                      </div>
-                      <div className="lp-tcard__name">{t.name || '(bez názvu)'}</div>
-                      {t.subtitle && <div className="lp-tcard__sub">{t.subtitle}</div>}
-                      <div className="lp-tcard__meta">
-                        {t.date && <span><CalendarDays size={13} />{t.date}</span>}
-                        {t.venue && <span><MapPin size={13} />{t.venue}</span>}
-                      </div>
-                    </div>
-                    <ChevronRight size={18} className="lp-tcard__chev" />
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          {!loading && !error && session && (() => {
+            const mine = tournaments.filter(t => isPlatformAdmin || (!!userId && t.owner_id === userId))
+            return (
+              <div className="lp-tgroup">
+                <h3 className="lp-tgroup__title">{isPlatformAdmin ? 'Všechny turnaje (správa platformy)' : 'Moje turnaje'}</h3>
+                {mine.length
+                  ? <div className="lp-tournaments">{mine.map(renderCard)}</div>
+                  : <p className="lp-tgroup__empty">Zatím nespravujete žádný turnaj — založte ho tlačítkem Nový turnaj.</p>}
+              </div>
+            )
+          })()}
         </div>
       </section>
 
@@ -554,6 +636,18 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
                   </button>
                 </div>
                 <p className="lp-modal__hint">{newMode === 'season' ? 'Liga po kolech s datem každého zápasu (např. okresní liga).' : 'Všechny zápasy v jeden den (např. firemní turnaj).'}</p>
+              </div>
+              <div>
+                <label className="field-label">Viditelnost</label>
+                <div className="lp-sportpick">
+                  <button type="button" onClick={() => setNewPrivate(false)} className={!newPrivate ? 'lp-sportpick__btn lp-sportpick__btn--on' : 'lp-sportpick__btn'}>
+                    <Globe size={20} />Veřejný
+                  </button>
+                  <button type="button" onClick={() => setNewPrivate(true)} className={newPrivate ? 'lp-sportpick__btn lp-sportpick__btn--on' : 'lp-sportpick__btn'}>
+                    <Lock size={20} />Soukromý (s kódem)
+                  </button>
+                </div>
+                <p className="lp-modal__hint">{newPrivate ? 'Uvidí ho jen ten, komu pošlete přístupový kód. Lze později změnit v Nastavení.' : 'Kdokoli ho najde ve vyhledávání. Lze později změnit v Nastavení.'}</p>
               </div>
               {myCompetitions.filter(c => c.sport === newSport).length > 0 && (
                 <div>

@@ -1,4 +1,5 @@
 import { Home } from 'lucide-react'
+import AccessCodeForm from './AccessCodeForm'
 
 interface Props {
   /** Turnaj nebyl nalezen (špatný odkaz / smazaný turnaj) */
@@ -13,7 +14,15 @@ export function TournamentSkeleton({ notFound, onHome }: Props) {
       <div className="tsk tsk--center">
         <div className="tsk__msg">
           <div className="tsk__msg-title" style={{ fontFamily: 'var(--font-display)' }}>Turnaj nenalezen</div>
-          <p>Odkaz je neplatný nebo byl turnaj odstraněn.</p>
+          <p>Odkaz je neplatný, turnaj byl odstraněn, nebo je soukromý. Máte-li od pořadatele přístupový kód, zadejte ho:</p>
+          <AccessCodeForm
+            autoFocus
+            onUnlocked={id => {
+              // Načíst znovu s kódem v hlavičce všech dotazů
+              if (window.location.pathname.split('/').filter(Boolean)[0] === id) window.location.reload()
+              else window.location.assign(`/${id}`)
+            }}
+          />
           <button type="button" className="ui-btn ui-btn--primary" onClick={onHome}>
             <Home size={16} /> Na úvodní stránku
           </button>

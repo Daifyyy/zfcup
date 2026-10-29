@@ -341,3 +341,11 @@
 .br-pv-tv__hdr { display: flex; justify-content: space-between; padding: .45rem .7rem; background: var(--chrome); font-family: var(--font-display); font-weight: 800; text-transform: uppercase; border-bottom: 2px solid var(--brand-on-dark); }
 .br-pv-tv__row { display: grid; grid-template-columns: 24px 1fr auto; gap: .5rem; padding: .3rem .7rem; font-size: .85rem; border-top: 1px solid rgba(255,255,255,.07); }
 .br-pv-tv__row b { font-family: var(--font-display); }
+
+/* Admin → Nastavení → Viditelnost */
+.vis__note { font-size: .76rem; color: var(--ink-muted); margin: .55rem 0; }
+.vis__note code { font-size: .72rem; }
+.vis__code { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; padding: .75rem .9rem; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); }
+.vis__label { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-muted); }
+.vis__value { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; letter-spacing: .12em; }
+.vis__actions { display: flex; flex-wrap: wrap; gap: .4rem; }

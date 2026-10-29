@@ -110,6 +110,12 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Stránka soutěže: nahoře vždy přehled (úřadující vítěz, nejúspěšnější klub, nejlepší střelec historie, nejvyšší výhra — klikací na záložky), souhrnná čísla a řada ročníků (`competitionHighlights` v `lib/history.ts`, test).
 - Turnaj v soutěži: v hlavičce rozbalovací výběr ročníku (místo šipek) + odkaz na historii; na Přehledu karta „Historie soutěže“ (Síň slávy + ročníky). Minulý vítěz na kartě není — vyžadoval by načtení celé historie.
 
+### Blok D — soukromé turnaje a vyhledávání (2026-10-29)
+- **Migrace 15** `db-backup/15_private_tournaments.sql` (**spouští uživatel**): `tournament.visibility` + `access_code` (UNIQUE), `can_read_tournament()` (veřejný / kód v hlavičce `x-access-code` / vlastník / správce), RLS `public_read` u turnaje a všech tabulek s `tournament_id`, RPC `find_tournament_by_code`.
+- Frontend: `lib/accessCodes.ts` (kódy v localStorage, hlavička jen pro `/rest/v1/`, `?kod=` v odkazu se uloží a z adresy zmizí), `ui/AccessCodeForm`, obrazovka „Turnaj nenalezen“ nabízí kód, Admin → Nastavení → Viditelnost (`VisibilitySection`: přepínač, kód, odkaz s kódem, nový kód), volba při založení. Divák s kódem: polling 30 s (realtime hlavičku nezná).
+- Úvodní stránka: místo seznamu všech turnajů vyhledávání (bez diakritiky, jen veřejné), „Právě probíhá“ (den turnaje = dnes, sezóna se zápasem ±14 dní), „Mám přístupový kód“, „Moje turnaje“ / u správce všechny (`lib/tournamentSearch.ts` + testy). Stránka Cookies doplněna o `turnajnik_access_codes`.
+- Ověřeno bez migrace (vše veřejné, hlášky o chybějící migraci). **Po spuštění migrace ověřit**: anonymně soukromý turnaj i zápasy = 0 řádků; s kódem data; vlastník bez kódu; vyhledávání soukromé nevrací; odkaz `?kod=` odemkne; založení soukromého turnaje.
+
 ### Kde navázat
 1. **Uživatel doplní** `OPERATOR` v `src/lib/legal.ts` (jméno, IČO, adresa, e-mail, zápis v rejstříku). Pak vyzkoušet export a „Vymazat vše“ na testovacím turnaji. Teprve potom vypnout maintenance.
 2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.

@@ -357,3 +357,9 @@
 .ev-mark--goal { color: var(--ink); }
 .ev-mark--assist { background: var(--brand-soft, var(--surface-2)); color: var(--brand); border: 1px solid var(--brand-line, var(--line)); }
 .ev-mark--pim { min-width: 28px; padding: 0 .3rem; border-radius: 4px; background: var(--loss); color: #fff; font-size: .75rem; }
+
+/* ── Přístupový kód soukromého turnaje ─────────────────── */
+.acf { width: 100%; max-width: 360px; margin: .4rem auto 1rem; text-align: left; }
+.acf__row { display: flex; gap: .5rem; }
+.acf__input { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.acf__err { margin: .4rem 0 0; font-size: .82rem; color: var(--loss); }

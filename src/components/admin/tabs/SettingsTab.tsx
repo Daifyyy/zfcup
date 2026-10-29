@@ -6,6 +6,7 @@ import { formatsForScheduleMode, getFormatDef, formatColumns } from '../../../li
 import { getSportDef } from '../../../lib/sports'
 import BrandingSection from './BrandingSection'
 import CompetitionSection from './CompetitionSection'
+import VisibilitySection from './VisibilitySection'
 import { exportTournamentData, downloadJson } from '../../../lib/dataExport'
 import { removeAssetByUrl } from '../../../lib/storage'
 import { slugify } from '../../../lib/editions'
@@ -393,6 +394,10 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           <button type="button" className="btn btn-s" onClick={saveLeagueParams}>Uložit parametry</button>
         </div>
       )}
+
+      <hr className="divider" />
+      <div className="sub-title">Viditelnost</div>
+      <VisibilitySection tournament={tournament} refetchTournament={refetchTournament} showToast={showToast} />
 
       <hr className="divider" />
       <CompetitionSection tournament={tournament} teams={teams} refetchTournament={refetchTournament} refetchTeams={refetchTeams} refetchPlayers={refetchPlayers} showToast={showToast} />
