@@ -123,6 +123,7 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 ### Audit připravenosti na ostrý provoz (2026-10-29)
 - Zpráva `docs/AUDIT-2026-10.md`. Verdikt: technicky připraveno na první turnaje (stovky diváků); **blokuje provoz/smlouvy**: Vercel Hobby zakazuje komerční použití, Supabase Free se po 7 dnech nečinnosti uspí a nemá zálohy.
 - Opraveno: zmenšování obrázků při nahrání + cache 1 rok (přenosy na turnaj ~1,1 GB → ~0,2 GB), polling podle stavu realtime (10 min / 30 s) + uvolnění spojení skryté karty, automatická obnova po nasazení nové verze, DOMPurify/TipTap (npm audit 34 → 6), heslo min. 8, migrace 17 (napsaná).
+- Doplněno: rozložení špičky po živé změně (dávka 250 ms + náhodně do 1 s), gesto Zpět zavře admin (ne turnaj), iOS bez přibližování při psaní (16 px vč. editoru + `maximum-scale=1` jen iOS), vyhledávání ukazuje i vlastní soukromé turnaje („Vesnická vřava“ byla v DB celá, jen soukromá).
 
 ### Kde navázat
 1. **Uživatel:** rozhodnout tarify (doporučeno Vercel Pro + Supabase Pro), spustit **migraci 17**, v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.

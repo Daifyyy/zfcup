@@ -164,22 +164,33 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // ── Administrace jako krok v historii ─────────────────
+  // Gesto/tlačítko Zpět (iPhone swipe, Android) admin zavře a nechá diváka v turnaji.
+  const openAdmin = useCallback(() => {
+    if (!window.history.state?.admin) window.history.pushState({ ...(window.history.state ?? {}), admin: true }, '')
+    setAdminOpen(true)
+  }, [])
+  const closeAdmin = useCallback(() => {
+    if (window.history.state?.admin) window.history.back() // popstate admin zavře
+    else setAdminOpen(false)
+  }, [])
+
   // ── Keyboard shortcuts ────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'A') { e.preventDefault(); setAdminOpen(true) }
-      if (e.key === 'Escape' && adminOpen) setAdminOpen(false)
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') { e.preventDefault(); openAdmin() }
+      if (e.key === 'Escape' && adminOpen) closeAdmin()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [adminOpen])
+  }, [adminOpen, openAdmin, closeAdmin])
 
   // ── Kiosk URL sync ────────────────────────────────────
   useEffect(() => {
     const url = new URL(window.location.href)
     if (kiosk) url.searchParams.set('kiosk', '1')
     else url.searchParams.delete('kiosk')
-    window.history.replaceState({ tab }, '', url.toString())
+    window.history.replaceState({ ...(window.history.state ?? {}), tab }, '', url.toString())
   }, [kiosk, tab])
 
   // ── Přepnutí turnaje: zavřít překryvy předchozího (admin, tisk, tabule) ──
@@ -198,6 +209,7 @@ export default function App() {
       setCompetitionSlug(detectCompetitionSlugFromUrl())
       setClubSlug(detectClubSlugFromUrl())
       setLegalDoc(detectLegalDocFromUrl())
+      setAdminOpen(!!e.state?.admin)
       const prev = e.state?.tab as Tab | undefined
       setTab(prev && VALID_TABS.includes(prev) ? prev : 'overview')
     }
@@ -369,7 +381,7 @@ export default function App() {
         tournament={tournament}
         tab={tab}
         onTab={navigateTab}
-        onAdmin={() => setAdminOpen(true)}
+        onAdmin={openAdmin}
         onKiosk={() => setKiosk(true)}
         onScoreboard={() => setScoreboard(true)}
         onPrint={() => setPrintOpen(true)}
@@ -469,7 +481,7 @@ export default function App() {
           refetchRuleItems={refetchRuleItems}
           sponsors={sponsors}
           refetchSponsors={refetchSponsors}
-          onClose={() => setAdminOpen(false)}
+          onClose={closeAdmin}
         />
       )}
       <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tipsOn} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} sponsorsEnabled={sponsorsEnabled} mediaEnabled={mediaEnabled} />

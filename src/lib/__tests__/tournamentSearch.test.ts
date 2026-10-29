@@ -14,9 +14,9 @@ describe('searchTournaments', () => {
     expect(matchesQuery(list[0], 'firemni MSENO')).toBe(true)
     expect(matchesQuery(list[1], 'pohar')).toBe(false)
   })
-  it('vrací jen veřejné, nejdřív shodu na začátku názvu', () => {
-    expect(searchTournaments(list, 'pohár').map(x => x.id)).toEqual(['1', '4'])
-    expect(searchTournaments(list, 'po').map(x => x.id)).toEqual(['1', '4'])
+  it('vrací vše, co uživatel smí vidět (i vlastní soukromé), nejdřív shodu na začátku názvu', () => {
+    expect(searchTournaments(list, 'pohár').map(x => x.id)).toEqual(['3', '1', '4'])
+    expect(searchTournaments(list, 'po').map(x => x.id)).toEqual(['3', '1', '4'])
   })
   it('krátký dotaz nic nevrací', () => {
     expect(searchTournaments(list, 'p')).toEqual([])
@@ -28,9 +28,9 @@ describe('isOngoing', () => {
     expect(isOngoing(t('a', 'A', { tips_lock_from: '2026-10-29' }), '2026-10-29', new Set())).toBe(true)
     expect(isOngoing(t('a', 'A', { tips_lock_from: '2026-10-28' }), '2026-10-29', new Set())).toBe(false)
   })
-  it('sezóna podle aktivních zápasů, soukromý nikdy', () => {
+  it('sezóna podle aktivních zápasů', () => {
     expect(isOngoing(t('s', 'S', { schedule_mode: 'season' }), '2026-10-29', new Set(['s']))).toBe(true)
-    expect(isOngoing(t('s', 'S', { schedule_mode: 'season', visibility: 'private' }), '2026-10-29', new Set(['s']))).toBe(false)
+    expect(isOngoing(t('s', 'S', { schedule_mode: 'season' }), '2026-10-29', new Set())).toBe(false)
   })
   it('shiftISO přes hranici měsíce', () => {
     expect(shiftISO('2026-10-29', 14)).toBe('2026-11-12')

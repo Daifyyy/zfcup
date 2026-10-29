@@ -120,6 +120,8 @@ Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–1
 - Nikdy `service_role` key ve frontendu; chyby → toast (ne `console.error`)
 - Obrázky nahrávat jen přes `uploadAsset` (`src/lib/storage.ts`) — zmenší je a nastaví dlouhou cache. Nový `React.lazy` obalit `withReloadOnChunkError` (`src/lib/lazyComponent.tsx`), jinak po nasazení spadne.
 - Audit provozu: `docs/AUDIT-2026-10.md` (limity tarifů, měření, P0/P1/P2).
+- **Překryvy přes celou obrazovku na mobilu** (admin apod.) zapisovat do historie (`pushState` + zavření přes `history.back()`), jinak gesto Zpět opustí turnaj. Vzor `openAdmin`/`closeAdmin` v `App.tsx`.
+- **iOS zoom**: políčka i `contenteditable` mají na mobilu 16 px (index.css) a iOS dostává `maximum-scale=1` (`main.tsx`). Nové vstupy nesmí mít `font-size` s `!important` pod 16 px.
 
 **UI / formuláře:**
 - Všechny `<button>` musí mít `type="button"` — bez toho nechtěný form submit

@@ -72,14 +72,21 @@ const splitKey = (key: string) => {
   return { table: key.slice(0, i), filter: key.slice(i + 1) || undefined }
 }
 
-/** Spustí handlery daných klíčů s 80ms debounce (koalescuje dávky, např. 8+ insertů při nasazení). */
+// Sloučení dávky změn + rozložení zátěže (audit 2026-10):
+// jedno uložení zápasu = několik událostí (zápas, góly, asistence, karty smazat+vložit).
+// Každá tabulka se stáhne jednou za dávku, a to s náhodným zpožděním, aby stovky diváků
+// nesáhly do DB ve stejnou milisekundu. Výsledek je u diváka do ~1,5 s.
+const BATCH_MS = 250
+const JITTER_MS = 1000
+
+/** Spustí handlery daných klíčů jednou za dávku (250 ms + náhodně až 1 s). */
 function fire(keys: string[]) {
   for (const key of keys) {
-    if (debounceTimers.has(key)) clearTimeout(debounceTimers.get(key)!)
+    if (debounceTimers.has(key)) continue // už naplánováno → tahle dávka se stáhne jednou
     debounceTimers.set(key, setTimeout(() => {
       debounceTimers.delete(key)
       bindings.get(key)?.forEach(h => h())
-    }, 80))
+    }, BATCH_MS + Math.round(Math.random() * JITTER_MS)))
   }
 }
 
