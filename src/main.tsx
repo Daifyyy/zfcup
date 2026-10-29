@@ -9,6 +9,7 @@ import './styles/landing.css'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ConfirmHost } from './components/ui/ConfirmDialog'
+import { BusyOverlay } from './components/ui/BusyOverlay'
 
 // iOS Safari přibližuje stránku při kliknutí do políčka (a sám ji neoddálí).
 // maximum-scale=1 to vypne, ruční přiblížení dvěma prsty iOS ponechá (od iOS 10 ho nejde zakázat).
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <App />
       <ConfirmHost />
+      <BusyOverlay />
     </ErrorBoundary>
   </StrictMode>,
 )

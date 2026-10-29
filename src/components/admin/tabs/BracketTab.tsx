@@ -7,6 +7,8 @@ import { addMinutes } from '../../../lib/constants'
 import { checkTournamentWinner } from '../../../lib/tipsEval'
 import { getFormatDef, getLegacyFormatDef } from '../../../lib/formats'
 import { getSportDef, sportHasOvertime } from '../../../lib/sports'
+import { changed, diffCounts } from '../../../lib/eventDiff'
+import { withBusy } from '../../../lib/busy'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
@@ -171,73 +173,74 @@ function SlotEditor({
     }
     savingRef.current = true
     setSaving(true)
-    const allPlayers = [...homePlayers, ...awayPlayers]
     try {
-      // 1) Save goals
-      const goalResults = await Promise.all(allPlayers.map(p => {
-        const count = counts[p.id] ?? 0
-        return count > 0
-          ? supabase.from('bracket_goals').upsert({ player_id: p.id, slot_id: slot.id, count, tournament_id: tournamentId }, { onConflict: 'player_id,slot_id' })
-          : supabase.from('bracket_goals').delete().match({ player_id: p.id, slot_id: slot.id })
-      }))
-      const goalErr = goalResults.find(r => r.error)?.error
-      if (goalErr) showToast('Chyba gólů: ' + goalErr.message)
-      else refetchBracketGoals()
-
-      // 2) Save assists
-      if (assistsEnabled) {
-        const assistResults = await Promise.all(allPlayers.map(p => {
-          const count = assistCounts[p.id] ?? 0
-          return count > 0
-            ? supabase.from('bracket_assists').upsert({ player_id: p.id, slot_id: slot.id, count, tournament_id: tournamentId }, { onConflict: 'player_id,slot_id' })
-            : supabase.from('bracket_assists').delete().match({ player_id: p.id, slot_id: slot.id })
-        }))
-        const assistErr = assistResults.find(r => r.error)?.error
-        if (assistErr) showToast('Chyba asistencí: ' + assistErr.message)
-        else refetchBracketAssists()
+      // Stav v DB pro aktuální týmy slotu → ukládají se jen změny, hromadně a najednou
+      const before = {
+        counts: buildCounts(s.home_id, s.away_id),
+        assists: buildAssistCounts(s.home_id, s.away_id),
+        cards: buildCardData(s.home_id, s.away_id),
+        penalties: buildPenaltyData(s.home_id, s.away_id),
       }
-
-      // 3) Save cards
-      if (cardsEnabled) {
-        await supabase.from('bracket_cards').delete().eq('slot_id', slot.id)
+      type Res = { error: { message: string } | null }
+      const tasks: { label: string; run: () => PromiseLike<Res> }[] = []
+      const countTasks = (table: 'bracket_goals' | 'bracket_assists', label: string, b: Record<string, number>, cur: Record<string, number>) => {
+        const d = diffCounts(b, cur)
+        if (d.upserts.length) tasks.push({ label, run: () => supabase.from(table).upsert(
+          d.upserts.map(u => ({ ...u, slot_id: slot.id, tournament_id: tournamentId })), { onConflict: 'player_id,slot_id' }) })
+        if (d.deletes.length) tasks.push({ label, run: () => supabase.from(table).delete().eq('slot_id', slot.id).in('player_id', d.deletes) })
+      }
+      countTasks('bracket_goals', 'góly', before.counts, counts)
+      if (assistsEnabled) countTasks('bracket_assists', 'asistence', before.assists, assistCounts)
+      if (cardsEnabled && changed(before.cards, cardData)) {
         const cardRows: { player_id: string; slot_id: string; type: string; tournament_id: string }[] = []
-        for (const p of allPlayers) {
-          const d = cardData[p.id]
-          if (!d) continue
-          for (let i = 0; i < (d.yellow ?? 0); i++) cardRows.push({ player_id: p.id, slot_id: slot.id, type: 'yellow', tournament_id: tournamentId })
-          if (d.red) cardRows.push({ player_id: p.id, slot_id: slot.id, type: 'red', tournament_id: tournamentId })
+        for (const [player_id, d] of Object.entries(cardData)) {
+          for (let i = 0; i < (d.yellow ?? 0); i++) cardRows.push({ player_id, slot_id: slot.id, type: 'yellow', tournament_id: tournamentId })
+          if (d.red) cardRows.push({ player_id, slot_id: slot.id, type: 'red', tournament_id: tournamentId })
         }
-        if (cardRows.length > 0) {
-          const { error: cErr } = await supabase.from('bracket_cards').insert(cardRows)
-          if (cErr) showToast('Chyba kartiček: ' + cErr.message)
-        }
-        refetchBracketCards()
+        tasks.push({ label: 'karty', run: async () => {
+          const del = await supabase.from('bracket_cards').delete().eq('slot_id', slot.id)
+          if (del.error || !cardRows.length) return del
+          return supabase.from('bracket_cards').insert(cardRows)
+        } })
       }
-
-      // 4) Save penalties
-      if (penaltiesEnabled) {
-        await supabase.from('bracket_penalties').delete().eq('slot_id', slot.id)
+      if (penaltiesEnabled && changed(before.penalties, penaltyData)) {
         const penaltyRows = Object.entries(penaltyData).flatMap(([player_id, minutesList]) =>
-          minutesList.map(minutes => ({ player_id, slot_id: slot.id, minutes, tournament_id: tournamentId }))
-        )
-        if (penaltyRows.length > 0) {
-          const { error: pErr } = await supabase.from('bracket_penalties').insert(penaltyRows)
-          if (pErr) showToast('Chyba trestných minut: ' + pErr.message)
-        }
-        refetchBracketPenalties()
+          minutesList.map(minutes => ({ player_id, slot_id: slot.id, minutes, tournament_id: tournamentId })))
+        tasks.push({ label: 'trestné minuty', run: async () => {
+          const del = await supabase.from('bracket_penalties').delete().eq('slot_id', slot.id)
+          if (del.error || !penaltyRows.length) return del
+          return supabase.from('bracket_penalties').insert(penaltyRows)
+        } })
       }
 
-      // 5) Save slot + auto-advance
       const autoPlayed = s.played || s.home_score > 0 || s.away_score > 0
-      await onSave({
-        home_id: s.home_id, away_id: s.away_id,
-        home_score: s.home_score, away_score: s.away_score,
-        played: autoPlayed,
-        scheduled_time: s.scheduled_time || null,
-        referee_id: refereeId || null,
-        decided_in: hasOvertime ? decidedIn : null,
-        ...(isSeason ? { match_date: s.match_date || null } : {}),
+      const failed = await withBusy('Ukládám zápas…', async () => {
+        const results = await Promise.all(tasks.map(t => Promise.resolve(t.run()).then(
+          r => ({ label: t.label, error: r.error }),
+          (e: unknown) => ({ label: t.label, error: { message: e instanceof Error ? e.message : String(e) } }),
+        )))
+        refetchBracketGoals()
+        if (assistsEnabled) refetchBracketAssists()
+        if (cardsEnabled) refetchBracketCards()
+        if (penaltiesEnabled) refetchBracketPenalties()
+        const bad = results.filter(r => r.error)
+        if (bad.length) return bad
+        // Skóre slotu + postup vítěze (formát play-off)
+        await onSave({
+          home_id: s.home_id, away_id: s.away_id,
+          home_score: s.home_score, away_score: s.away_score,
+          played: autoPlayed,
+          scheduled_time: s.scheduled_time || null,
+          referee_id: refereeId || null,
+          decided_in: hasOvertime ? decidedIn : null,
+          ...(isSeason ? { match_date: s.match_date || null } : {}),
+        })
+        return []
       })
+      if (failed.length) {
+        showToast(`Neuloženo: ${failed.map(f => f.label).join(', ')} — ${failed[0].error!.message}`)
+        return
+      }
     } catch (e: unknown) {
       showToast('Chyba: ' + (e instanceof Error ? e.message : String(e)))
     } finally {

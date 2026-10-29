@@ -51,6 +51,7 @@ import { lazyComponent } from './lib/lazyComponent'
 import { detectLegalDocFromUrl, type LegalDoc } from './lib/legal'
 import { consumeCodeFromUrl } from './lib/accessCodes'
 import { onPoll } from './lib/poller'
+import { isBusy } from './lib/busy'
 import SiteFooter from './components/layout/SiteFooter'
 
 const PrintBulletin = lazyComponent(() => import('./components/public/PrintBulletin'))
@@ -105,6 +106,8 @@ export default function App() {
   const [legalDoc, setLegalDoc] = useState<LegalDoc | ''>(() => detectLegalDocFromUrl())
   const [tab, setTab] = useState<Tab>('overview')
   const [adminOpen, setAdminOpen] = useState(false)
+  const adminOpenRef = useRef(false)
+  adminOpenRef.current = adminOpen
   const [kiosk, setKiosk] = useState(() => new URLSearchParams(window.location.search).get('kiosk') === '1')
   const [scoreboard, setScoreboard] = useState(false)
   const [printOpen, setPrintOpen] = useState(false)
@@ -171,6 +174,7 @@ export default function App() {
     setAdminOpen(true)
   }, [])
   const closeAdmin = useCallback(() => {
+    if (isBusy()) return // probíhá ukládání výsledku — admin nezavírat
     if (window.history.state?.admin) window.history.back() // popstate admin zavře
     else setAdminOpen(false)
   }, [])
@@ -205,6 +209,11 @@ export default function App() {
   useEffect(() => {
     window.history.replaceState({ tab: 'overview' }, '')
     const handlePopstate = (e: PopStateEvent) => {
+      // Během ukládání výsledku krok Zpět zrušit (vrátit stav) — nic se nesmí zavřít v půlce
+      if (isBusy()) {
+        window.history.pushState({ ...(e.state ?? {}), ...(adminOpenRef.current ? { admin: true } : {}) }, '')
+        return
+      }
       setTournamentId(detectTournamentIdFromUrl())
       setCompetitionSlug(detectCompetitionSlugFromUrl())
       setClubSlug(detectClubSlugFromUrl())

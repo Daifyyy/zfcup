@@ -365,3 +365,9 @@
 .acf__row { display: flex; gap: .5rem; }
 .acf__input { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .acf__err { margin: .4rem 0 0; font-size: .82rem; color: var(--loss); }
+
+/* ── Blokující ukládání (BusyOverlay) ───────────────────── */
+.busy { position: fixed; inset: 0; z-index: 6000; background: rgba(11,18,32,.45); display: flex; align-items: center; justify-content: center; padding: 1rem; cursor: progress; }
+.busy__panel { display: flex; flex-direction: column; align-items: center; gap: .7rem; padding: 1.4rem 1.8rem; background: var(--surface-1); border-radius: var(--radius-lg); box-shadow: var(--shadow-panel); border-top: 4px solid var(--brand); text-align: center; }
+.busy__text { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; text-transform: uppercase; }
+.busy__hint { font-size: .8rem; color: var(--ink-muted); }

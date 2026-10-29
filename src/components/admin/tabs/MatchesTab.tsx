@@ -19,6 +19,8 @@ import { calcGroupStandings } from '../../../lib/standings'
 import { exportSchedule, exportRefCards } from '../../../lib/exportExcel'
 import { checkGroupSpecialTips, checkLeagueTournamentWinner } from '../../../lib/tipsEval'
 import { getSportDef, sportHasOvertime } from '../../../lib/sports'
+import { changed, diffCounts } from '../../../lib/eventDiff'
+import { withBusy } from '../../../lib/busy'
 
 interface Props {
   teams: Team[]
@@ -136,6 +138,8 @@ function InlineMatchEditor({
     return p
   }
   const [penaltyData, setPenaltyData] = useState<Record<string, PenaltyMinutes[]>>(initPenaltyData)
+  // Stav při otevření editoru — ukládají se jen změny proti němu
+  const initial = useRef({ counts, assistCounts, cardData, penaltyData })
 
   const addPenalty = (pid: string, minutes: PenaltyMinutes) =>
     setPenaltyData(p => ({ ...p, [pid]: [...(p[pid] ?? []), minutes] }))
@@ -176,19 +180,23 @@ function InlineMatchEditor({
 
   const saveAll = async () => {
     if (savingRef.current) return
-    savingRef.current = true
-    setSaving(true)
     const autoPlayed = played || homeScore > 0 || awayScore > 0
 
     if (autoPlayed && !sportDef.standings.allowDraws && homeScore === awayScore) {
       showToast('Zápas nemůže skončit nerozhodně — zadejte konečné skóre po prodloužení/nájezdech')
-      savingRef.current = false
-      setSaving(false)
       return
     }
+    savingRef.current = true
+    setSaving(true)
+    const t0 = performance.now()
+    const tid = tournament?.id
+    const init = initial.current
 
-    // 1) Uložit skóre zápasu
-    const { error: matchErr } = await supabase.from('matches').update({
+    // Všechny části najednou; u událostí jen změny a hromadně (dřív 2 dotazy na každého hráče)
+    type Res = { error: { message: string } | null }
+    const tasks: { label: string; run: () => PromiseLike<Res> }[] = []
+
+    tasks.push({ label: 'skóre', run: () => supabase.from('matches').update({
       home_score: homeScore,
       away_score: awayScore,
       played: autoPlayed,
@@ -198,84 +206,77 @@ function InlineMatchEditor({
       decided_in: hasOvertime ? decidedIn : null,
       // match_date jen v sezónním režimu (sloupec z migrace 09)
       ...(isSeason ? { match_date: matchDate || null } : {}),
-    }).eq('id', match.id)
+    }).eq('id', match.id) })
 
-    if (matchErr) { showToast('Chyba skóre: ' + matchErr.message); savingRef.current = false; setSaving(false); return }
-
-    // 2) Uložit góly hráčů — paralelně
-    const goalResults = await Promise.all(
-      Object.entries(counts).map(([player_id, count]) =>
-        count > 0
-          ? supabase.from('goals').upsert({ player_id, match_id: match.id, count, tournament_id: tournament?.id }, { onConflict: 'player_id,match_id' })
-          : supabase.from('goals').delete().match({ player_id, match_id: match.id })
-      )
-    )
-    const goalErr = goalResults.find(r => r.error)?.error
-    if (goalErr) { showToast('Chyba gólů: ' + goalErr.message); savingRef.current = false; setSaving(false); return }
-
-    // 3) Asistence (pokud modul zapnut)
-    if (tournament?.assists_enabled) {
-      const assistResults = await Promise.all(
-        Object.entries(assistCounts).map(([player_id, count]) =>
-          count > 0
-            ? supabase.from('assists').upsert({ player_id, match_id: match.id, count, tournament_id: tournament?.id }, { onConflict: 'player_id,match_id' })
-            : supabase.from('assists').delete().match({ player_id, match_id: match.id })
-        )
-      )
-      const assistErr = assistResults.find(r => r.error)?.error
-      if (assistErr) { showToast('Chyba asistencí: ' + assistErr.message); savingRef.current = false; setSaving(false); return }
-      refetchAssists()
+    const countTasks = (table: 'goals' | 'assists', label: string, before: Record<string, number>, after: Record<string, number>) => {
+      const d = diffCounts(before, after)
+      if (d.upserts.length) tasks.push({ label, run: () => supabase.from(table).upsert(
+        d.upserts.map(u => ({ ...u, match_id: match.id, tournament_id: tid })), { onConflict: 'player_id,match_id' }) })
+      if (d.deletes.length) tasks.push({ label, run: () => supabase.from(table).delete().eq('match_id', match.id).in('player_id', d.deletes) })
     }
+    countTasks('goals', 'góly', init.counts, counts)
+    if (tournament?.assists_enabled) countTasks('assists', 'asistence', init.assistCounts, assistCounts)
 
-    // 4) Kartičky (pokud modul zapnut) — smazat staré, vložit nové
-    if (tournament?.cards_enabled) {
-      await supabase.from('cards').delete().eq('match_id', match.id)
-      const newCards = Object.entries(cardData).flatMap(([player_id, { yellow, red }]) => {
-        if (yellow === 2) return [{ player_id, match_id: match.id, type: 'yellow_red' as const, tournament_id: tournament?.id }]
-        if (red === 1) return [{ player_id, match_id: match.id, type: 'red' as const, tournament_id: tournament?.id }]
-        if (yellow === 1) return [{ player_id, match_id: match.id, type: 'yellow' as const, tournament_id: tournament?.id }]
+    // Karty a tresty: jen při změně — smazat staré a vložit nové (v rámci jedné úlohy za sebou)
+    if (tournament?.cards_enabled && changed(init.cardData, cardData)) {
+      type CardRow = { player_id: string; match_id: string; type: 'yellow' | 'red' | 'yellow_red'; tournament_id: string | undefined }
+      const newCards = Object.entries(cardData).flatMap(([player_id, { yellow, red }]): CardRow[] => {
+        if (yellow === 2) return [{ player_id, match_id: match.id, type: 'yellow_red' as const, tournament_id: tid }]
+        if (red === 1) return [{ player_id, match_id: match.id, type: 'red' as const, tournament_id: tid }]
+        if (yellow === 1) return [{ player_id, match_id: match.id, type: 'yellow' as const, tournament_id: tid }]
         return []
       })
-      if (newCards.length > 0) {
-        const { error: cardErr } = await supabase.from('cards').insert(newCards)
-        if (cardErr) { showToast('Chyba kartiček: ' + cardErr.message); savingRef.current = false; setSaving(false); return }
-      }
-      refetchCards()
+      tasks.push({ label: 'karty', run: async () => {
+        const del = await supabase.from('cards').delete().eq('match_id', match.id)
+        if (del.error || !newCards.length) return del
+        return supabase.from('cards').insert(newCards)
+      } })
     }
-
-    // 5) Trestné minuty (pokud modul zapnut) — smazat staré, vložit nové
-    if (tournament?.penalty_minutes_enabled) {
-      await supabase.from('penalties').delete().eq('match_id', match.id)
+    if (tournament?.penalty_minutes_enabled && changed(init.penaltyData, penaltyData)) {
       const newPenalties = Object.entries(penaltyData).flatMap(([player_id, minutesList]) =>
-        minutesList.map(minutes => ({ player_id, match_id: match.id, minutes, tournament_id: tournament?.id }))
-      )
-      if (newPenalties.length > 0) {
-        const { error: penaltyErr } = await supabase.from('penalties').insert(newPenalties)
-        if (penaltyErr) { showToast('Chyba trestných minut: ' + penaltyErr.message); savingRef.current = false; setSaving(false); return }
-      }
-      refetchPenalties()
+        minutesList.map(minutes => ({ player_id, match_id: match.id, minutes, tournament_id: tid })))
+      tasks.push({ label: 'trestné minuty', run: async () => {
+        const del = await supabase.from('penalties').delete().eq('match_id', match.id)
+        if (del.error || !newPenalties.length) return del
+        return supabase.from('penalties').insert(newPenalties)
+      } })
     }
 
-    refetchMatches()
-    refetchGoals()
     try {
-      if (autoPlayed && match.group_id && group && tournament?.id)
-        await checkGroupSpecialTips(match.group_id, group, sportDef, tournament.id)
-      const isLeagueNoPlayoff = tournament?.format === 'league' && !(tournament?.league_has_playoff ?? true)
-      if (isLeagueNoPlayoff && autoPlayed && tournament?.id) {
-        const ligaGroup = groups.find(g => g.name === 'Liga')
-        if (ligaGroup) {
-          const evaluated = await checkLeagueTournamentWinner(ligaGroup, sportDef, tournament.id)
-          if (evaluated) { showToast('Uloženo ✓ · Vítěz ligy vyhodnocen'); return }
+      const results = await withBusy('Ukládám zápas…', () => Promise.all(tasks.map(t => Promise.resolve(t.run()).then(
+        r => ({ label: t.label, error: r.error }),
+        (e: unknown) => ({ label: t.label, error: { message: e instanceof Error ? e.message : String(e) } }),
+      ))))
+      refetchMatches(); refetchGoals()
+      if (tournament?.assists_enabled) refetchAssists()
+      if (tournament?.cards_enabled) refetchCards()
+      if (tournament?.penalty_minutes_enabled) refetchPenalties()
+
+      const failed = results.filter(r => r.error)
+      if (failed.length) {
+        // Editor zůstane otevřený, aby šlo uložit znovu
+        showToast(`Neuloženo: ${failed.map(f => f.label).join(', ')} — ${failed[0].error!.message}`)
+        initial.current = { counts, assistCounts, cardData, penaltyData }
+        return
+      }
+
+      // Tipovačka jen když je v turnaji zapnutá (vyhodnocení stojí několik dalších dotazů)
+      let toast = `Uloženo ✓ (${((performance.now() - t0) / 1000).toFixed(1)} s)`
+      if (tournament?.tips_enabled && autoPlayed && tid) {
+        try {
+          if (match.group_id && group) await checkGroupSpecialTips(match.group_id, group, sportDef, tid)
+          const isLeagueNoPlayoff = tournament.format === 'league' && !(tournament.league_has_playoff ?? true)
+          const ligaGroup = groups.find(g => g.name === 'Liga')
+          if (isLeagueNoPlayoff && ligaGroup && await checkLeagueTournamentWinner(ligaGroup, sportDef, tid)) toast = 'Uloženo ✓ · Vítěz ligy vyhodnocen'
+        } catch {
+          toast = 'Uloženo ✓ (tipy neaktualizovány)'
         }
       }
-      showToast('Uloženo ✓')
-    } catch {
-      showToast('Uloženo ✓ (tipy neaktualizovány)')
+      showToast(toast)
+      onClose()
     } finally {
       savingRef.current = false
       setSaving(false)
-      onClose()
     }
   }
 
