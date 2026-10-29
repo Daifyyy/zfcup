@@ -84,7 +84,7 @@ Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'foo
 - **Auth → "Allow new users to sign up" = VYPNUTO** — nové účty přes Supabase dashboard → Invite user
 
 ## RLS a DB záloha
-Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–17_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje, 16 = odstranění cizích politik čtení, 17 = vypnutí anonymních zápisů tipovačky). **Žádné další SELECT politiky na tabulkách turnaje nevytvářet** (ani v dashboardu) — sčítají se a obešly by soukromí.
+Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–18_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje, 16 = odstranění cizích politik čtení, 17+18 = vypnutí anonymních zápisů tipovačky). Pozor: živá DB obsahovala politiky s jinými názvy než v db-backup — nové migrace mažou podle role/příkazu (`pg_policies`), ne podle názvu. **Žádné další SELECT politiky na tabulkách turnaje nevytvářet** (ani v dashboardu) — sčítají se a obešly by soukromí.
 - **Čtení**: SELECT pro všechny (anon) u veřejných turnajů; soukromé jen s kódem / vlastník (migrace 15).
 - **Zápis (migrace 11)**: `can_edit_tournament(tournament_id)` = vlastník turnaje (`tournament.owner_id`) nebo správce platformy (`is_platform_admin()`); soutěže/kluby/osoby přes `can_edit_competition`. Storage: `can_edit_storage_path(name)` — nové soubory ukládat pod `tournaments/{turnajId}/…` (`src/lib/storage.ts`: `tournamentAssetPath`, `uploadAsset`, `removeAssetByUrl`).
 - **Frontend**: `useAuthRole()` (`session`, `isPlatformAdmin`, `canEditTournament(ownerId)`); `App.tsx` `canEdit` řídí admin panel (cizí turnaj → „Bez oprávnění“). Výběr soutěže pro nový ročník jen z vlastních.
