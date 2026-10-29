@@ -10,6 +10,7 @@ import { Badge } from '../ui/Badge'
 import { TeamLogo } from '../ui/TeamLogo'
 import Empty from '../ui/Empty'
 import SiteFooter from '../layout/SiteFooter'
+import AccessCodeForm from '../ui/AccessCodeForm'
 
 type CTab = 'editions' | 'table' | 'records' | 'players'
 
@@ -46,7 +47,13 @@ export default function CompetitionPage({ slug, onOpenTournament, onHome }: Prop
     return (
       <div className="lp">
         <div className="lp-wrap" style={{ padding: '4rem 1rem' }}>
-          <Empty text={!h.available ? 'Soutěže zatím nejsou na této platformě aktivní.' : 'Soutěž nebyla nalezena.'} />
+          <Empty text={!h.available ? 'Soutěže zatím nejsou na této platformě aktivní.' : 'Soutěž nebyla nalezena, nebo jsou všechny její ročníky soukromé.'} />
+          {h.available && (
+            <div style={{ maxWidth: 380, margin: '1rem auto 0' }}>
+              <p style={{ fontSize: '.85rem', color: 'var(--ink-muted)', textAlign: 'center', margin: 0 }}>Máte-li od pořadatele přístupový kód některého ročníku, zadejte ho:</p>
+              <AccessCodeForm onUnlocked={() => window.location.reload()} />
+            </div>
+          )}
           <div style={{ textAlign: 'center', marginTop: '1rem' }}>
             <button type="button" className="ui-btn ui-btn--secondary" onClick={onHome}><ChevronLeft size={16} />Zpět na přehled</button>
           </div>
