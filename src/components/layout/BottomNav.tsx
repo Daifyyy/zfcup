@@ -20,7 +20,8 @@ const ICONS: Record<string, LucideIcon> = {
   media: Newspaper,
 }
 
-const PRIMARY: Tab[] = ['overview', 'results', 'standings', 'statistics']
+// Hlavní lišta: Přehled, Zápasy, Tabulka, Pavouk (bez pavouka → Statistiky); zbytek ve „Více“
+const PRIMARY_BASE: Tab[] = ['overview', 'results', 'standings']
 
 interface Props {
   tab: Tab
@@ -35,7 +36,8 @@ interface Props {
 export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true, sponsorsEnabled, mediaEnabled }: Props) {
   const [moreOpen, setMoreOpen] = useState(false)
   const all = buildPublicTabs({ showBracket, tipsEnabled, sponsorsEnabled, mediaEnabled })
-  const primary = all.filter(t => PRIMARY.includes(t.value))
+  const PRIMARY: Tab[] = [...PRIMARY_BASE, all.some(t => t.value === 'bracket') ? 'bracket' : 'statistics']
+  const primary = PRIMARY.map(v => all.find(t => t.value === v)).filter((t): t is (typeof all)[number] => !!t)
   const secondary = all.filter(t => !PRIMARY.includes(t.value))
   const moreActive = secondary.some(t => t.value === tab)
 

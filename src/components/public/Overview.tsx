@@ -149,10 +149,21 @@ export default function Overview({
       {/* ── Klíčová čísla ─────────────────────────────── */}
       {hasBoard && (
         <div className="ov-kpis">
-          <div className="ov-kpi"><b>{teams.length}</b><span>Týmů</span></div>
-          <div className="ov-kpi"><b>{playedCount}<small>/{fixtures.length}</small></b><span>Odehraných zápasů</span></div>
-          <div className="ov-kpi"><b>{totalGoals}</b><span>Gólů</span></div>
-          <div className="ov-kpi"><b>{playedCount ? (totalGoals / playedCount).toFixed(1) : '—'}</b><span>Gólů na zápas</span></div>
+          <button type="button" className="ov-kpi ov-kpi--link" onClick={() => onTab?.('teams')}>
+            <b>{teams.length}</b><span>Týmů</span><ChevronRight size={14} className="ov-kpi__go" />
+          </button>
+          <button type="button" className="ov-kpi ov-kpi--link" onClick={() => onTab?.('results')}>
+            <b>{playedCount}<small>/{fixtures.length}</small></b><span>Odehraných zápasů</span><ChevronRight size={14} className="ov-kpi__go" />
+          </button>
+          <button type="button" className="ov-kpi ov-kpi--link" onClick={() => onTab?.('statistics')}>
+            <b>{totalGoals}</b><span>Gólů{playedCount > 0 && <em> · {(totalGoals / playedCount).toFixed(1)} na zápas</em>}</span><ChevronRight size={14} className="ov-kpi__go" />
+          </button>
+          <button type="button" className="ov-kpi ov-kpi--link" onClick={() => onTab?.('statistics')}>
+            {scorers[0]
+              ? <b className="ov-kpi__name" title={scorers[0].player.name}><span>{scorers[0].player.name}</span><small>{scorers[0].goals}</small></b>
+              : <b>—</b>}
+            <span>Nejlepší střelec</span><ChevronRight size={14} className="ov-kpi__go" />
+          </button>
         </div>
       )}
 

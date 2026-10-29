@@ -1,6 +1,8 @@
 import type { MouseEvent } from 'react'
-import { BRAND } from '../../lib/brand'
+import { BRAND, contactHref } from '../../lib/brand'
 import { LEGAL_DOCS, OPERATOR, legalPath, type LegalDoc } from '../../lib/legal'
+
+const contact = contactHref()
 
 /** Přechod na právní stránku bez znovunačtení (App poslouchá popstate). */
 export function goToLegal(doc: LegalDoc, e?: MouseEvent) {
@@ -26,6 +28,7 @@ export default function SiteFooter({ variant = 'dark' }: { variant?: 'dark' | 'i
       {LEGAL_DOCS.map(d => (
         <a key={d.id} href={legalPath(d.id)} onClick={e => goToLegal(d.id, e)}>{d.short}</a>
       ))}
+      {contact && <a href={contact}>Kontakt</a>}
     </nav>
   )
 

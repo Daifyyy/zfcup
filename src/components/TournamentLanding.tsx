@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { SPORTS, getSportDef, type SportId } from '../lib/sports'
-import { BRAND } from '../lib/brand'
+import { BRAND, contactHref } from '../lib/brand'
 import { useCompetitions } from '../hooks/useCompetitions'
 import { useAuthRole } from '../hooks/useAuthRole'
 import { usePlatformSettings } from '../hooks/usePlatformSettings'
@@ -11,8 +11,10 @@ import { lazyComponent } from '../lib/lazyComponent'
 import { FEATURES, type DemoKey } from '../demo/features'
 import SiteFooter from './layout/SiteFooter'
 import {
-  ArrowRight, CalendarDays, Shield, ChevronRight, Lock, LogOut, MapPin, Plus, Settings2, Trophy,
+  ArrowRight, CalendarDays, Shield, ChevronRight, Lock, LogOut, Mail, MapPin, Plus, Settings2, Trophy,
 } from 'lucide-react'
+
+const contact = contactHref()
 
 const ClubLibrary = lazyComponent(() => import('./clubs/ClubLibrary'))
 const DemoModal = lazyComponent(() => import('../demo/DemoModal'))
@@ -250,7 +252,8 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
               na webu i na velké obrazovce v hale. Profesionální prezentace pro hráče, diváky i partnery.
             </p>
             <div className="lp-hero__cta">
-              <a className="ui-btn ui-btn--primary" href="#turnaje">Prohlédnout turnaje<ArrowRight size={16} /></a>
+              {contact && <a className="ui-btn ui-btn--primary" href={contact}><Mail size={16} />Chci turnaj</a>}
+              <a className={contact ? 'ui-btn ui-btn--chrome' : 'ui-btn ui-btn--primary'} href="#turnaje">Prohlédnout turnaje<ArrowRight size={16} /></a>
               {!session && (
                 <button type="button" className="ui-btn ui-btn--chrome" onClick={() => { setShowLogin(true); setLoginError('') }}>
                   Přihlášení pořadatele
@@ -300,7 +303,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
             <p>Od rozlosování po vyhlášení vítěze — bez tabulek v Excelu a bez instalace.</p>
           </div>
           <div className="lp-features">
-            {FEATURES.filter(f => f.key !== 'tips' || platform.tipsEnabled).map(f => {
+            {FEATURES.map(f => {
               const Icon = f.icon
               return (
                 <button key={f.key} type="button" className="lp-feature lp-feature--demo" onClick={() => setDemo(f.key)}>
@@ -312,6 +315,15 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
               )
             })}
           </div>
+          {contact && (
+            <div className="lp-cta-band">
+              <div>
+                <h3>Chcete vlastní turnaj?</h3>
+                <p>Napište nám — turnaj připravíme a pomůžeme s nastavením.</p>
+              </div>
+              <a className="ui-btn ui-btn--primary" href={contact}><Mail size={16} />Chci turnaj</a>
+            </div>
+          )}
         </div>
       </section>
 
@@ -450,7 +462,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
       )}
 
       {/* ── Ukázka funkce (demo) ─────────────────────── */}
-      {demo && <DemoModal initial={demo} tipsEnabled={platform.tipsEnabled} onClose={() => setDemo(null)} />}
+      {demo && <DemoModal initial={demo} onClose={() => setDemo(null)} />}
 
       {/* ── Knihovna klubů organizátora ─────────────── */}
       {showClubs && session && <ClubLibrary ownerId={session.user.id} onClose={() => setShowClubs(false)} />}

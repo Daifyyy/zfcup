@@ -1,7 +1,7 @@
 // Ukázka funkce na úvodní stránce: skutečné komponenty aplikace nad ukázkovými daty
 // (src/demo/mockTournament.ts) — žádné dotazy do DB, nic se neukládá.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, FileSpreadsheet, ImageDown, Mail, MousePointerClick, Printer, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Mail, MousePointerClick, X } from 'lucide-react'
 import { buildDemoData } from './mockTournament'
 import { FEATURES, type DemoKey } from './features'
 import { TournamentDataContext, DetailContext, useDetail, type DetailTarget } from '../lib/TournamentDataContext'
@@ -12,13 +12,11 @@ import { getSportDef } from '../lib/sports'
 import { getTitlePartner, sortByTier } from '../lib/partners'
 import { fixtureId } from '../lib/details'
 import { TOURNAMENT_FORMATS } from '../lib/formats'
-import { BRAND } from '../lib/brand'
+import { contactHref } from '../lib/brand'
 import { Card } from '../components/ui/Card'
 import { MatchRow } from '../components/ui/MatchRow'
-import { PartnerStrip } from '../components/ui/PartnerStrip'
 import Standings from '../components/public/Standings'
 import Bracket from '../components/public/Bracket'
-import Sponsors from '../components/public/Sponsors'
 import Scoreboard from '../components/public/Scoreboard'
 import TeamDetailDrawer from '../components/public/TeamDetailDrawer'
 import MatchDetailDrawer from '../components/public/MatchDetailDrawer'
@@ -26,8 +24,6 @@ import { MatchGraphic, TableGraphic, FORMAT_SIZE } from '../components/share/tem
 
 interface Props {
   initial: DemoKey
-  /** Tipovačka se nabízí jen při globálně zapnuté tipovačce */
-  tipsEnabled: boolean
   onClose: () => void
 }
 
@@ -52,8 +48,8 @@ function Scaled({ w, h, children, className }: { w: number; h: number; children:
   )
 }
 
-export default function DemoModal({ initial, tipsEnabled, onClose }: Props) {
-  const features = useMemo(() => FEATURES.filter(f => f.key !== 'tips' || tipsEnabled), [tipsEnabled])
+export default function DemoModal({ initial, onClose }: Props) {
+  const features = FEATURES
   const [key, setKey] = useState<DemoKey>(initial)
   const [detail, setDetail] = useState<DetailTarget | null>(null)
   const data = useMemo(() => buildDemoData(), [])
@@ -79,9 +75,7 @@ export default function DemoModal({ initial, tipsEnabled, onClose }: Props) {
   }, [detail, index, features, onClose])
 
   const Icon = feature.icon
-  const mail = BRAND.supportEmail
-    ? `mailto:${BRAND.supportEmail}?subject=${encodeURIComponent(`Chci turnaj na platformě ${BRAND.name}`)}`
-    : null
+  const mail = contactHref()
 
   return (
     <div className="lp-modal dm" onClick={onClose}>
@@ -184,17 +178,6 @@ function Preview({ k, data }: { k: DemoKey; data: ReturnType<typeof buildDemoDat
           />
         </Scaled>
       )
-    case 'partners':
-      return (
-        <div className="dm-col">
-          <div className="dm-presented">
-            <span>Presented by</span>
-            <img src={getTitlePartner(sponsors)?.logo_url} alt="" />
-          </div>
-          <Sponsors sponsors={sponsors} />
-          <PartnerStrip sponsors={sortedSponsors} />
-        </div>
-      )
     case 'share': {
       const final = bracketSlots.find(s => s.id === 's-sf2')!
       const rows = calcGroupStandings(groups[0], matches, getSportDef(tournament.sport))
@@ -219,47 +202,7 @@ function Preview({ k, data }: { k: DemoKey; data: ReturnType<typeof buildDemoDat
             </div>
           </div>
       )
-    case 'mobile': {
-      const final = bracketSlots.find(s => s.id === 's-f')!
-      return (
-        <div className="dm-phone-wrap">
-          <div className="dm-phone">
-            <div className="dm-phone__screen">
-              <MatchDetailDrawer matchId={final.id} onClose={() => {}} allowLink={false} />
-            </div>
-          </div>
-        </div>
-      )
-    }
-    case 'media':
-      return (
-        <div className="dm-col">
-          <Card title="Pro média">
-            <div className="dm-press">
-              <div>
-                <div className="dm-press__label">Kontakt pro novináře</div>
-                <div className="dm-press__name">Jana Svobodová</div>
-                <div className="dm-press__meta">media@firemnipohar.cz · +420 777 123 456</div>
-                <p className="dm-press__note">Akreditace na místě u hlavního vstupu, focení u hřiště povoleno.</p>
-              </div>
-              <div className="dm-press__dl">
-                <span className="dm-press__btn"><FileSpreadsheet size={16} />Výsledkový servis (Excel)</span>
-                <span className="dm-press__btn"><Printer size={16} />Bulletin k tisku</span>
-                <span className="dm-press__btn"><ImageDown size={16} />Loga partnerů</span>
-              </div>
-            </div>
-          </Card>
-          <Card padded={false} title="Výsledkový servis">{fixtures.filter(f => f.played).slice(-5).reverse().map(row)}</Card>
-        </div>
-      )
-    case 'tips':
     default:
-      return (
-        <div className="dm-col">
-          <Card padded={false} title="Zápasy k tipování">
-            {fixtures.slice(-6).map(row)}
-          </Card>
-        </div>
-      )
+      return null
   }
 }

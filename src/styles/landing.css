@@ -229,6 +229,9 @@
 }
 
 /* Dlaždice funkcí jako tlačítka do ukázky */
+.lp-cta-band { margin-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem 1.5rem; flex-wrap: wrap; padding: 1.2rem 1.4rem; background: var(--chrome); color: var(--chrome-ink); border-radius: var(--radius-lg); border-left: 4px solid var(--brand); }
+.lp-cta-band h3 { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; line-height: 1.05; }
+.lp-cta-band p { margin-top: .25rem; font-size: .9rem; color: var(--chrome-muted); }
 .lp-feature--demo { font: inherit; color: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; transition: border-color .15s, box-shadow .15s, transform .15s; }
 .lp-feature--demo:hover { border-color: var(--brand-line); box-shadow: var(--shadow-lg); transform: translateY(-2px); }
 .lp-feature--demo:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
@@ -261,26 +264,20 @@
 .dm-tv { border-radius: var(--radius); box-shadow: var(--shadow-lg); }
 .dm-share { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .dm-share__item { border-radius: var(--radius); box-shadow: var(--shadow-lg); }
-.dm-presented { display: flex; align-items: center; gap: .8rem; padding: .8rem 1rem; background: var(--chrome); color: var(--chrome-muted); border-radius: var(--radius); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
-.dm-presented img { height: 44px; border-radius: var(--radius-sm); }
 .dm-formats { display: flex; flex-wrap: wrap; gap: .4rem; }
 .dm-format { font-size: .74rem; font-weight: 600; padding: .3rem .6rem; border-radius: 999px; background: var(--surface-1); border: 1px solid var(--line); color: var(--ink); }
-.dm-phone-wrap { display: flex; justify-content: center; padding: .5rem 0; }
-.dm-phone { width: 340px; height: 640px; padding: 12px; border-radius: 36px; background: #0b1220; box-shadow: var(--shadow-lg); }
-.dm-phone__screen { position: relative; width: 100%; height: 100%; border-radius: 26px; overflow: hidden; transform: translateZ(0); background: var(--surface-0); }
-.dm-phone__screen .tm-drawer { background: transparent; }
-.dm-phone__screen .tm-drawer__panel { width: 100%; }
 @media (max-width: 860px) {
-  .dm-body { grid-template-columns: 1fr; overflow-y: auto; }
-  .dm-stage { overflow: visible; }
-  .dm-info { border-left: none; border-top: 1px solid var(--line); }
+  /* Mobil: krátký popis s ovládáním nahoře, náhled pod ním (bez gridu — řádky se nesmí smrštit pod obsah) */
+  .dm-body { display: flex; flex-direction: column; overflow-y: auto; }
+  .dm-stage { overflow: visible; flex: none; padding: .8rem; }
+  .dm-info { order: -1; flex: none; overflow: visible; border-left: none; border-bottom: 1px solid var(--line); padding: .9rem 1rem; gap: .6rem; }
+  .dm-info__points, .dm-info__note { display: none; }
+  .dm-info__lead { font-size: .92rem; }
+  .dm-nav { margin-top: 0; }
   .dm-share { grid-template-columns: 1fr; }
 }
-.dm-press { display: grid; grid-template-columns: 1fr auto; gap: 1.2rem; align-items: start; }
-.dm-press__label { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-muted); }
-.dm-press__name { font-weight: 700; font-size: 1.05rem; margin-top: .2rem; }
-.dm-press__meta { font-size: .85rem; color: var(--ink-muted); }
-.dm-press__note { font-size: .82rem; margin: .6rem 0 0; color: var(--ink); }
-.dm-press__dl { display: flex; flex-direction: column; gap: .4rem; }
-.dm-press__btn { display: inline-flex; align-items: center; gap: .45rem; padding: .5rem .8rem; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface-1); font-size: .82rem; font-weight: 600; white-space: nowrap; }
-@media (max-width: 600px) { .dm-press { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+  .lp-modal.dm { padding: 0; }
+  .dm .dm-panel { width: 100%; height: 100%; max-height: none; border-radius: 0; }
+  .dm-stage { padding: .6rem .4rem; }
+}
