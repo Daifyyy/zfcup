@@ -6,13 +6,15 @@ import type { Tournament } from '../../hooks/useTournament'
 import type { StandingRow } from '../../lib/standings'
 import ShareModal from './ShareModal'
 import type { SideEvents } from '../../lib/details'
-import { LeadersGraphic, MatchGraphic, TableGraphic, type LeaderRow } from './templates'
+import { LeadersGraphic, MatchGraphic, TableGraphic, TournamentGraphic, type LeaderRow } from './templates'
 
 interface Base {
   tournament: Tournament | null
   sponsors: Sponsor[]
   onClose: () => void
   showToast?: (msg: string) => void
+  /** Odkaz pro „Kopírovat odkaz“ */
+  url?: string
 }
 
 function slug(s: string): string {
@@ -23,15 +25,21 @@ export function ShareMatch(p: Base & {
   home?: Team; away?: Team; homeScore: number; awayScore: number; label: string
   decidedIn?: 'regulation' | 'ot' | 'so' | null
   live?: boolean
+  /** Zápas ještě nezačal → grafika „Hrajeme“ s časem místo skóre */
+  upcoming?: boolean
+  time?: string | null
   events?: { home: SideEvents; away: SideEvents }
 }) {
-  const title = `${p.home?.name ?? '—'} ${p.homeScore}:${p.awayScore} ${p.away?.name ?? '—'}`
+  const title = p.upcoming
+    ? `${p.home?.name ?? 'Určí se'} – ${p.away?.name ?? 'Určí se'}`
+    : `${p.home?.name ?? '—'} ${p.homeScore}:${p.awayScore} ${p.away?.name ?? '—'}`
   return (
     <ShareModal
       title={title}
       fileName={slug(`vysledek-${p.home?.name}-${p.away?.name}`)}
       onClose={p.onClose}
       showToast={p.showToast}
+      url={p.url}
       render={format => <MatchGraphic format={format} {...p} />}
     />
   )
@@ -44,6 +52,7 @@ export function ShareTable(p: Base & { groupName: string; rows: StandingRow[]; t
       fileName={slug(`tabulka-${p.groupName}`)}
       onClose={p.onClose}
       showToast={p.showToast}
+      url={p.url}
       render={format => <TableGraphic format={format} {...p} />}
     />
   )
@@ -56,7 +65,21 @@ export function ShareLeaders(p: Base & { title: string; unit?: string; rows: Lea
       fileName={slug(p.title)}
       onClose={p.onClose}
       showToast={p.showToast}
+      url={p.url}
       render={format => <LeadersGraphic format={format} {...p} />}
+    />
+  )
+}
+
+export function ShareTournament(p: Base & { teamCount: number; matchCount: number; goalCount: number; url: string }) {
+  return (
+    <ShareModal
+      title={p.tournament?.name ?? 'Turnaj'}
+      fileName={slug(p.tournament?.name ?? 'turnaj')}
+      onClose={p.onClose}
+      showToast={p.showToast}
+      url={p.url}
+      render={format => <TournamentGraphic format={format} {...p} />}
     />
   )
 }

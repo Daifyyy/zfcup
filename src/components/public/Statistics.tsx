@@ -19,6 +19,7 @@ import { TeamLogo } from '../ui/TeamLogo'
 import { Card, SectionHeader } from '../ui/Card'
 import { CardChip } from '../ui/CardChip'
 import { getSportDef } from '../../lib/sports'
+import { tournamentUrl } from '../../lib/share'
 
 interface Props {
   goals: Goal[]
@@ -237,6 +238,7 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
 
       {share && (
         <ShareLeadersDialog
+          url={tournament ? tournamentUrl(tournament.id) : undefined}
           tournament={tournament}
           sponsors={sponsors}
           title={share.title}

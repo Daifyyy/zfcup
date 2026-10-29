@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, Clock, Gavel, ImageDown, MapPin, X } from 'lucide-react'
+import { CalendarDays, Clock, Gavel, MapPin, Share2, X } from 'lucide-react'
 import { TeamLogo } from '../ui/TeamLogo'
 import { CardChip } from '../ui/CardChip'
 import { MatchStatusBadge } from '../ui/Badge'
@@ -7,7 +7,6 @@ import { getMatchState } from '../../lib/matchState'
 import { formatDateWeekday } from '../../lib/dates'
 import { getSportDef, type SportDef } from '../../lib/sports'
 import { GoalMark, AssistMark, PimMark } from '../ui/EventIcons'
-import ShareButton from '../share/ShareButton'
 import { ShareMatchDialog } from '../share/lazy'
 import { matchUrl } from '../../lib/share'
 import { useTournamentData, useDetail } from '../../lib/TournamentDataContext'
@@ -122,9 +121,6 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
     md.referee && { key: 'ref', icon: <Gavel size={15} />, text: md.referee },
   ].filter(Boolean) as { key: string; icon: JSX.Element; text: string }[]
   const title = `${home?.name ?? 'Určí se'} – ${away?.name ?? 'Určí se'}`
-  const shareText = showScore
-    ? `${home?.name ?? '—'} ${md.home_score}:${md.away_score} ${away?.name ?? '—'} · ${tournament.name}`
-    : `${md.label || 'Zápas'} · ${tournament.name}`
 
   return (
     <div className="tm-drawer" onClick={onClose}>
@@ -132,13 +128,9 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
         <header className="tm-drawer__head md-head">
           <div className="md-head__label">{md.label || (md.kind === 'playoff' ? 'Play-off' : 'Zápas')}</div>
           {allowLink && (
-            <ShareButton
-              className="tm-drawer__close"
-              iconSize={20}
-              title="Sdílet zápas"
-              data={{ title, text: shareText, url: matchUrl(tournament.id, md.id) }}
-              extras={showScore ? [{ key: 'graphic', label: 'Grafika výsledku', icon: <ImageDown size={15} />, onClick: () => setGraphic(true) }] : []}
-            />
+            <button type="button" className="tm-drawer__close" onClick={() => setGraphic(true)} title="Sdílet zápas (obrázek)" aria-label="Sdílet zápas">
+              <Share2 size={20} />
+            </button>
           )}
           <button type="button" className="tm-drawer__close" onClick={onClose} aria-label="Zavřít"><X size={20} /></button>
         </header>
@@ -204,7 +196,10 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
             label={md.label || (md.kind === 'playoff' ? 'Play-off' : 'Zápas')}
             decidedIn={md.decided_in}
             live={state === 'live'}
+            upcoming={!showScore}
+            time={md.scheduled_time}
             events={events}
+            url={matchUrl(tournament.id, md.id)}
             onClose={() => setGraphic(false)}
           />
         </div>

@@ -16,6 +16,7 @@ import { MatchStatusBadge } from '../ui/Badge'
 import type { Sponsor } from '../../hooks/useSponsors'
 import { ShareMatchDialog } from '../share/lazy'
 import { useDetail } from '../../lib/TournamentDataContext'
+import { tournamentUrl } from '../../lib/share'
 
 interface Props {
   matches: Match[]
@@ -182,6 +183,7 @@ export default function Results({ matches, teams, tournament, referees = [], spo
         if (!m) return null
         return (
           <ShareMatchDialog
+          url={tournament ? tournamentUrl(tournament.id) : undefined}
             tournament={tournament ?? null}
             sponsors={sponsors}
             home={teamById.get(m.home_id)}

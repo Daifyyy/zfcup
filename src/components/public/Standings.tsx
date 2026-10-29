@@ -13,6 +13,7 @@ import { Card, SectionHeader } from '../ui/Card'
 import { standingsZones } from '../../lib/zones'
 import { getSportDef, sportHasOvertime } from '../../lib/sports'
 import { useDetail } from '../../lib/TournamentDataContext'
+import { tournamentUrl } from '../../lib/share'
 
 interface Props {
   groups: Group[]
@@ -161,6 +162,7 @@ export default function Standings({ groups, matches, teams, tournament, sponsors
         if (!g) return null
         return (
           <ShareTableDialog
+          url={tournament ? tournamentUrl(tournament.id) : undefined}
             tournament={tournament}
             sponsors={sponsors}
             groupName={g.name}

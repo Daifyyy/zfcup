@@ -7,6 +7,7 @@ import type { Sponsor } from '../../hooks/useSponsors'
 import type { Tournament } from '../../hooks/useTournament'
 import type { StandingRow } from '../../lib/standings'
 import { BRAND } from '../../lib/brand'
+import { QRCodeSVG } from 'qrcode.react'
 import { getSportDef } from '../../lib/sports'
 import type { SideEvents } from '../../lib/details'
 
@@ -134,7 +135,7 @@ function EventColumn({ lines, big }: { lines: EventLine[]; big?: boolean }) {
   )
 }
 
-export function MatchGraphic({ format, tournament, sponsors, home, away, homeScore, awayScore, label, decidedIn, live, events }: {
+export function MatchGraphic({ format, tournament, sponsors, home, away, homeScore, awayScore, label, decidedIn, live, upcoming, time, events }: {
   format: ShareFormat
   tournament: Tournament | null
   sponsors: Sponsor[]
@@ -145,6 +146,8 @@ export function MatchGraphic({ format, tournament, sponsors, home, away, homeSco
   label: string
   decidedIn?: 'regulation' | 'ot' | 'so' | null
   live?: boolean
+  upcoming?: boolean
+  time?: string | null
   events?: { home: SideEvents; away: SideEvents }
 }) {
   const story = format === 'story'
@@ -160,10 +163,13 @@ export function MatchGraphic({ format, tournament, sponsors, home, away, homeSco
     </div>
   )
   return (
-    <Frame format={format} tournament={tournament} kicker={`${live ? 'Průběžný stav' : 'Výsledek'} · ${label}`} sponsors={sponsors}>
+    <Frame format={format} tournament={tournament} kicker={`${upcoming ? 'Hrajeme' : live ? 'Průběžný stav' : 'Výsledek'} · ${label}`} sponsors={sponsors}>
       <div style={{ display: 'flex', alignItems: story || !hasEvents ? 'center' : 'flex-start', justifyContent: 'space-between', flexDirection: story ? 'column' : 'row', gap: story ? 44 : 0 }}>
         {team(home, homeScore >= awayScore, events?.home)}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, marginTop: story || !hasEvents ? 0 : logo / 2 - 100 }}>
+          {upcoming ? (
+            <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 150, lineHeight: 1, color: 'var(--brand-2)' }}>VS</div>
+          ) : (
           <div style={{ display: 'flex', gap: 10 }}>
             {[homeScore, awayScore].map((v, i) => (
               <div key={i} style={{
@@ -175,7 +181,8 @@ export function MatchGraphic({ format, tournament, sponsors, home, away, homeSco
               }}>{v}</div>
             ))}
           </div>
-          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: live ? RED : MUTED }}>{live ? 'Živě' : 'Konec'}{suffix && !live && ` · ${suffix}`}</div>
+          )}
+          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: live ? RED : MUTED }}>{upcoming ? (time ? `Výkop ${time}` : 'Brzy') : live ? 'Živě' : 'Konec'}{suffix && !live && !upcoming && ` · ${suffix}`}</div>
         </div>
         {team(away, awayScore >= homeScore, events?.away)}
       </div>
@@ -294,6 +301,48 @@ export function LeadersGraphic({ format, tournament, sponsors, title, unit, rows
             ))}
           </div>
         )}
+      </div>
+    </Frame>
+  )
+}
+
+/** Pozvánka / přehled turnaje: čísla + QR kód na živé výsledky. */
+export function TournamentGraphic({ format, tournament, sponsors, teamCount, matchCount, goalCount, url }: {
+  format: ShareFormat
+  tournament: Tournament | null
+  sponsors: Sponsor[]
+  teamCount: number
+  matchCount: number
+  goalCount: number
+  url: string
+}) {
+  const story = format === 'story'
+  const tile = (value: number, label: string) => (
+    <div style={{ flex: 1, padding: story ? '34px 20px' : '26px 16px', background: 'rgba(255,255,255,.06)', borderRadius: 14, textAlign: 'center', borderTop: '6px solid var(--brand)' }}>
+      <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: story ? 110 : 90, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: MUTED, marginTop: 8 }}>{label}</div>
+    </div>
+  )
+  return (
+    <Frame format={format} tournament={tournament} kicker="Turnaj" sponsors={sponsors}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: story ? 60 : 40 }}>
+        {tournament?.subtitle && (
+          <div style={{ fontSize: story ? 44 : 36, fontWeight: 600, color: INK, lineHeight: 1.25 }}>{tournament.subtitle}</div>
+        )}
+        <div style={{ display: 'flex', gap: 20 }}>
+          {tile(teamCount, 'týmů')}
+          {tile(matchCount, 'zápasů')}
+          {tile(goalCount, 'gólů')}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 34 }}>
+          <div style={{ background: '#fff', padding: 14, borderRadius: 14, lineHeight: 0 }}>
+            <QRCodeSVG value={url} size={story ? 240 : 190} fgColor="#0b1220" bgColor="#ffffff" />
+          </div>
+          <div>
+            <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: story ? 70 : 58, lineHeight: 1, textTransform: 'uppercase' }}>Sleduj živě</div>
+            <div style={{ fontSize: 26, color: MUTED, marginTop: 10 }}>výsledky, tabulky a statistiky — naskenuj kód</div>
+          </div>
+        </div>
       </div>
     </Frame>
   )

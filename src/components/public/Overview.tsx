@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, ChevronRight, Hourglass, Landmark, MapPin, Radio } from 'lucide-react'
+import { CalendarDays, ChevronRight, Hourglass, Landmark, MapPin, Radio, Share2 } from 'lucide-react'
 import type { Tab } from '../../App'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Announcement } from '../../hooks/useAnnouncements'
@@ -12,7 +12,7 @@ import type { BracketGoal } from '../../hooks/useBracketGoals'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Sponsor } from '../../hooks/useSponsors'
 import QRCode from '../ui/QRCode'
-import ShareButton from '../share/ShareButton'
+import { ShareTournamentDialog } from '../share/lazy'
 import { sanitizeHtml } from '../../lib/sanitize'
 import { getSportDef } from '../../lib/sports'
 import { calcGroupStandings } from '../../lib/standings'
@@ -74,6 +74,7 @@ export default function Overview({
   competition, editionOptions = [], onOpenCompetition, onOpenTournament,
 }: Props) {
   useMinuteTick()
+  const [shareOpen, setShareOpen] = useState(false)
   const { openTeam, openMatch } = useDetail()
   const sport = getSportDef(tournament?.sport)
   const SportIcon = sport.Icon
@@ -147,12 +148,9 @@ export default function Overview({
             </div>
           )}
           {tournament && tournamentUrl && (
-            <ShareButton
-              className="ui-btn ui-btn--chrome ui-btn--sm"
-              label="Sdílet"
-              title="Sdílet turnaj"
-              data={{ title: tournament.name, text: [tournament.date, tournament.venue].filter(Boolean).join(' · ') || undefined, url: tournamentUrl }}
-            />
+            <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={() => setShareOpen(true)} title="Sdílet turnaj (obrázek)">
+              <Share2 size={16} />Sdílet
+            </button>
           )}
           <div className="ov-hero__qr desktop-only">
             <QRCode size={72} url={tournamentUrl} />
@@ -331,6 +329,17 @@ export default function Overview({
         <div className="ov-partners">
           <PartnerStrip sponsors={sponsors} />
         </div>
+      )}
+      {shareOpen && tournament && tournamentUrl && (
+        <ShareTournamentDialog
+          tournament={tournament}
+          sponsors={sponsors}
+          teamCount={teams.length}
+          matchCount={fixtures.length}
+          goalCount={totalGoals}
+          url={tournamentUrl}
+          onClose={() => setShareOpen(false)}
+        />
       )}
     </div>
   )
