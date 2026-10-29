@@ -227,10 +227,13 @@ export default function App() {
   }, [])
 
   // ── Tab navigation with history ───────────────────────
+  // tdepth = počet kroků uvnitř turnaje (pro tlačítko Zpět v hlavičce)
   const navigateTab = useCallback((t: Tab) => {
-    window.history.pushState({ tab: t }, '')
+    const depth = Number(window.history.state?.tdepth ?? 0)
+    window.history.pushState({ tab: t, tdepth: depth + 1 }, '')
     setTab(t)
   }, [])
+
 
   // ── Branding turnaje (barvy) ──────────────────────────
   useEffect(() => {
@@ -288,6 +291,21 @@ export default function App() {
     window.history.pushState({}, '', '/')
     openTournament('')
   }, [openTournament])
+
+  // Tlačítko vlevo nahoře: skutečné „Zpět“ v rámci turnaje.
+  // Je kam se vrátit → krok zpět; otevřeno odkazem mimo Přehled → Přehled; jinak domů (ikona domu).
+  const headerBackMode: 'back' | 'overview' | 'home' =
+    Number(window.history.state?.tdepth ?? 0) > 0 ? 'back' : tab !== 'overview' ? 'overview' : 'home'
+  const headerBack = useCallback(() => {
+    const depth = Number(window.history.state?.tdepth ?? 0)
+    if (depth > 0) { window.history.back(); return }
+    if (tab !== 'overview') {
+      window.history.replaceState({ ...(window.history.state ?? {}), tab: 'overview', tdepth: 0 }, '')
+      setTab('overview')
+      return
+    }
+    goHome()
+  }, [tab, goHome])
 
   // ── Landing page: no tournamentId in URL ─────────────
   const openCompetition = (slug: string) => {
@@ -394,7 +412,8 @@ export default function App() {
         onKiosk={() => setKiosk(true)}
         onScoreboard={() => setScoreboard(true)}
         onPrint={() => setPrintOpen(true)}
-        onHome={goHome}
+        onHome={headerBack}
+        homeMode={headerBackMode}
         isAdmin={canEdit}
         tipsEnabled={tipsOn}
         showBracket={showBracket}

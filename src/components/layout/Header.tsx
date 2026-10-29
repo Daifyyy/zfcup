@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, History, Lock, LockOpen, MonitorPlay, Printer, Tv } from 'lucide-react'
+import { ChevronDown, ChevronLeft, History, Home, Lock, LockOpen, MonitorPlay, Printer, Tv } from 'lucide-react'
 import type { Tab } from '../../App'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Sponsor } from '../../hooks/useSponsors'
@@ -15,6 +15,8 @@ interface Props {
   onScoreboard: () => void
   onPrint?: () => void
   onHome?: () => void
+  /** Tlačítko vlevo: krok zpět v turnaji / na Přehled / domů na všechny turnaje */
+  homeMode?: 'back' | 'overview' | 'home'
   isAdmin: boolean
   tipsEnabled?: boolean
   showBracket?: boolean
@@ -62,7 +64,7 @@ function HeaderAction({ icon, label, title, onClick }: { icon: React.ReactNode; 
 }
 
 export default function Header({
-  tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, isAdmin,
+  tournament, tab, onTab, onAdmin, onKiosk, onScoreboard, onPrint, onHome, homeMode = 'home', isAdmin,
   tipsEnabled, showBracket = true, sponsorsEnabled, presentedBy, mediaEnabled, competition, onOpenCompetition, editionOptions = [], onOpenTournament,
 }: Props) {
   const tabs = buildPublicTabs({ showBracket, tipsEnabled, sponsorsEnabled, mediaEnabled })
@@ -75,9 +77,11 @@ export default function Header({
       <div className="hdr__top">
         <div className="hdr__inner">
           {onHome && (
-            <button type="button" onClick={onHome} title="Zpět na přehled turnajů" className="hdr-back">
-              <ChevronLeft size={18} />
-              <span className="hide-mobile">Turnaje</span>
+            <button type="button" onClick={onHome} className="hdr-back"
+              title={homeMode === 'home' ? 'Všechny turnaje' : homeMode === 'overview' ? 'Na Přehled turnaje' : 'Zpět'}
+              aria-label={homeMode === 'home' ? 'Všechny turnaje' : homeMode === 'overview' ? 'Na Přehled turnaje' : 'Zpět'}>
+              {homeMode === 'home' ? <Home size={17} /> : <ChevronLeft size={18} />}
+              <span className="hide-mobile">{homeMode === 'home' ? 'Turnaje' : homeMode === 'overview' ? 'Přehled' : 'Zpět'}</span>
             </button>
           )}
 
