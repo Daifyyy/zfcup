@@ -34,6 +34,10 @@
   /* Broadcast lišty (hlavička, TV) */
   --chrome:       #0b1220;
   --chrome-2:     #141d2e;
+  /* TV tabule: tmavé odstíny hlavní barvy turnaje (max. ~36 % značky → bílý text ≥ 4,5:1) */
+  --tv-bg:        color-mix(in srgb, var(--brand) 30%, #060a12);
+  --tv-col:       color-mix(in srgb, var(--brand) 36%, #0d1422);
+  --tv-panel:     color-mix(in srgb, var(--brand) 33%, #0a101c);
   --chrome-line:  rgba(255,255,255,.08);
   --chrome-ink:   #ffffff;
   --chrome-muted: rgba(255,255,255,.62);

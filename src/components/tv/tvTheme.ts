@@ -1,11 +1,12 @@
 // Společná paleta a velikosti písma pro TV tabuli (Scoreboard) a TV režim (KioskMode).
-// Tmavé „broadcast“ pozadí; akcent = značka turnaje zesvětlená pro tmavé plochy
-// (--brand-on-dark, nastavuje applyTournamentTheme v src/lib/theme.ts).
+// Pozadí v tmavých odstínech hlavní barvy turnaje (--tv-bg/--tv-col/--tv-panel v index.css,
+// míchají --brand do tmavé báze → bílý text vždy čitelný); akcent = značka zesvětlená
+// pro tmavé plochy (--brand-on-dark, nastavuje applyTournamentTheme v src/lib/theme.ts).
 
 export const TV = {
-  bg:       '#060a12',
-  col:      '#0d1422',
-  panel:    '#0a101c',
+  bg:       'var(--tv-bg)',
+  col:      'var(--tv-col)',
+  panel:    'var(--tv-panel)',
   hdr:      'var(--chrome)',
   text:     '#f5f7fa',
   muted:    'rgba(226,232,240,.66)',
