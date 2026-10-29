@@ -23,6 +23,7 @@ import { TV, TV_SIZE, tvLogo } from '../tv/tvTheme'
 import { TvGroupTable } from '../tv/TvGroupTable'
 import { FitBox } from '../tv/FitBox'
 import { standingsZones } from '../../lib/zones'
+import { useBackClose } from '../../lib/useBackClose'
 
 interface Props {
   tournament: Tournament | null
@@ -37,6 +38,8 @@ interface Props {
   onExit: () => void
   sponsors?: Sponsor[]
   presentedBy?: Sponsor | null
+  /** Zápis do historie prohlížeče (Zpět zavře tabuli); ukázka na úvodní stránce = false */
+  historyStep?: boolean
 }
 
 // ── palette ──────────────────────────────────────────────────────────────────
@@ -590,8 +593,10 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
 }
 
 // ── Main Scoreboard ───────────────────────────────────────────────────────────
-export default function Scoreboard({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit, sponsors = [], presentedBy }: Props) {
+export default function Scoreboard({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit, sponsors = [], presentedBy, historyStep = true }: Props) {
   const clock = useClock()
+  // Zpět (gesto / tlačítko) zavře tabuli, ne turnaj; v ukázce na úvodní stránce vypnuto
+  useBackClose(historyStep, onExit, 'scoreboard')
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onExit() }

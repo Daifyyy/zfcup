@@ -21,6 +21,7 @@ import Scoreboard from '../components/public/Scoreboard'
 import TeamDetailDrawer from '../components/public/TeamDetailDrawer'
 import MatchDetailDrawer from '../components/public/MatchDetailDrawer'
 import { MatchGraphic, TableGraphic, FORMAT_SIZE } from '../components/share/templates'
+import { useBackClose } from '../lib/useBackClose'
 
 interface Props {
   initial: DemoKey
@@ -50,6 +51,7 @@ function Scaled({ w, h, children, className }: { w: number; h: number; children:
 
 export default function DemoModal({ initial, onClose }: Props) {
   const features = FEATURES
+  useBackClose(true, onClose, 'demo')
   const [key, setKey] = useState<DemoKey>(initial)
   const [detail, setDetail] = useState<DetailTarget | null>(null)
   const data = useMemo(() => buildDemoData(), [])
@@ -174,7 +176,7 @@ function Preview({ k, data }: { k: DemoKey; data: ReturnType<typeof buildDemoDat
           <Scoreboard
             tournament={tournament} teams={teams} players={players} groups={groups} matches={matches} goals={goals}
             bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots}
-            onExit={() => {}} sponsors={sortedSponsors} presentedBy={getTitlePartner(sponsors)}
+            onExit={() => {}} historyStep={false} sponsors={sortedSponsors} presentedBy={getTitlePartner(sponsors)}
           />
         </Scaled>
       )

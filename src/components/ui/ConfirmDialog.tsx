@@ -5,6 +5,7 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { AlertTriangle, HelpCircle } from 'lucide-react'
+import { useBackClose } from '../../lib/useBackClose'
 
 export interface ConfirmOptions {
   /** Nadpis (výchozí podle `danger`) */
@@ -44,6 +45,8 @@ export function ConfirmHost() {
     () => current,
   )
   const okRef = useRef<HTMLButtonElement>(null)
+  // Zpět (gesto / tlačítko) = Zrušit
+  useBackClose(!!pending, () => close(false), 'confirm')
 
   useEffect(() => {
     if (!pending) return

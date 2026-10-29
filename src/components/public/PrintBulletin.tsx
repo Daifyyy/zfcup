@@ -11,6 +11,7 @@ import type { Group } from '../../hooks/useGroups'
 import type { Match } from '../../hooks/useMatches'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import { copyrightLine } from '../layout/SiteFooter'
+import { useBackClose } from '../../lib/useBackClose'
 
 interface Props {
   tournament: Tournament
@@ -52,6 +53,7 @@ function scoreText(m: { played: boolean; home_score: number | null; away_score: 
 }
 
 export default function PrintBulletin({ tournament, teams, groups, matches, bracketRounds, bracketSlots, onClose }: Props) {
+  useBackClose(true, onClose, 'bulletin')
   const sportDef = getSportDef(tournament.sport)
   const hasOt = sportHasOvertime(sportDef)
   const allowDraws = sportDef.standings.allowDraws

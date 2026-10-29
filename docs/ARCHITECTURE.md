@@ -184,6 +184,7 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `legal.ts` | **údaje provozovatele `OPERATOR`** (vyplňuje uživatel), `LEGAL_EFFECTIVE_DATE`, `SUBPROCESSORS`, `LEGAL_DOCS`, `detectLegalDocFromUrl`, `missingOperatorFields` | brand | App, LegalPage, SiteFooter, Tips |
 | `accessCodes.ts` | kódy soukromých turnajů (localStorage), `accessHeader` pro `supabase.ts`, `unlockWithCode` (RPC), `consumeCodeFromUrl`, `generateAccessCode` | supabase (dynamicky) | supabase.ts, App, AccessCodeForm, VisibilitySection, Landing |
 | `tournamentSearch.ts` | `searchTournaments`, `isOngoing`, `shiftISO` (úvodní stránka) | — | TournamentLanding |
+| `useBackClose.ts` | hook: vrstva přes obrazovku jako krok v historii (Zpět ji zavře) | — | Scoreboard, PrintBulletin, ShareModal, DemoModal, BottomNav, ConfirmDialog |
 | `share.ts` | sdílení odkazů: `prefersNativeShare`, `nativeShare`, `shareTargets` (FB, X, WhatsApp, LinkedIn, e-mail), `copyText`, `matchUrl`/`teamUrl` | — | ShareButton, detaily, Overview |
 | `dataExport.ts` | `exportTournamentData` (JSON všech tabulek turnaje, bez PINů), `downloadJson` | supabase | SettingsTab |
 | `storage.ts` | cesty a upload do Storage (`tournaments/{id}/…`) | supabase | TeamsTab, SponsorsTab |

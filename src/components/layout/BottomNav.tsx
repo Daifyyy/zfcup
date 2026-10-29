@@ -6,6 +6,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import type { Tab } from '../../App'
 import { buildPublicTabs } from './Header'
+import { useBackClose } from '../../lib/useBackClose'
 
 const ICONS: Record<string, LucideIcon> = {
   overview: Home,
@@ -35,6 +36,7 @@ interface Props {
 
 export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true, sponsorsEnabled, mediaEnabled }: Props) {
   const [moreOpen, setMoreOpen] = useState(false)
+  useBackClose(moreOpen, () => setMoreOpen(false), 'more')
   const all = buildPublicTabs({ showBracket, tipsEnabled, sponsorsEnabled, mediaEnabled })
   const PRIMARY: Tab[] = [...PRIMARY_BASE, all.some(t => t.value === 'bracket') ? 'bracket' : 'statistics']
   const primary = PRIMARY.map(v => all.find(t => t.value === v)).filter((t): t is (typeof all)[number] => !!t)
@@ -42,6 +44,13 @@ export default function BottomNav({ tab, onTab, tipsEnabled, showBracket = true,
   const moreActive = secondary.some(t => t.value === tab)
 
   function go(t: Tab) {
+    // Z nabídky „Více“: nejdřív spotřebovat její krok v historii, pak přejít na sekci
+    // (jinak by v historii zůstal prázdný krok a Zpět by „nic neudělalo“)
+    if (moreOpen && String(window.history.state?.overlay ?? '').startsWith('more:')) {
+      window.addEventListener('popstate', () => onTab(t), { once: true })
+      window.history.back()
+      return
+    }
     setMoreOpen(false)
     onTab(t)
   }

@@ -4,6 +4,7 @@ import { Download, Share2, X } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { FORMAT_SIZE, type ShareFormat } from './templates'
 import { Segmented } from '../ui/Tabs'
+import { useBackClose } from '../../lib/useBackClose'
 
 interface Props {
   title: string
@@ -17,6 +18,7 @@ interface Props {
 
 /** Modal s náhledem sdílecí grafiky, stažením PNG a nativním sdílením (mobil). */
 export default function ShareModal({ title, fileName, render, onClose, showToast }: Props) {
+  useBackClose(true, onClose, 'share')
   const [format, setFormat] = useState<ShareFormat>('square')
   const [busy, setBusy] = useState(false)
   const nodeRef = useRef<HTMLDivElement>(null)
