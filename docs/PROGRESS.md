@@ -116,6 +116,10 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Úvodní stránka: místo seznamu všech turnajů vyhledávání (bez diakritiky, jen veřejné), „Právě probíhá“ (den turnaje = dnes, sezóna se zápasem ±14 dní), „Mám přístupový kód“, „Moje turnaje“ / u správce všechny (`lib/tournamentSearch.ts` + testy). Stránka Cookies doplněna o `turnajnik_access_codes`.
 - Ověřeno bez migrace (vše veřejné, hlášky o chybějící migraci). **Po spuštění migrace ověřit**: anonymně soukromý turnaj i zápasy = 0 řádků; s kódem data; vlastník bez kódu; vyhledávání soukromé nevrací; odkaz `?kod=` odemkne; založení soukromého turnaje.
 
+### Validační turnaj + test soukromí naostro (2026-10-29)
+- **Validační pohár 2026** `/adcb7982-5716-407a-9f27-6fbae02346cb` (slug `validacni-pohar-2026`) — NEMAZAT, slouží k validacím. Fotbal, `groups_qf`, 16 týmů (dlouhé názvy, SVG loga, 4 bez loga), 176 hráčů (2 velmi dlouhá jména), 6 rozhodčích, 9 partnerů všech úrovní, 4 oznámení, 6 pravidel, média, Výrazný branding. Skupiny odehrané (skupina C = těsné výsledky na tiebreakery), čtvrtfinále + 1. semifinále odehrané, 2. semifinále, o 3. místo a finále naplánované. Skript `src/dev/seedValidation.ts` (spouští se v prohlížeči s přihlášením; nic ho neimportuje).
+- **Test soukromí po migraci 15 odhalil únik:** zápasy skryté správně, ale `tournament` (včetně `access_code`!), `players`, `goals` dál čitelné anonymně → v DB jsou navíc jiné politiky čtení (mimo db-backup). Oprava = **migrace 16** `db-backup/16_private_read_fix.sql` (smaže cizí SELECT/ALL politiky, zapne RLS, vypíše zbytek). Do spuštění 16 a nového testu **nepoužívat soukromé turnaje naostro**. Validační turnaj je vrácený na veřejný.
+
 ### Kde navázat
 1. **Uživatel doplní** `OPERATOR` v `src/lib/legal.ts` (jméno, IČO, adresa, e-mail, zápis v rejstříku). Pak vyzkoušet export a „Vymazat vše“ na testovacím turnaji. Teprve potom vypnout maintenance.
 2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.
