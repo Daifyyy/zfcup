@@ -93,6 +93,10 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Ověřeno: typy 63 (beze změny), 99 testů, prohlížeč 360/768/1366 px bez přetečení (tabulky na mobilu jako karty), navigace patičkou a Zpět. Neověřeno naostro: export a rozšířené mazání (vyžaduje přihlášení — vyzkoušet na testovacím turnaji).
 - Texty jsou kvalitní šablona; před spuštěním doporučena kontrola právníkem. Ochranná známka zatím neověřena.
 
+### Úpravy po Fázi 8 — blok A (2026-10-29, 21b4e58)
+- Spodní lišta: Přehled, Zápasy, Tabulka, Pavouk (+ Více). Dema zúžená na 4; oprava překryvu popisu a náhledu na mobilu (grid → flex, ukázka přes celou obrazovku, popis nahoře). „Chci turnaj“ v hero, v pásu pod funkcemi a v patičce (`contactHref()`). Dlaždice Přehledu klikací, 4. dlaždice = nejlepší střelec.
+- Plán dalších bloků: `C:/Users/denis/.claude/plans/shiny-tinkering-robin.md` (B mobil přetékání, C sdílení, D soukromé turnaje + vyhledávání, E historie soutěže).
+
 ### Kde navázat
 1. **Uživatel doplní** `OPERATOR` v `src/lib/legal.ts` (jméno, IČO, adresa, e-mail, zápis v rejstříku). Pak vyzkoušet export a „Vymazat vše“ na testovacím turnaji. Teprve potom vypnout maintenance.
 2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.
