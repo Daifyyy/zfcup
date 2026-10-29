@@ -11,6 +11,7 @@ import { Badge } from '../ui/Badge'
 import { TeamLogo } from '../ui/TeamLogo'
 import Empty from '../ui/Empty'
 import { RoleBadge } from '../public/TeamDetailDrawer'
+import SiteFooter from '../layout/SiteFooter'
 
 type KTab = 'seasons' | 'h2h' | 'players'
 
@@ -208,6 +209,7 @@ export default function ClubPage({ slug, onOpenTournament, onHome }: Props) {
           </div>
         )}
       </main>
+      <SiteFooter />
     </div>
   )
 }

@@ -33,7 +33,7 @@ export function AnnouncementCard({ a }: { a: Announcement }) {
       <article className="news-card">
         <div className="news-card__video">
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}`}
+            src={`https://www.youtube-nocookie.com/embed/${videoId}`}
             title={a.title}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

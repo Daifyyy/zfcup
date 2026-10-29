@@ -6,6 +6,9 @@ import { formatsForScheduleMode, getFormatDef, formatColumns } from '../../../li
 import { getSportDef } from '../../../lib/sports'
 import BrandingSection from './BrandingSection'
 import CompetitionSection from './CompetitionSection'
+import { exportTournamentData, downloadJson } from '../../../lib/dataExport'
+import { removeAssetByUrl } from '../../../lib/storage'
+import { slugify } from '../../../lib/editions'
 import type { Team } from '../../../hooks/useTeams'
 
 interface Props {
@@ -29,6 +32,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
   const [p1, setP1] = useState('')
   const [p2, setP2] = useState('')
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [leagueParams, setLeagueParams] = useState({
     match_duration: 20,
     halves: 1,
@@ -146,9 +150,18 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
 
   const resetData = async () => {
     if (!tournament) return
-    if (!await confirmDialog('Smažou se VŠECHNA data turnaje včetně týmů a hráčů.\n\nTuto akci nelze vrátit.', { danger: true, title: 'Smazat vše', confirmLabel: 'Smazat vše' })) return
+    if (!await confirmDialog('Smažou se VŠECHNA data turnaje včetně týmů, hráčů a jejich fotek, rozhodčích a tipérů.\n\nTuto akci nelze vrátit. Data si můžete předtím stáhnout tlačítkem Export dat turnaje.', { danger: true, title: 'Smazat vše', confirmLabel: 'Smazat vše' })) return
 
     const tid = tournament.id
+    // Záznamy navázané na hráče/zápasy (chybějící tabulka nebo migrace nevadí)
+    for (const table of ['assists', 'bracket_assists', 'cards', 'bracket_cards', 'penalties', 'bracket_penalties']) {
+      const { error } = await supabase.from(table).delete().eq('tournament_id', tid)
+      if (error) console.warn(`Soft delete ${table}:`, error.message)
+    }
+    // Fotky hráčů ve Storage (osobní údaje) — před smazáním hráčů
+    const { data: avatars } = await supabase.from('players').select('avatar_url').eq('tournament_id', tid).not('avatar_url', 'is', null)
+    await Promise.all((avatars ?? []).map(p => removeAssetByUrl(p.avatar_url as string).catch(() => {})))
+
     const tables = [
       'bracket_goals', 'goals',
       'tips', 'bracket_tips', 'special_tips',
@@ -161,11 +174,31 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       const { error } = await supabase.from(table).delete().eq('tournament_id', tid)
       if (error) { showToast('Chyba (' + table + '): ' + error.message); return }
     }
-    await supabase.from('tipsters').update({ total_points: 0 }).eq('tournament_id', tid)
+    // Další osobní údaje: tipéři, rozhodčí, kontakt pro média (sloupce z migrace 08 nemusí existovat)
+    for (const table of ['tipsters', 'referees']) {
+      const { error } = await supabase.from(table).delete().eq('tournament_id', tid)
+      if (error) console.warn(`Soft delete ${table}:`, error.message)
+    }
+    await supabase.from('tournament').update({ press_contact_name: null, press_contact_email: null, press_contact_phone: null }).eq('id', tid)
     await supabase.from('tournament').update({ name: '', subtitle: '', date: '', venue: '', description: '' })
       .eq('id', tid)
-    refetchGroups(); refetchMatches(); refetchGoals(); refetchBracket(); refetchBracketGoals(); refetchTournament()
+    refetchGroups(); refetchMatches(); refetchGoals(); refetchBracket(); refetchBracketGoals(); refetchTournament(); refetchTeams(); refetchPlayers()
     showToast('Vše smazáno')
+  }
+
+  const exportData = async () => {
+    if (!tournament || exporting) return
+    setExporting(true)
+    try {
+      const data = await exportTournamentData(tournament.id)
+      downloadJson(data, `${slugify(tournament.name || 'turnaj') || 'turnaj'}-export-${new Date().toISOString().slice(0, 10)}.json`)
+      const skipped = Object.keys(data.skipped)
+      showToast(skipped.length ? `Export stažen (bez: ${skipped.join(', ')})` : 'Export stažen ✓')
+    } catch (e) {
+      showToast('Chyba exportu: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -492,6 +525,17 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
       </button>
 
       <hr className="divider" />
+      <div className="sub-title">Data a ochrana osobních údajů</div>
+      <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
+        Jako organizátor jste správcem osobních údajů hráčů, rozhodčích a tipérů svého turnaje. Export obsahuje všechna
+        data turnaje ve formátu JSON (bez PINů tipérů) — hodí se pro archiv nebo pro vyřízení žádosti hráče o jeho údaje.
+        Jednotlivého hráče smažete v záložce Týmy, celý turnaj tlačítkem Vymazat vše níže.
+      </p>
+      <button type="button" className="btn btn-s" onClick={exportData} style={{ opacity: exporting ? 0.6 : 1 }}>
+        {exporting ? 'Připravuji…' : 'Export dat turnaje (JSON)'}
+      </button>
+
+      <hr className="divider" />
       <div className="sub-title">Nebezpečná zóna</div>
       <p style={{ fontSize: '.76rem', color: 'var(--muted)', marginBottom: '.7rem' }}>
         Tyto akce jsou nevratné.
@@ -514,7 +558,7 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
         <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 9, padding: '.75rem .9rem' }}>
           <div style={{ fontWeight: 600, fontSize: '.84rem', marginBottom: '.25rem' }}>Vymazat úplně vše</div>
           <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.55rem' }}>
-            Smaže veškerá data včetně týmů. Účet Supabase Auth zůstane zachován.
+            Smaže veškerá data včetně týmů, hráčů a jejich fotek, rozhodčích a tipérů. Váš účet organizátora zůstane zachován.
           </div>
           <button
             type="button"

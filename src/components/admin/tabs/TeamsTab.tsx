@@ -235,7 +235,7 @@ function RosterSection({ team, players, tournament, showToast, refetchPlayers }:
                           <input type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" style={{ display: 'none' }}
                             onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(p.id, f) }} />
                         </label>
-                        <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 2 }}>PNG nebo JPG · max 200 KB</div>
+                        <div style={{ fontSize: '.65rem', color: 'var(--muted)', marginTop: 2 }}>PNG nebo JPG · max 200 KB · jen se souhlasem hráče (u nezletilých zákonného zástupce)</div>
                       </div>
                       {p.avatar_url && (
                         <button type="button" style={{ fontSize: '.72rem', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}

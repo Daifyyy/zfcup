@@ -10,6 +10,7 @@ import type { Team } from '../../hooks/useTeams'
 import type { Group } from '../../hooks/useGroups'
 import type { Match } from '../../hooks/useMatches'
 import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
+import { copyrightLine } from '../layout/SiteFooter'
 
 interface Props {
   tournament: Tournament
@@ -220,7 +221,7 @@ export default function PrintBulletin({ tournament, teams, groups, matches, brac
         )}
 
         <div style={{ fontSize: 10, color: '#999', textAlign: 'center', marginTop: 20 }}>
-          Generováno aplikací {BRAND.name}
+          Generováno aplikací {BRAND.name} · {copyrightLine()}
         </div>
       </div>
     </div>

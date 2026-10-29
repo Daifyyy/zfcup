@@ -9,6 +9,7 @@ import { carryOverTeams, lastEdition, nextEditionNumber } from '../lib/editions'
 import { formatColumns, getFormatDef } from '../lib/formats'
 import { lazyComponent } from '../lib/lazyComponent'
 import { FEATURES, type DemoKey } from '../demo/features'
+import SiteFooter from './layout/SiteFooter'
 import {
   ArrowRight, CalendarDays, Shield, ChevronRight, Lock, LogOut, MapPin, Plus, Settings2, Trophy,
 } from 'lucide-react'
@@ -406,12 +407,7 @@ export default function TournamentLanding({ onSelect, onSelectCompetition }: Pro
         </div>
       </section>
 
-      <footer className="lp-footer">
-        <div className="lp-wrap lp-footer__inner">
-          <span className="lp-brand__name" style={{ fontSize: '1.1rem' }}>{BRAND.name}</span>
-          <span>{BRAND.tagline}</span>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* ── Správa platformy (jen správce) ───────────── */}
       {showPlatform && isPlatformAdmin && (

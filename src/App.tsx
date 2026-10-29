@@ -48,10 +48,13 @@ import type { Session } from '@supabase/supabase-js'
 
 import type { Sponsor } from './hooks/useSponsors'
 import { lazyComponent } from './lib/lazyComponent'
+import { detectLegalDocFromUrl, type LegalDoc } from './lib/legal'
+import SiteFooter from './components/layout/SiteFooter'
 
 const PrintBulletin = lazyComponent(() => import('./components/public/PrintBulletin'))
 const AdminPanel = lazyComponent(() => import('./components/admin/AdminPanel'))
 const KioskMode = lazyComponent(() => import('./components/kiosk/KioskMode'))
+const LegalPage = lazyComponent(() => import('./components/legal/LegalPage'))
 const Scoreboard = lazyComponent(() => import('./components/public/Scoreboard'))
 const CompetitionPage = lazyComponent(() => import('./components/competition/CompetitionPage'))
 const ClubPage = lazyComponent(() => import('./components/club/ClubPage'))
@@ -74,7 +77,7 @@ function SponsorSidebarLogo({ sponsor }: { sponsor: Sponsor }) {
 // E.g. /abc123 → 'abc123'; / → ''
 function detectTournamentIdFromUrl(): string {
   const segments = window.location.pathname.split('/').filter(Boolean)
-  if (segments[0] === 's' || segments[0] === 'k') return ''
+  if (segments[0] === 's' || segments[0] === 'k' || segments[0] === 'pravni') return ''
   return segments[0] ?? ''
 }
 
@@ -97,6 +100,7 @@ export default function App() {
   const [tournamentId, setTournamentId] = useState<string>(() => detectTournamentIdFromUrl())
   const [competitionSlug, setCompetitionSlug] = useState<string>(() => detectCompetitionSlugFromUrl())
   const [clubSlug, setClubSlug] = useState<string>(() => detectClubSlugFromUrl())
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | ''>(() => detectLegalDocFromUrl())
   const [tab, setTab] = useState<Tab>('overview')
   const [adminOpen, setAdminOpen] = useState(false)
   const [kiosk, setKiosk] = useState(() => new URLSearchParams(window.location.search).get('kiosk') === '1')
@@ -177,6 +181,7 @@ export default function App() {
       setTournamentId(detectTournamentIdFromUrl())
       setCompetitionSlug(detectCompetitionSlugFromUrl())
       setClubSlug(detectClubSlugFromUrl())
+      setLegalDoc(detectLegalDocFromUrl())
       const prev = e.state?.tab as Tab | undefined
       setTab(prev && VALID_TABS.includes(prev) ? prev : 'overview')
     }
@@ -243,6 +248,7 @@ export default function App() {
     setTab('overview')
     setCompetitionSlug('')
     setClubSlug('')
+    setLegalDoc('')
     setTournamentId(id)
   }, [])
 
@@ -257,6 +263,14 @@ export default function App() {
     setTournamentId('')
     setClubSlug('')
     setCompetitionSlug(slug)
+  }
+
+  if (legalDoc) {
+    return (
+      <TournamentProvider tournamentId="">
+        <LegalPage doc={legalDoc} onHome={goHome} />
+      </TournamentProvider>
+    )
   }
 
   if (clubSlug) {
@@ -383,6 +397,7 @@ export default function App() {
         {tab === 'tips'      && tipsOn && <Tips matches={matches} teams={teams} players={players} groups={groups} bracketRounds={bracketRounds} bracketSlots={bracketSlots} tournament={tournament} showToast={showToast} />}
         {tab === 'sponsors'  && <Sponsors sponsors={sponsors} />}
         {tab === 'media'     && mediaEnabled && <Media tournament={tournament} sponsors={sponsorsEnabled ? sortedSponsors : []} matches={matches} groups={groups} teams={teams} players={players} goals={goals} bracketGoals={bracketGoals} bracketRounds={bracketRounds} bracketSlots={bracketSlots} onPrint={() => setPrintOpen(true)} showToast={showToast} />}
+        <SiteFooter variant="inline" />
       </main>
       {sponsorsEnabled && sponsors.length > 0 && (
         <aside className="sponsor-sidebar" style={{ position: 'fixed', right: 0, top: HEADER_HEIGHT_DESKTOP + 8, bottom: 0, width: 130, flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '2rem .5rem', overflowY: 'auto' }}>

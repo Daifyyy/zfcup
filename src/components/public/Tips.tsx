@@ -16,6 +16,7 @@ import type { Tournament } from '../../hooks/useTournament'
 import { TeamLogo } from '../ui/TeamLogo'
 import { recalcTipsterPoints } from '../../lib/tipsEval'
 import { getSportDef } from '../../lib/sports'
+import { legalPath } from '../../lib/legal'
 
 const STORAGE_KEY = 'turnajnik_tipster_id'
 
@@ -57,6 +58,7 @@ function TipsLogin({ tournamentId, onSuccess, showToast }: { tournamentId: strin
   const [lastName, setLastName] = useState('')
   const [pin, setPin] = useState('')
   const [pinConfirm, setPinConfirm] = useState('')
+  const [consent, setConsent] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const buildName = () => `${firstName.trim()} ${lastName.trim()}`.toLowerCase().replace(/\s+/g, ' ').trim()
@@ -66,6 +68,7 @@ function TipsLogin({ tournamentId, onSuccess, showToast }: { tournamentId: strin
     if (!lastName.trim()) { showToast('Zadej příjmení'); return }
     if (!/^\d{4}$/.test(pin)) { showToast('PIN musí být 4 číslice (0–9)'); return }
     if (pin !== pinConfirm) { showToast('PINy se neshodují'); return }
+    if (!consent) { showToast('Potvrď prosím souhlas se zobrazením jména v žebříčku'); return }
     setLoading(true)
     const normalized = buildName()
     const { data, error } = await supabase
@@ -126,6 +129,15 @@ function TipsLogin({ tournamentId, onSuccess, showToast }: { tournamentId: strin
               value={pinConfirm} onChange={e => setPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 4))}
               onKeyDown={e => e.key === 'Enter' && handleRegister()} placeholder="••••" />
           </div>
+        )}
+        {mode === 'register' && (
+          <label style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start', fontSize: '.74rem', color: 'var(--ink-muted)', lineHeight: 1.45, margin: '.2rem 0 .7rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} style={{ marginTop: 2, flexShrink: 0 }} />
+            <span>
+              Souhlasím, že se moje jméno a body zobrazí ve veřejném žebříčku tipovačky. Více v{' '}
+              <a href={legalPath('ochrana-osobnich-udaju')} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand)' }}>zásadách ochrany osobních údajů</a>.
+            </span>
+          </label>
         )}
         <button type="button" className="btn btn-p btn-full"
           onClick={mode === 'login' ? handleLogin : handleRegister}

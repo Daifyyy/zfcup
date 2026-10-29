@@ -39,6 +39,7 @@ Výjimky s vlastními hooky: `TournamentLanding`, `CompetitionPage`, `Competitio
 | `/{uuid}?kiosk=1` | `KioskMode` (+ `Scoreboard` přes tlačítko) | stav `kiosk` |
 | `/s/{slug}` | `CompetitionPage` (síň vítězů, věčná tabulka, rekordy, hráči) | `detectCompetitionSlugFromUrl()` |
 | `/k/{slug}` | `ClubPage` (turnaje a umístění, vzájemné zápasy, hráči, soupiska) | `detectClubSlugFromUrl()` |
+| `/pravni/{doc}` | `LegalPage` — `podminky`, `ochrana-osobnich-udaju`, `cookies`, `provozovatel` | `detectLegalDocFromUrl()` (`lib/legal.ts`) |
 | `/{uuid}?zapas={id}` / `?tym={id}` | turnaj s otevřeným detailem zápasu (i play-off slotu) / týmu | `DetailHost` |
 
 - Záložka turnaje je jen ve `history.state.tab` (ne v URL). Jediný `popstate` handler čte turnaj/soutěž z URL a záložku ze state.
@@ -46,7 +47,8 @@ Výjimky s vlastními hooky: `TournamentLanding`, `CompetitionPage`, `Competitio
 - Načítání: `TournamentSkeleton`, dokud `tournament.id !== tournamentId` nebo se načítají týmy/skupiny/zápasy; `notFound` → „Turnaj nenalezen“.
 - **Detaily (Fáze 4)**: `TournamentDataContext` (data, která App už načítá — `useTournamentData()`) + `DetailHost` (stav otevřeného detailu, `useDetail().openTeam/openMatch`). Otevření = `pushState` s `detail` + `detailDepth` ve stavu a `?zapas=`/`?tym=` v URL; Zpět vrátí předchozí detail, křížek/Esc zavře všechny (`history.go(-depth)`); odkaz z URL se otevře bez nového záznamu (hloubka 0). `DetailHost` má `key={tournamentId}`. V kiosku/TV a adminu se detaily neotevírají (`useDetail()` mimo provider nic nedělá).
 - Překryvy: `AdminPanel` (Ctrl+Shift+A / ikona zámku, jen `canEdit`), `PrintBulletin` (portál do `<body>`), `Scoreboard`, `PasswordResetOverlay`.
-- Líně načítané: `AdminPanel`, `KioskMode`, `Scoreboard`, `PrintBulletin`, `CompetitionPage` (`lib/lazyComponent.tsx`), sdílecí grafiky (`share/lazy.tsx`), `xlsx` v exportech.
+- **Patička** `SiteFooter` (`components/layout/`): `dark` na úvodní stránce, soutěži, klubu a právních stránkách; `inline` pod obsahem turnaje; © řádek i v bulletinu. Odkazy přecházejí bez reloadu přes `goToLegal()` (pushState + umělý `popstate`).
+- Líně načítané: `AdminPanel`, `KioskMode`, `Scoreboard`, `PrintBulletin`, `LegalPage`, `CompetitionPage` (`lib/lazyComponent.tsx`), sdílecí grafiky (`share/lazy.tsx`), `xlsx` v exportech.
 
 ---
 
@@ -179,6 +181,8 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `tipsEval.ts` | vyhodnocení speciálních tipů, `checkTournamentWinner`, `recalcTipsterPoints` | supabase, standings | MatchesTab, BracketTab, TipsAdminTab, Tips |
 | `partners.ts` | úrovně partnerů, `isMissingColumnError` | — | App, Sponsors, Media, admin |
 | `theme.ts` | `applyTournamentTheme` (WCAG kontrast) | — | App, BrandingSection |
+| `legal.ts` | **údaje provozovatele `OPERATOR`** (vyplňuje uživatel), `LEGAL_EFFECTIVE_DATE`, `SUBPROCESSORS`, `LEGAL_DOCS`, `detectLegalDocFromUrl`, `missingOperatorFields` | brand | App, LegalPage, SiteFooter, Tips |
+| `dataExport.ts` | `exportTournamentData` (JSON všech tabulek turnaje, bez PINů), `downloadJson` | supabase | SettingsTab |
 | `storage.ts` | cesty a upload do Storage (`tournaments/{id}/…`) | supabase | TeamsTab, SponsorsTab |
 | `exportExcel.ts` / `exportPress.ts` | XLSX rozpis, kartičky rozhodčích / tiskový servis | standings, sports, `xlsx` (líně) | MatchesTab / Media |
 | `sanitize.ts` | DOMPurify pro `dangerouslySetInnerHTML` | — | Overview, Info, Rules, AnnouncementCard |

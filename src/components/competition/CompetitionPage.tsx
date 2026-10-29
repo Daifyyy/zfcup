@@ -9,6 +9,7 @@ import { Card, SectionHeader } from '../ui/Card'
 import { Badge } from '../ui/Badge'
 import { TeamLogo } from '../ui/TeamLogo'
 import Empty from '../ui/Empty'
+import SiteFooter from '../layout/SiteFooter'
 
 type CTab = 'editions' | 'table' | 'records' | 'players'
 
@@ -289,6 +290,7 @@ export default function CompetitionPage({ slug, onOpenTournament, onHome }: Prop
           </div>
         )}
       </main>
+      <SiteFooter />
 
       {profile && (
         <div className="tm-drawer" onClick={() => setProfile(null)}>

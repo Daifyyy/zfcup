@@ -10,7 +10,7 @@
 **Plán dotažení (9 fází, schválen 2026-10-27):** `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`
 Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bulletin, přepínání turnajů, Přehled) → 3 datová vrstva → 4 detail týmu/zápasu → 5 knihovna klubů + historie → 6 design (TV, branding, oznámení) → 7 demo na úvodní stránce → 8 právní rámec. Tipovačka se jen globálně vypne (zabezpečení odloženo).
 
-**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); Fáze 6 nasazená (57898b6); Fáze 7 nasazená (fd3ef25); **další: Fáze 8 (právní rámec)**, pak Fáze 9 (registrace + obchodní model — čeká na rozhodnutí)
+**Větev:** `main` — Fáze 0 a 1 hotové a nasazené (f94d7f0); Fáze 2 hotová a nasazená (9aaf0b2); Fáze 3 hotová a nasazená; Fáze 4 hotová a nasazená (dfe8a45); Fáze 5 nasazená (160c637); Fáze 6 nasazená (57898b6); Fáze 7 nasazená (fd3ef25); Fáze 8 hotová (čeká na doplnění údajů provozovatele), pak Fáze 9 (registrace + obchodní model — čeká na rozhodnutí)
 **Produkce (`main`, Vercel):** web je stále za maintenance heslem (`MAINTENANCE=true`)
 **DB migrace:** 01–14 spuštěné (14 = brand_style, spuštěná 2026-10-27); 01–12 spuštěné (12 = indexy tournament_id) (10 = realtime publikace; 11 = role a RLS podle vlastníka, platform_settings)
 **Účty:** správce platformy `denis.honzejk@gmail.com` (vlastní všechny turnaje/soutěže); `zf@zf.com` už nepoužívat (běžný organizátor bez turnajů). Maintenance údaje jen v env Vercelu (`MAINTENANCE_USER`/`MAINTENANCE_PASSWORD`).
@@ -85,8 +85,16 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Ověřeno v prohlížeči: desktop i mobil 390 px (bez přetečení), typy 63, 99 testů, build (DemoModal 5 kB gzip).
 - Tlačítko „Chci turnaj“ v ukázkách → `mailto:` na `BRAND.supportEmail` (vyplněno, e-mail správce platformy). Do budoucna zvážit kontaktní formulář (spam, GDPR — Fáze 8).
 
+### Fáze 8 — právní rámec (2026-10-29)
+- Stránky `/pravni/podminky`, `/pravni/ochrana-osobnich-udaju`, `/pravni/cookies`, `/pravni/provozovatel` (`components/legal/LegalPage.tsx`, líně). Provozovatel = uživatel; **údaje si doplní sám** v `src/lib/legal.ts` (`OPERATOR`) — prázdná pole se na stránkách ukazují jako „[doplnit: …]“ a nahoře je upozornění.
+- Podmínky: účty organizátorů, odpovědnost za obsah, licence a ochrana díla (zákaz kopírování, scrapingu…), zpracovatelská smlouva čl. 28 GDPR (organizátor = správce, platforma = zpracovatel), tipovačka bez vkladu, omezení odpovědnosti, změny, ČOI.
+- Zásady GDPR: role, tabulka údajů / účel / právní základ / doba uchování, zpracovatelé (Supabase, Vercel, YouTube), přenos mimo EHP, děti, práva, ÚOOÚ. Cookies: jen technicky nezbytné localStorage → bez cookie lišty.
+- Patička s © a odkazy všude (úvod, turnaj, soutěž, klub, bulletin). YouTube v oznámeních přes `youtube-nocookie.com`. Souhlas se zobrazením jména při registraci tipéra. Upozornění na souhlas u nahrávání fotky hráče. Nastavení → „Data a ochrana osobních údajů“: export turnaje do JSON; „Vymazat vše“ nově maže i asistence, karty, tresty, fotky hráčů ve Storage, tipéry, rozhodčí a kontakt pro média. `public/robots.txt`.
+- Ověřeno: typy 63 (beze změny), 99 testů, prohlížeč 360/768/1366 px bez přetečení (tabulky na mobilu jako karty), navigace patičkou a Zpět. Neověřeno naostro: export a rozšířené mazání (vyžaduje přihlášení — vyzkoušet na testovacím turnaji).
+- Texty jsou kvalitní šablona; před spuštěním doporučena kontrola právníkem. Ochranná známka zatím neověřena.
+
 ### Kde navázat
-1. **Příště začít:** Fáze 8 — právní rámec (GDPR, podmínky, cookies) — nutné před vypnutím maintenance režimu. Na začátku si od uživatele vyžádat identitu provozovatele (jméno/firma, IČO, adresa, e-mail).
+1. **Uživatel doplní** `OPERATOR` v `src/lib/legal.ts` (jméno, IČO, adresa, e-mail, zápis v rejstříku). Pak vyzkoušet export a „Vymazat vše“ na testovacím turnaji. Teprve potom vypnout maintenance.
 2. **Fáze 9 (nová, 2026-10-27):** registrace organizátorů a obchodní model — uživatel ještě nerozhodl (předplatné vs. cena za turnaj…). Detaily v plánu.
 2. Před nasazením play-off v Cupu 2026 ověřit, že je nasazená oprava `groups_qf_full`.
 3. Pozn.: čísla migrací v plánu jsou posunutá o 1 (indexy = 12, kluby = 13).
