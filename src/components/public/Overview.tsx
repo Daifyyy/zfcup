@@ -27,6 +27,7 @@ import { useDetail } from '../../lib/TournamentDataContext'
 import { fixtureId } from '../../lib/details'
 import { TeamLogo } from '../ui/TeamLogo'
 import { PartnerStrip } from '../ui/PartnerStrip'
+import { tournamentQrUrl, withAccessCode } from '../../lib/share'
 
 interface Props {
   tournament: Tournament | null
@@ -153,7 +154,7 @@ export default function Overview({
             </button>
           )}
           <div className="ov-hero__qr desktop-only">
-            <QRCode size={72} url={tournamentUrl} />
+            <QRCode size={72} url={tournamentQrUrl(tournament)} />
             <span>Naskenuj a sleduj živě</span>
           </div>
         </div>
@@ -338,6 +339,7 @@ export default function Overview({
           matchCount={fixtures.length}
           goalCount={totalGoals}
           url={tournamentUrl}
+          codeUrl={withAccessCode(tournamentUrl, tournament)}
           onClose={() => setShareOpen(false)}
         />
       )}

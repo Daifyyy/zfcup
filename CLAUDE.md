@@ -46,6 +46,7 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 - `tournament.visibility` (`public`|`private`) + `access_code`. RLS čtení přes `can_read_tournament(tid)`: veřejný, vlastník/správce, nebo kód v hlavičce `x-access-code` (posílá `src/lib/supabase.ts` z `src/lib/accessCodes.ts`, jen pro `/rest/v1/`). Realtime hlavičku nezná → divák s kódem má polling 30 s (`App.tsx`).
 - Nová tabulka s `tournament_id` = přidat ji do seznamu v migraci 15 (politika `public_read` s `can_read_tournament`). `visibility`/`access_code` posílat jen u soukromého turnaje (bez migrace sloupce chybí).
 - Validační turnaj `/adcb7982-5716-407a-9f27-6fbae02346cb` (slug `validacni-pohar-2026`) nemazat; skript `src/dev/seedValidation.ts`.
+- **QR a odkazy u soukromého turnaje**: TV tabule, TV režim a QR na Přehledu obsahují přístupový kód (`tournamentQrUrl` v `src/lib/share.ts`). Sdílecí grafika a „Kopírovat odkaz“ jsou bez kódu; v okně sdílení volba „Přidat přístupový kód“ (výchozí vypnuto, `withAccessCode`).
 - Úvodní stránka nezobrazuje všechny turnaje: vyhledávání + „Právě probíhá“ + „Moje turnaje“ (`src/lib/tournamentSearch.ts`).
 
 ## Knihovna klubů (migrace 13)

@@ -24,6 +24,7 @@ import { TvGroupTable } from '../tv/TvGroupTable'
 import { FitBox } from '../tv/FitBox'
 import { standingsZones } from '../../lib/zones'
 import { useBackClose } from '../../lib/useBackClose'
+import { tournamentQrUrl } from '../../lib/share'
 
 interface Props {
   tournament: Tournament | null
@@ -638,7 +639,7 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
             <div style={{ fontSize: S.label, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Sledujte živě</div>
             <div style={{ fontSize: S.label, color: C.muted }}>naskenujte QR kód</div>
           </div>
-          <div className="sb-head__qrbox"><QRCode size={52} url={tournamentUrl} /></div>
+          <div className="sb-head__qrbox"><QRCode size={52} url={tournamentQrUrl(tournament)} /></div>
         </div>
 
         <button type="button" onClick={onExit} className="sb-head__close" style={{ fontSize: S.label }} aria-label="Zavřít tabuli">

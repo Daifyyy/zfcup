@@ -20,6 +20,7 @@ import { TV, TV_SIZE, tvLogo } from '../tv/tvTheme'
 import { TvGroupTable } from '../tv/TvGroupTable'
 import { FitBox } from '../tv/FitBox'
 import { standingsZones } from '../../lib/zones'
+import { tournamentQrUrl } from '../../lib/share'
 
 /* ── Palette ───────────────────────────────────────────── */
 // Tmavá broadcast paleta — shodná s TV tabulí (Scoreboard).
@@ -590,7 +591,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
             <div style={{ fontSize: S.label, color: 'rgba(255,255,255,.5)' }}>Naskenuj QR kód</div>
           </div>
           <div style={{ background: '#fff', padding: 4, borderRadius: 4, lineHeight: 0 }}>
-            <QRCode size={52} url={tournament?.id ? `${window.location.origin}/${tournament.id}` : undefined} />
+            <QRCode size={52} url={tournamentQrUrl(tournament)} />
           </div>
         </div>
       </div>

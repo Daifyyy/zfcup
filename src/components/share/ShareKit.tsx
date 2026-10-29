@@ -15,6 +15,8 @@ interface Base {
   showToast?: (msg: string) => void
   /** Odkaz pro „Kopírovat odkaz“ */
   url?: string
+  /** Soukromý turnaj: odkaz s přístupovým kódem (volba v okně sdílení) */
+  codeUrl?: string | null
 }
 
 function slug(s: string): string {
@@ -40,6 +42,7 @@ export function ShareMatch(p: Base & {
       onClose={p.onClose}
       showToast={p.showToast}
       url={p.url}
+      codeUrl={p.codeUrl}
       render={format => <MatchGraphic format={format} {...p} />}
     />
   )
@@ -53,6 +56,7 @@ export function ShareTable(p: Base & { groupName: string; rows: StandingRow[]; t
       onClose={p.onClose}
       showToast={p.showToast}
       url={p.url}
+      codeUrl={p.codeUrl}
       render={format => <TableGraphic format={format} {...p} />}
     />
   )
@@ -66,6 +70,7 @@ export function ShareLeaders(p: Base & { title: string; unit?: string; rows: Lea
       onClose={p.onClose}
       showToast={p.showToast}
       url={p.url}
+      codeUrl={p.codeUrl}
       render={format => <LeadersGraphic format={format} {...p} />}
     />
   )
@@ -79,7 +84,8 @@ export function ShareTournament(p: Base & { teamCount: number; matchCount: numbe
       onClose={p.onClose}
       showToast={p.showToast}
       url={p.url}
-      render={format => <TournamentGraphic format={format} {...p} />}
+      codeUrl={p.codeUrl}
+      render={(format, withCode) => <TournamentGraphic format={format} {...p} url={withCode && p.codeUrl ? p.codeUrl : p.url} />}
     />
   )
 }

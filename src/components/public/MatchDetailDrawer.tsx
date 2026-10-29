@@ -8,7 +8,7 @@ import { formatDateWeekday } from '../../lib/dates'
 import { getSportDef, type SportDef } from '../../lib/sports'
 import { GoalMark, AssistMark, PimMark } from '../ui/EventIcons'
 import { ShareMatchDialog } from '../share/lazy'
-import { matchUrl } from '../../lib/share'
+import { matchUrl, withAccessCode } from '../../lib/share'
 import { useTournamentData, useDetail } from '../../lib/TournamentDataContext'
 import { findMatchDetail, matchEvents, type SideEvents } from '../../lib/details'
 import type { Team } from '../../hooks/useTeams'
@@ -200,6 +200,7 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
             time={md.scheduled_time}
             events={events}
             url={matchUrl(tournament.id, md.id)}
+            codeUrl={withAccessCode(matchUrl(tournament.id, md.id), tournament)}
             onClose={() => setGraphic(false)}
           />
         </div>

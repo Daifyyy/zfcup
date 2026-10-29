@@ -10,12 +10,14 @@ import { copyText } from '../../lib/share'
 interface Props {
   title: string
   fileName: string
-  /** Šablona pro daný formát */
-  render: (format: ShareFormat) => ReactElement
+  /** Šablona pro daný formát (withCode = vložit přístupový kód do QR) */
+  render: (format: ShareFormat, withCode: boolean) => ReactElement
   onClose: () => void
   showToast?: (msg: string) => void
   /** Odkaz pro „Kopírovat odkaz“ (doplňková volba) */
   url?: string
+  /** Soukromý turnaj: odkaz s přístupovým kódem (nabídne se jako volba, výchozí vypnuto) */
+  codeUrl?: string | null
 }
 
 /** Umí prohlížeč sdílet soubor (mobil → Instagram, Facebook, WhatsApp…)? */
@@ -33,11 +35,13 @@ function canShareFiles(): boolean {
  * náhled ukazuje přesně výsledný obrázek. Mobil: „Sdílet obrázek“ → systémová nabídka;
  * počítač: Stáhnout / Kopírovat obrázek (vložit do FB, WhatsApp Web…) / Kopírovat odkaz.
  */
-export default function ShareModal({ title, fileName, render, onClose, showToast, url }: Props) {
+export default function ShareModal({ title, fileName, render, onClose, showToast, url, codeUrl }: Props) {
   useBackClose(true, onClose, 'share')
   const [format, setFormat] = useState<ShareFormat>('square')
-  const [blobs, setBlobs] = useState<Partial<Record<ShareFormat, Blob>>>({})
-  const [previews, setPreviews] = useState<Partial<Record<ShareFormat, string>>>({})
+  const [withCode, setWithCode] = useState(false)
+  const key = `${format}|${withCode ? 1 : 0}`
+  const [blobs, setBlobs] = useState<Record<string, Blob>>({})
+  const [previews, setPreviews] = useState<Record<string, string>>({})
   const [error, setError] = useState(false)
   const [done, setDone] = useState<'image' | 'link' | null>(null)
   const nodeRef = useRef<HTMLDivElement>(null)
@@ -54,7 +58,7 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
 
   // Vygenerovat obrázek pro aktuální formát (jednou; Safari první render někdy vynechá obrázky → 2×)
   useEffect(() => {
-    if (blobs[format]) return
+    if (blobs[key]) return
     let cancelled = false
     setError(false)
     const run = async () => {
@@ -68,19 +72,20 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
         await toBlob(node, opts)
         const blob = await toBlob(node, opts)
         if (cancelled || !blob) return
-        setBlobs(b => ({ ...b, [format]: blob }))
-        setPreviews(p => ({ ...p, [format]: URL.createObjectURL(blob) }))
+        setBlobs(b => ({ ...b, [key]: blob }))
+        setPreviews(p => ({ ...p, [key]: URL.createObjectURL(blob) }))
       } catch {
         if (!cancelled) setError(true)
       }
     }
     run()
     return () => { cancelled = true }
-  }, [format, blobs, w, h])
+  }, [key, blobs, w, h])
 
   useEffect(() => () => { Object.values(previews).forEach(u => u && URL.revokeObjectURL(u)) }, [previews])
 
-  const blob = blobs[format]
+  const blob = blobs[key]
+  const linkToCopy = withCode && codeUrl ? codeUrl : url
   const file = blob ? new File([blob], `${fileName}-${format === 'story' ? '1080x1920' : '1080x1080'}.png`, { type: 'image/png' }) : null
 
   function flash(kind: 'image' | 'link') {
@@ -119,8 +124,8 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
   }
 
   async function copyLink() {
-    if (!url) return
-    if (await copyText(url)) { flash('link'); showToast?.('Odkaz zkopírován') }
+    if (!linkToCopy) return
+    if (await copyText(linkToCopy)) { flash('link'); showToast?.('Odkaz zkopírován') }
     else showToast?.('Odkaz se nepodařilo zkopírovat')
   }
 
@@ -146,10 +151,20 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
         </div>
 
         <div className={`shr__preview shr__preview--${format}`}>
-          {previews[format]
-            ? <img src={previews[format]} alt={`Náhled: ${title}`} />
+          {previews[key]
+            ? <img src={previews[key]} alt={`Náhled: ${title}`} />
             : <div className="shr__loading">{error ? 'Grafiku se nepodařilo vytvořit' : <><div className="spinner" />Připravuji obrázek…</>}</div>}
         </div>
+
+        {codeUrl && (
+          <label className="shr__code">
+            <input type="checkbox" checked={withCode} onChange={e => setWithCode(e.target.checked)} />
+            <span>
+              <b>Přidat přístupový kód</b> — soukromý turnaj pak otevře každý, kdo uvidí obrázek nebo odkaz.
+              {withCode && <em> Nesdílejte veřejně (Instagram, veřejné skupiny).</em>}
+            </span>
+          </label>
+        )}
 
         <div className="shr__actions">
           {shareFiles ? (
@@ -176,7 +191,7 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
               )}
             </>
           )}
-          {url && (
+          {linkToCopy && (
             <button type="button" className="ui-btn ui-btn--ghost" onClick={copyLink}>
               {done === 'link' ? <Check size={16} /> : <Link2 size={16} />}Kopírovat odkaz
             </button>
@@ -191,7 +206,7 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
 
       {/* Šablona v plné velikosti mimo obrazovku — z ní se dělá PNG */}
       <div className="shr__render" aria-hidden="true">
-        <div ref={nodeRef} style={{ width: w, height: h }}>{render(format)}</div>
+        <div ref={nodeRef} style={{ width: w, height: h }}>{render(format, withCode)}</div>
       </div>
     </div>,
     document.body,

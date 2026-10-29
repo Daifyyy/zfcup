@@ -65,3 +65,21 @@ export function matchUrl(tournamentId: string, matchId: string): string {
 export function teamUrl(tournamentId: string, teamId: string): string {
   return `${tournamentUrl(tournamentId)}?tym=${teamId}`
 }
+
+interface CodeAware { id: string; visibility?: 'public' | 'private'; access_code?: string | null }
+
+/** Adresa s přístupovým kódem (jen soukromý turnaj se známým kódem), jinak null. */
+export function withAccessCode(url: string, t: CodeAware | null | undefined): string | null {
+  if (!t || t.visibility !== 'private' || !t.access_code) return null
+  return `${url}${url.includes('?') ? '&' : '?'}kod=${encodeURIComponent(t.access_code)}`
+}
+
+/**
+ * Adresa pro QR kód na TV tabuli / v TV režimu / na Přehledu: soukromý turnaj s kódem
+ * (kód vidí jen lidé na místě nebo ti, kdo turnaj už mají otevřený), veřejný bez kódu.
+ */
+export function tournamentQrUrl(t: CodeAware | null | undefined): string | undefined {
+  if (!t?.id) return undefined
+  const base = tournamentUrl(t.id)
+  return withAccessCode(base, t) ?? base
+}
