@@ -45,6 +45,7 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 ## Soukromé turnaje (migrace 15)
 - `tournament.visibility` (`public`|`private`) + `access_code`. RLS čtení přes `can_read_tournament(tid)`: veřejný, vlastník/správce, nebo kód v hlavičce `x-access-code` (posílá `src/lib/supabase.ts` z `src/lib/accessCodes.ts`, jen pro `/rest/v1/`). Realtime hlavičku nezná → divák s kódem má polling 30 s (`App.tsx`).
 - Nová tabulka s `tournament_id` = přidat ji do seznamu v migraci 15 (politika `public_read` s `can_read_tournament`). `visibility`/`access_code` posílat jen u soukromého turnaje (bez migrace sloupce chybí).
+- Validační turnaj `/adcb7982-5716-407a-9f27-6fbae02346cb` (slug `validacni-pohar-2026`) nemazat; skript `src/dev/seedValidation.ts`.
 - Úvodní stránka nezobrazuje všechny turnaje: vyhledávání + „Právě probíhá“ + „Moje turnaje“ (`src/lib/tournamentSearch.ts`).
 
 ## Knihovna klubů (migrace 13)
@@ -83,7 +84,7 @@ Aplikace podporuje více sportů (fotbal, hokej) přes `tournament.sport` (`'foo
 - **Auth → "Allow new users to sign up" = VYPNUTO** — nové účty přes Supabase dashboard → Invite user
 
 ## RLS a DB záloha
-Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–15_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje).
+Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–16_*.sql` (12 = indexy `tournament_id`, 15 = soukromé turnaje, 16 = odstranění cizích politik čtení). **Žádné další SELECT politiky na tabulkách turnaje nevytvářet** (ani v dashboardu) — sčítají se a obešly by soukromí.
 - **Čtení**: SELECT pro všechny (anon) u veřejných turnajů; soukromé jen s kódem / vlastník (migrace 15).
 - **Zápis (migrace 11)**: `can_edit_tournament(tournament_id)` = vlastník turnaje (`tournament.owner_id`) nebo správce platformy (`is_platform_admin()`); soutěže/kluby/osoby přes `can_edit_competition`. Storage: `can_edit_storage_path(name)` — nové soubory ukládat pod `tournaments/{turnajId}/…` (`src/lib/storage.ts`: `tournamentAssetPath`, `uploadAsset`, `removeAssetByUrl`).
 - **Frontend**: `useAuthRole()` (`session`, `isPlatformAdmin`, `canEditTournament(ownerId)`); `App.tsx` `canEdit` řídí admin panel (cizí turnaj → „Bez oprávnění“). Výběr soutěže pro nový ročník jen z vlastních.
