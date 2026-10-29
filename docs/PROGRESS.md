@@ -126,7 +126,7 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Doplněno: rozložení špičky po živé změně (dávka 250 ms + náhodně do 1 s), gesto Zpět zavře admin (ne turnaj), iOS bez přibližování při psaní (16 px vč. editoru + `maximum-scale=1` jen iOS), vyhledávání ukazuje i vlastní soukromé turnaje („Vesnická vřava“ byla v DB celá, jen soukromá).
 
 ### Kde navázat
-1. **Uživatel:** rozhodnout tarify (doporučeno Vercel Pro + Supabase Pro), spustit **migraci 17**, v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
+1. **Uživatel:** rozhodnout tarify (doporučeno Vercel Pro + Supabase Pro); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
 2. Pak Fáze 9 — registrace organizátorů a obchodní model.
 3. P2 z auditu: menší hlavní balík, sloučení startovních dotazů do RPC, hlášení chyb, `xlsx` z cdn.sheetjs.com.
 
