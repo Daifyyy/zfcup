@@ -1,3 +1,4 @@
+import PartnerReachSection from './PartnerReachSection'
 import { useState, useEffect } from 'react'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { ArrowDown, ArrowUp, ImagePlus, Pencil, Trash2 } from 'lucide-react'
@@ -225,6 +226,7 @@ export default function SponsorsTab({ sponsors, tournament, refetchSponsors, sho
           </div>
         </>
       )}
+      <PartnerReachSection tournament={tournament} sponsors={sponsors} showToast={showToast} />
     </div>
   )
 }

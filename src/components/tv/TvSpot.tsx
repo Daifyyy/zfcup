@@ -4,7 +4,9 @@ import type { Announcement } from '../../hooks/useAnnouncements'
 import { sortByTier, tierLabel, tierOf } from '../../lib/partners'
 import { announcementIcon } from '../../lib/announcementIcons'
 import { sanitizeHtml } from '../../lib/sanitize'
-import { TV } from './tvTheme'
+import { TV, tvLogo } from './tvTheme'
+import QRCode from '../ui/QRCode'
+import { reachUrl } from '../../lib/partnerReach'
 
 export type Spot = { kind: 'partner'; sponsor: Sponsor } | { kind: 'announcement'; announcement: Announcement }
 
@@ -54,7 +56,15 @@ export function TvSpot({ spot }: { spot: Spot }) {
           <img src={s.logo_url} alt={s.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
         </div>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: vw(2.6), textTransform: 'uppercase', color: TV.text }}>{s.name}</div>
-        {s.website_url && <div style={{ fontSize: vw(1.2), color: TV.muted }}>{s.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</div>}
+        {s.reach ? (
+          // QR akce partnera (modul partner_reach) — sken se započte do reportu pro partnera
+          <div style={{ display: 'flex', alignItems: 'center', gap: vw(1.4), background: 'rgba(255,255,255,.06)', borderRadius: 16, padding: `${vw(.8)} ${vw(1.4)}` }}>
+            <div style={{ background: '#fff', padding: vw(.4), borderRadius: 10, lineHeight: 0 }}>
+              <QRCode url={reachUrl(s.reach.code, 'tv')} size={Math.round(tvLogo(150))} />
+            </div>
+            <div style={{ fontSize: vw(1.5), fontWeight: 700, color: TV.text, maxWidth: vw(28), textAlign: 'left' }}>{s.reach.cta || 'Naskenujte kód'}</div>
+          </div>
+        ) : s.website_url && <div style={{ fontSize: vw(1.2), color: TV.muted }}>{s.website_url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</div>}
       </div>
     )
   }

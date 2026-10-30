@@ -29,7 +29,9 @@ import { BRAND } from './lib/brand'
 import { sortByTier, getTitlePartner } from './lib/partners'
 import { applyTournamentTheme } from './lib/theme'
 import { ModulesProvider } from './lib/ModulesContext'
-import { isPlayingToday } from './lib/modules'
+import { isModuleEnabled, isPlayingToday } from './lib/modules'
+import { usePartnerLinks } from './hooks/usePartnerLinks'
+import { trackVisitOnce } from './lib/partnerReach'
 import { todayISO } from './lib/dates'
 import BottomNav from './components/layout/BottomNav'
 import Overview from './components/public/Overview'
@@ -145,7 +147,7 @@ export default function App() {
   const { announcements, refetch: refetchAnnouncements } = useAnnouncements(tournamentId)
   const { ruleItems, refetch: refetchRuleItems } = useRuleItems(tournamentId)
   const { referees, refetch: refetchReferees } = useReferees(tournamentId)
-  const { sponsors, refetch: refetchSponsors } = useSponsors(tournamentId)
+  const { sponsors: rawSponsors, refetch: refetchSponsors } = useSponsors(tournamentId)
   const { competitions } = useCompetitions()
   const { editions: competitionEditions } = useCompetitionEditions(tournament?.id === tournamentId ? (tournament?.competition_id ?? '') : '')
   const { session, isPlatformAdmin, canEditTournament, ready: authReady } = useAuthRole()
@@ -154,6 +156,16 @@ export default function App() {
   const canEdit = !!tournament && canEditTournament(tournament.owner_id)
   // Tipovačka: globální vypínač správce platformy AND přepínač turnaje
   const tipsOn = platform.tipsEnabled && (tournament?.tips_enabled ?? false)
+  // Dosah partnera (modul partner_reach): QR akce přidané k partnerům → TV, grafiky, stránka Partneři
+  const reachOn = isModuleEnabled('partner_reach', tournament?.id === tournamentId ? tournament : null, platform.modules, { isPlatformAdmin, playingToday: false })
+  const { links: partnerLinks } = usePartnerLinks(tournamentId, reachOn)
+  const sponsors = useMemo(() => {
+    if (!partnerLinks.length) return rawSponsors
+    const bySponsor = new Map(partnerLinks.filter(l => l.sponsor_id).map(l => [l.sponsor_id!, l]))
+    return rawSponsors.map(s => { const l = bySponsor.get(s.id); return l ? { ...s, reach: { code: l.code, cta: l.cta } } : s })
+  }, [rawSponsors, partnerLinks])
+  // Návštěva webu turnaje — jeden součtový zápis za relaci (jen při zapnutém modulu)
+  useEffect(() => { if (reachOn && tournamentId) trackVisitOnce(tournamentId) }, [reachOn, tournamentId])
 
   // Soukromý turnaj přes přístupový kód: Realtime hlavičku s kódem nezná → živé události
   // nechodí, proto častější obnova (vlastník/správce dostávají realtime normálně)

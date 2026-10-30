@@ -8,6 +8,7 @@ import type { Tournament } from '../../hooks/useTournament'
 import type { StandingRow } from '../../lib/standings'
 import { BRAND } from '../../lib/brand'
 import { QRCodeSVG } from 'qrcode.react'
+import { reachUrl } from '../../lib/partnerReach'
 import { getSportDef } from '../../lib/sports'
 import { getTitlePartner, sortByTier } from '../../lib/partners'
 import type { SideEvents } from '../../lib/details'
@@ -156,6 +157,13 @@ function PartnerFooter({ sponsors, story }: { sponsors: Sponsor[]; story: boolea
     <div style={{ display: 'flex', flexDirection: story ? 'row' : 'column', alignItems: story ? 'center' : 'flex-start', gap: story ? 20 : 6, flexShrink: 0 }}>
       <span style={{ ...label, fontSize: story ? 18 : 14 }}>Presented by</span>
       <img src={title.logo_url} crossOrigin="anonymous" alt={title.name} style={{ height: story ? 92 : 64, maxWidth: story ? 320 : 240, objectFit: 'contain' }} />
+      {/* QR akce generálního partnera (modul partner_reach) — sken se počítá jako „Grafiky na sítích“ */}
+      {title.reach && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <QRCodeSVG value={reachUrl(title.reach.code, 'social')} size={story ? 96 : 72} fgColor="#0b1220" bgColor="#ffffff" />
+          {title.reach.cta && <span style={{ fontSize: story ? 18 : 15, fontWeight: 700, color: '#0b1220', maxWidth: story ? 260 : 180, lineHeight: 1.25 }}>{title.reach.cta}</span>}
+        </div>
+      )}
     </div>
   )
   const othersBlock = shown.length > 0 && (

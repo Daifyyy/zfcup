@@ -3,7 +3,7 @@
 // limit 100 000 požadavků/den); hlavičky jim dává public/_headers.
 // Všechno ostatní projde tudy: maintenance → náhledy pro roboty → aplikace (SPA).
 // _headers se na odpovědi Workeru neuplatní → hlavičky přidáváme tady.
-import { maintenanceResponse, ogResponse, SECURITY_HEADERS, type EdgeEnv } from './core'
+import { maintenanceResponse, ogResponse, reachRedirect, SECURITY_HEADERS, type EdgeEnv } from './core'
 
 interface Env extends EdgeEnv {
   ASSETS: { fetch: (request: Request) => Promise<Response> }
@@ -23,6 +23,9 @@ export default {
     const open = env.MAINTENANCE?.trim().toLowerCase() === 'false'
     const blocked = maintenanceResponse(request, { ...env, MAINTENANCE: open ? 'false' : 'true' })
     if (blocked) return withSecurityHeaders(blocked)
+    // QR akce partnera (/r/{kód}) — přesměrování, bez hlaviček aplikace
+    const reach = await reachRedirect(request, env)
+    if (reach) return reach
     const og = await ogResponse(request, env)
     if (og) return withSecurityHeaders(og)
     // not_found_handling: single-page-application → neznámé cesty vrátí index.html

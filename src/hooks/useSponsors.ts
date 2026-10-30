@@ -12,6 +12,8 @@ export interface Sponsor {
   position: number
   /** Úroveň partnera — chybí, dokud není spuštěna migrace 08 */
   tier?: 'title' | 'main' | 'partner' | 'supplier' | 'media'
+  /** QR akce partnera (doplní App z partner_links při zapnutém modulu partner_reach) */
+  reach?: { code: string; cta: string | null }
 }
 
 export function useSponsors(tournamentId: string) {

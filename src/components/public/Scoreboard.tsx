@@ -28,6 +28,7 @@ import { tournamentQrUrl } from '../../lib/share'
 import { useModule } from '../../lib/ModulesContext'
 import { useTvEvents } from '../../hooks/useTvEvents'
 import { GoalOverlay, type GoalShow } from '../tv/GoalOverlay'
+import { useTvMinutes } from '../../hooks/useTvMinutes'
 
 interface Props {
   tournament: Tournament | null
@@ -618,6 +619,8 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
   }, [tvEvents.id])
   useEffect(() => { if (!goalAnimOn) setGoalQueue([]) }, [goalAnimOn])
   const finishGoal = useCallback(() => setGoalQueue(q => q.slice(1)), [])
+  // Dosah partnera: jak dlouho běží tabule s logy partnerů
+  useTvMinutes(tournament?.id, useModule('partner_reach'))
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onExit() }

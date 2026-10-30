@@ -82,3 +82,53 @@ describe('náhled odkazu', () => {
     expect(ogSignature({ ...t, name: 'Cup 2' }, [])).not.toBe(base)
   })
 })
+
+import { reachRedirect } from '../../../edge/core'
+import { vi } from 'vitest'
+import { buildReport, normalizeTarget } from '../partnerReach'
+
+describe('QR akce partnera — přesměrování /r/{kód}', () => {
+  const env = { VITE_SUPABASE_URL: 'https://s.test', VITE_SUPABASE_ANON_KEY: 'k' }
+  it('jiná cesta → nic; známý kód → 302 na cíl; robot se nepočítá; neznámý → úvod', async () => {
+    expect(await reachRedirect(new Request('https://x.test/moje'), env)).toBeUndefined()
+    const calls: { body: string }[] = []
+    const fetchMock = vi.fn(async (_u: string, init: RequestInit) => {
+      calls.push({ body: String(init.body) })
+      return new Response(JSON.stringify(JSON.parse(String(init.body)).p_code === 'abcd2345' ? 'https://partner.cz/akce' : null), { status: 200 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const ok = await reachRedirect(new Request('https://x.test/r/abcd2345?s=tv'), env)
+    expect(ok?.status).toBe(302)
+    expect(ok?.headers.get('location')).toBe('https://partner.cz/akce')
+    expect(JSON.parse(calls[0].body)).toEqual({ p_code: 'abcd2345', p_source: 'tv', p_count: true })
+    await reachRedirect(new Request('https://x.test/r/abcd2345?s=hack', { headers: { 'user-agent': 'WhatsApp/2.0' } }), env)
+    expect(JSON.parse(calls[1].body)).toMatchObject({ p_source: 'other', p_count: false })
+    const unknown = await reachRedirect(new Request('https://x.test/r/zzzz9999'), env)
+    expect(unknown?.headers.get('location')).toBe('https://x.test/')
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('report dosahu partnera', () => {
+  it('součty skenů podle zdroje a hodin, spoty, návštěvy, minuty TV, období', () => {
+    const r = buildReport([
+      { sponsor_id: 'P', kind: 'scan', source: 'tv', hour: '2026-10-30T10:00:00Z', amount: 3 },
+      { sponsor_id: 'P', kind: 'scan', source: 'social', hour: '2026-10-30T11:00:00Z', amount: 5 },
+      { sponsor_id: 'P', kind: 'scan', source: 'tv', hour: '2026-10-30T11:00:00Z', amount: 1 },
+      { sponsor_id: 'P', kind: 'tv_spot', source: '', hour: '2026-10-30T10:00:00Z', amount: 7 },
+      { sponsor_id: null, kind: 'visit', source: '', hour: '2026-10-30T09:00:00Z', amount: 40 },
+      { sponsor_id: null, kind: 'tv_minutes', source: '', hour: '2026-10-30T12:00:00Z', amount: 25 },
+    ])
+    const p = r.partners.get('P')!
+    expect(p.scans).toBe(9)
+    expect(p.scansBySource).toEqual([{ source: 'social', count: 5 }, { source: 'tv', count: 4 }])
+    expect(p.scansByHour.map(h => h.count)).toEqual([3, 6])
+    expect(p.tvSpots).toBe(7)
+    expect([r.visits, r.tvMinutes, r.from, r.to]).toEqual([40, 25, '2026-10-30T09:00:00Z', '2026-10-30T12:00:00Z'])
+  })
+  it('cílová adresa: doplní https, odmítne nesmysl', () => {
+    expect(normalizeTarget('www.partner.cz/akce')).toBe('https://www.partner.cz/akce')
+    expect(normalizeTarget('javascript:alert(1)')).toBeNull()
+    expect(normalizeTarget('ahoj')).toBeNull()
+  })
+})

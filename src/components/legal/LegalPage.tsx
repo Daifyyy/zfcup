@@ -407,6 +407,12 @@ function Cookies() {
               <td>do smazání dat webu (hlasy posledních 50 zápasů)</td>
             </tr>
             <tr>
+              <td><code>turnajnik_visit_…</code></td>
+              <td>úložiště relace (sessionStorage)</td>
+              <td>jen u turnajů s měřeným dosahem partnerů: aby se návštěva webu turnaje započetla jen jednou (ukládají se jen součty, žádné údaje o vás)</td>
+              <td>do zavření karty</td>
+            </tr>
+            <tr>
               <td><code>turnajnik_chunk_reload</code></td>
               <td>úložiště relace (sessionStorage)</td>
               <td>po nasazení nové verze aplikace zabrání opakovanému obnovování stránky</td>

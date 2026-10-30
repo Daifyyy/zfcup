@@ -196,6 +196,7 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `finalStandings.ts` | konečné pořadí (finále, zápasy o umístění, sdílená místa, liga) | standings, history | tournamentGraphics |
 | `dayDigest.ts` | hrací dny, program a souhrn dne, stránkování | fixtures, dates | ShareKit, tournamentGraphics |
 | `tournamentGraphics.ts` | data grafik nad `TournamentData` (`bestTeamScopes`, `finalStandingsOf`, `playDaysOf`) | výše | GraphicsMenu, BestTeamCard, DemoModal |
+| `partnerReach.ts` | dosah partnera: `reachUrl`, kódy, sledování (návštěva, spot, minuty TV), `buildReport`/`fetchReport` | supabase | PartnerReachSection, PartnerReport, TvSpot, templates, Sponsors, App |
 | `fanVote.ts` | hlasování diváků: id zařízení, `castVote` (RPC), `fetchVoteResults`, `voteOpen` | supabase, matchState | FanVoteSection, KioskMode, useFanVotes |
 | `diplomas.ts` | diplomy: kdo je dostane (umístění, střelec, hráč, brankář) | tournamentGraphics, finalStandings, bestTeam | Diplomas |
 | `tvEvents.ts` | události TV „od teď“: snímek stavu, rozdíly (gól se střelcem, začátek/konec, skupina, vítěz) | matchState, history | useTvEvents |
@@ -240,7 +241,7 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 - `recalc_all_tipster_points()` (06)
 
 ### 7.3 Migrace (`db-backup/`, spouští uživatel v SQL Editoru)
-01 tabulky · 02 RLS · 03 triggery · 04 storage · 05 upgrade sloupců · 06 FK indexy + RPC · 07 multisport · 08 partneři/branding/média · 09 soutěže a sezóny · 10 realtime publikace · 11 role a RLS podle vlastníka · **12 indexy `tournament_id`** · 13 knihovna klubů · 14 intenzita brandingu · 15 soukromé turnaje · 16 cizí politiky čtení · 17+18 anon zápisy tipovačky · 19 viditelnost soutěže · 20 fotka pro sdílecí grafiky (`tournament.share_photo_url`) · 21 systém modulů (`platform_settings.modules`, `tournament.modules`, `module_feedback`) · 22 hráč zápasu (`matches/bracket_slots.mvp_player_id`) a ruční úpravy týmu turnaje (`tournament.best_team`) · 23 hlasování diváků (`fan_votes`, RPC `cast_fan_vote`, `fan_vote_results`). Další volné číslo: **24**.
+01 tabulky · 02 RLS · 03 triggery · 04 storage · 05 upgrade sloupců · 06 FK indexy + RPC · 07 multisport · 08 partneři/branding/média · 09 soutěže a sezóny · 10 realtime publikace · 11 role a RLS podle vlastníka · **12 indexy `tournament_id`** · 13 knihovna klubů · 14 intenzita brandingu · 15 soukromé turnaje · 16 cizí politiky čtení · 17+18 anon zápisy tipovačky · 19 viditelnost soutěže · 20 fotka pro sdílecí grafiky (`tournament.share_photo_url`) · 21 systém modulů (`platform_settings.modules`, `tournament.modules`, `module_feedback`) · 22 hráč zápasu (`matches/bracket_slots.mvp_player_id`) a ruční úpravy týmu turnaje (`tournament.best_team`) · 23 hlasování diváků (`fan_votes`, RPC `cast_fan_vote`, `fan_vote_results`) · 24 dosah partnera (`partner_links`, `partner_stats`, RPC `resolve_partner_link`, `track_reach`, `partner_report`). Další volné číslo: **25**.
 
 ### 7.4 Storage (bucket `team-logos`)
 Nové soubory pod `tournaments/{turnajId}/…` (`lib/storage.ts`); starší cesty `{teamId}.png`, `sponsors/{id}.png`, `players/{id}.png`.

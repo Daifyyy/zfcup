@@ -35,6 +35,8 @@ import { voteOpen } from '../../lib/fanVote'
 import { buildFixtures } from '../../lib/fixtures'
 import { fixtureId } from '../../lib/details'
 import { matchUrl, withAccessCode } from '../../lib/share'
+import { useTvMinutes } from '../../hooks/useTvMinutes'
+import { trackTvSpot } from '../../lib/partnerReach'
 
 /* ── Palette ───────────────────────────────────────────── */
 // Tmavá broadcast paleta — shodná s TV tabulí (Scoreboard).
@@ -562,6 +564,15 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvEvents.id])
+
+  // Dosah partnera: minuty běhu TV a zobrazení spotu partnera (jen při zapnutém modulu)
+  const reachOn = useModule('partner_reach')
+  useTvMinutes(tournament?.id, reachOn)
+  const shownSpot = currentView.key === 'spot' && spots.length ? spots[spotIdx % spots.length] : null
+  const shownSponsorId = shownSpot?.kind === 'partner' ? shownSpot.sponsor.id : null
+  useEffect(() => {
+    if (reachOn && tournament?.id && shownSponsorId) trackTvSpot(tournament.id, shownSponsorId)
+  }, [reachOn, tournament?.id, shownSponsorId, spotIdx])
 
   // Hlasatel: vypnutí modulu nebo hlasu = okamžité ztišení; odchod z TV také
   useEffect(() => { if (!announcerOn || !voiceOn) cancelSpeech() }, [announcerOn, voiceOn])

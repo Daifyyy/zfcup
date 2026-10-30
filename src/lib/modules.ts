@@ -50,7 +50,7 @@ export const MODULES: ModuleDef[] = [
   { key: 'fan_vote', name: 'Hlasování diváků', description: 'Diváci hlasují o hráči zápasu přes QR kód na TV, výsledek se ukáže živě.', defaultEnabled: false, ready: true },
   { key: 'ai_reporter', name: 'AI zpravodaj', description: 'Článek a text na sítě po každém zápase, souhrn dne a reportáž po turnaji — pořadatel text schválí.', defaultEnabled: false, ready: false },
   { key: 'diplomas', name: 'Diplomy', description: 'Diplomy za umístění, nejlepšího střelce, hráče a brankáře turnaje jedním klikem k tisku nebo do PDF (Admin → Zápasy).', defaultEnabled: true, ready: true },
-  { key: 'partner_reach', name: 'Dosah partnera', description: 'QR akce partnera na TV a v grafikách s počítáním skenů a reportem pro partnera.', defaultEnabled: false, ready: false },
+  { key: 'partner_reach', name: 'Dosah partnera', description: 'QR akce partnera na TV, v grafikách a na webu s počítáním skenů, času na TV a návštěvnosti — report pro partnery po akci (Admin → Partneři).', defaultEnabled: false, ready: true },
 ]
 
 export function getModuleDef(key: string): ModuleDef | undefined {

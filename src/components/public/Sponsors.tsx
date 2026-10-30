@@ -2,6 +2,7 @@ import { ExternalLink } from 'lucide-react'
 import type { Sponsor } from '../../hooks/useSponsors'
 import { groupByTier } from '../../lib/partners'
 import { SectionHeader } from '../ui/Card'
+import { reachUrl } from '../../lib/partnerReach'
 import Empty from '../ui/Empty'
 
 interface Props {
@@ -18,12 +19,15 @@ function PartnerTile({ sponsor, height }: { sponsor: Sponsor; height: number }) 
       </div>
       <div className="pt-tile__name">
         {sponsor.name}
-        {sponsor.website_url && <ExternalLink size={12} />}
+        {(sponsor.website_url || sponsor.reach) && <ExternalLink size={12} />}
       </div>
+      {sponsor.reach?.cta && <div className="pt-tile__cta">{sponsor.reach.cta}</div>}
     </>
   )
-  return sponsor.website_url ? (
-    <a className="pt-tile" href={sponsor.website_url} target="_blank" rel="noopener noreferrer">{inner}</a>
+  // QR akce partnera (modul partner_reach): odkaz přes měřené přesměrování
+  const href = sponsor.reach ? reachUrl(sponsor.reach.code, 'web') : sponsor.website_url
+  return href ? (
+    <a className="pt-tile" href={href} target="_blank" rel="noopener noreferrer">{inner}</a>
   ) : (
     <div className="pt-tile">{inner}</div>
   )

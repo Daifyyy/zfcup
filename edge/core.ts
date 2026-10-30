@@ -79,6 +79,39 @@ async function ogImageUrl(origin: string, base: string, id: string): Promise<str
   }
 }
 
+const REACH_PATH = /^\/r\/([a-z0-9]{6,12})\/?$/i
+const REACH_SOURCES = new Set(['tv', 'social', 'print', 'web'])
+
+/**
+ * QR akce partnera: /r/{kód}?s=tv|social|print|web → započítat sken (modul partner_reach)
+ * a přesměrovat na cíl partnera. Roboti náhledů odkazů se nepočítají. Neznámý kód → úvodní stránka.
+ * Vytištěné QR fungují vždy — počítání řeší funkce v DB (jen při zapnutém modulu).
+ */
+export async function reachRedirect(request: Request, env: EdgeEnv): Promise<Response | undefined> {
+  const url = new URL(request.url)
+  const m = REACH_PATH.exec(url.pathname)
+  if (!m) return undefined
+  const fallback = Response.redirect(`${url.origin}/`, 302)
+  const base = env.VITE_SUPABASE_URL
+  const key = env.VITE_SUPABASE_ANON_KEY
+  if (!base || !key) return fallback
+  const source = REACH_SOURCES.has(url.searchParams.get('s') ?? '') ? url.searchParams.get('s')! : 'other'
+  const isBot = BOT_UA.test(request.headers.get('user-agent') ?? '')
+  try {
+    const res = await fetch(`${base}/rest/v1/rpc/resolve_partner_link`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_code: m[1].toLowerCase(), p_source: source, p_count: !isBot }),
+    })
+    if (!res.ok) return fallback
+    const target = (await res.json()) as string | null
+    if (!target || !/^https?:\/\//i.test(target)) return fallback
+    return new Response(null, { status: 302, headers: { Location: target, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } })
+  } catch {
+    return fallback
+  }
+}
+
 /** Robot sociální sítě na /{uuid} → HTML s OG metadaty; jinak undefined (pustit na aplikaci). */
 export async function ogResponse(request: Request, env: EdgeEnv): Promise<Response | undefined> {
   const url = new URL(request.url)
