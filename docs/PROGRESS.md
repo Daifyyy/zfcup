@@ -154,7 +154,14 @@ Kroky (odhad 1,5–2 dny):
 
 Nasazení po přesunu: `git push` na `main` → Cloudflare sestaví a nasadí (1–2 min); jiná větev → náhledová adresa; vrácení verze v dashboardu jedním klikem; změna proměnných = nový deploy (jako dnes).
 
+### Redesign sdílecích grafik (2026-10-30)
+- `share/templates.tsx`: kompaktní lišta turnaje (1 řádek), popisek nad obsahem, výsledek zápasu jako hlavní prvek (větší skóre, dlouhé názvy týmů se zmenší na 2 řádky), tabulka s řádky podle počtu týmů, grafika turnaje s velkým názvem.
+- 3 styly v okně sdílení: Tmavý (tónovaný barvou turnaje), Barvy turnaje (tmavší odstíny značky, kontrast i u světlé barvy), Světlý; výchozí podle Vzhledu turnaje.
+- Patička: generální partner „Presented by“, ostatní v jedné řadě bez ořezu; Story má partnery ve 2 řadách.
+- Ověřeno na validačním turnaji: 1:1 i 9:16, všechny styly, zápas s mnoha událostmi a nejdelším názvem týmu; typecheck 62 (baseline), testy 117/117, build OK.
+
 ### Kde navázat
+0. **Prémiový produkt** — roadmapa `docs/ROADMAP-PREMIUM.md` (prověrka 2026-10-30: co potvrzuje kvalitu, konkurence AHL/Tournify, 4 vlny nadstandardu). Prodávat celé, bez osekaných tarifů. Bod 1 (redesign grafik) ✅. Další: Vlna 1 body 2–4 (fotka na pozadí, nové šablony, balíček grafik), pak Vlna 2 body 6–7 (gól na TV, spoty partnerů). Každý bod = vlastní plán a sezení.
 1. **Přesun hostingu na Cloudflare** — viz plán výše (začít krokem 1, nové sezení, bez prohlížeče).
 2. **Uživatel:** tarify — místo Vercel Pro přesun na Cloudflare (výše); Supabase Pro zapínat kolem placených turnajů, mezi nimi Free + denní „probuzení“ a záloha (`pg_dump`, GitHub Action — zatím neuděláno); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
 3. Pak Fáze 9 — registrace organizátorů a obchodní model.

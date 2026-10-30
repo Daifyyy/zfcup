@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, Download, ImageDown, Link2, Share2, X } from 'lucide-react'
 import { toBlob } from 'html-to-image'
-import { FORMAT_SIZE, type ShareFormat } from './templates'
+import { FORMAT_SIZE, SHARE_STYLES, type ShareFormat, type ShareStyle } from './templates'
 import { Segmented } from '../ui/Tabs'
 import { useBackClose } from '../../lib/useBackClose'
 import { copyText } from '../../lib/share'
@@ -10,8 +10,10 @@ import { copyText } from '../../lib/share'
 interface Props {
   title: string
   fileName: string
-  /** Šablona pro daný formát (withCode = vložit přístupový kód do QR) */
-  render: (format: ShareFormat, withCode: boolean) => ReactElement
+  /** Šablona pro daný formát a styl (withCode = vložit přístupový kód do QR) */
+  render: (format: ShareFormat, withCode: boolean, style: ShareStyle) => ReactElement
+  /** Výchozí vizuální styl (podle vzhledu turnaje) */
+  defaultStyle?: ShareStyle
   onClose: () => void
   showToast?: (msg: string) => void
   /** Odkaz pro „Kopírovat odkaz“ (doplňková volba) */
@@ -35,11 +37,12 @@ function canShareFiles(): boolean {
  * náhled ukazuje přesně výsledný obrázek. Mobil: „Sdílet obrázek“ → systémová nabídka;
  * počítač: Stáhnout / Kopírovat obrázek (vložit do FB, WhatsApp Web…) / Kopírovat odkaz.
  */
-export default function ShareModal({ title, fileName, render, onClose, showToast, url, codeUrl }: Props) {
+export default function ShareModal({ title, fileName, render, onClose, showToast, url, codeUrl, defaultStyle = 'dark' }: Props) {
   useBackClose(true, onClose, 'share')
   const [format, setFormat] = useState<ShareFormat>('square')
   const [withCode, setWithCode] = useState(false)
-  const key = `${format}|${withCode ? 1 : 0}`
+  const [style, setStyle] = useState<ShareStyle>(defaultStyle)
+  const key = `${format}|${style}|${withCode ? 1 : 0}`
   const [blobs, setBlobs] = useState<Record<string, Blob>>({})
   const [previews, setPreviews] = useState<Record<string, string>>({})
   const [error, setError] = useState(false)
@@ -82,7 +85,11 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
     return () => { cancelled = true }
   }, [key, blobs, w, h])
 
-  useEffect(() => () => { Object.values(previews).forEach(u => u && URL.revokeObjectURL(u)) }, [previews])
+  // Náhledy uvolnit až při zavření okna — dřív se uvolňovaly při každém novém náhledu
+  // a po návratu na už vygenerovaný formát/styl zůstal prázdný obrázek.
+  const previewsRef = useRef(previews)
+  previewsRef.current = previews
+  useEffect(() => () => { Object.values(previewsRef.current).forEach(u => u && URL.revokeObjectURL(u)) }, [])
 
   const blob = blobs[key]
   const linkToCopy = withCode && codeUrl ? codeUrl : url
@@ -148,6 +155,7 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
             { value: 'square', label: 'Příspěvek 1:1' },
             { value: 'story', label: 'Story 9:16' },
           ]} />
+          <Segmented value={style} onChange={setStyle} items={SHARE_STYLES} />
         </div>
 
         <div className={`shr__preview shr__preview--${format}`}>
@@ -206,7 +214,7 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
 
       {/* Šablona v plné velikosti mimo obrazovku — z ní se dělá PNG */}
       <div className="shr__render" aria-hidden="true">
-        <div ref={nodeRef} style={{ width: w, height: h }}>{render(format, withCode)}</div>
+        <div ref={nodeRef} style={{ width: w, height: h }}>{render(format, withCode, style)}</div>
       </div>
     </div>,
     document.body,

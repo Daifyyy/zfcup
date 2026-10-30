@@ -1,6 +1,6 @@
 // Šablony sdílecích grafik (1080×1080 / 1080×1920). Renderují se mimo obrazovku
 // a html-to-image z nich udělá PNG. Styly jsou inline, aby výstup nezávisel na
-// okolním layoutu stránky.
+// okolním layoutu stránky. Barvy turnaje přes CSS proměnné (--brand…, theme.ts).
 import type { CSSProperties, ReactNode } from 'react'
 import type { Team } from '../../hooks/useTeams'
 import type { Sponsor } from '../../hooks/useSponsors'
@@ -9,6 +9,7 @@ import type { StandingRow } from '../../lib/standings'
 import { BRAND } from '../../lib/brand'
 import { QRCodeSVG } from 'qrcode.react'
 import { getSportDef } from '../../lib/sports'
+import { getTitlePartner, sortByTier } from '../../lib/partners'
 import type { SideEvents } from '../../lib/details'
 
 export type ShareFormat = 'square' | 'story'
@@ -17,16 +18,103 @@ export const FORMAT_SIZE: Record<ShareFormat, { w: number; h: number }> = {
   story:  { w: 1080, h: 1920 },
 }
 
-const INK = '#f5f7fa'
-const MUTED = 'rgba(226,232,240,.62)'
+/** Vizuální styl grafiky (volba v okně sdílení). */
+export type ShareStyle = 'dark' | 'brand' | 'light'
+export const SHARE_STYLES: { value: ShareStyle; label: string }[] = [
+  { value: 'dark', label: 'Tmavý' },
+  { value: 'brand', label: 'Barvy turnaje' },
+  { value: 'light', label: 'Světlý' },
+]
+/** Výchozí styl podle vzhledu turnaje (Výrazná → barvy turnaje). */
+export function defaultShareStyle(tournament: Tournament | null): ShareStyle {
+  return tournament?.brand_style === 'bold' ? 'brand' : 'dark'
+}
+
+interface Pal {
+  bg: string
+  ink: string
+  muted: string
+  panel: string
+  panelStrong: string
+  line: string
+  /** Popisek nad obsahem (kicker) */
+  accent: string
+  /** Svislý pruh vlevo */
+  stripe: string
+  scoreA: { bg: string; ink: string }
+  scoreB: { bg: string; ink: string }
+  diag: string
+  logoShadow: string
+}
+
+// Sdílecí šablony mají vlastní paletu (výjimka z pravidla tokenů), barvu turnaje berou z --brand*.
+const PALETTES: Record<ShareStyle, Pal> = {
+  dark: {
+    bg: 'linear-gradient(160deg, color-mix(in srgb, var(--brand) 24%, #070b14) 0%, color-mix(in srgb, var(--brand) 10%, #0b1220) 58%, #070b14 100%)',
+    ink: '#f5f7fa',
+    muted: 'rgba(226,232,240,.66)',
+    panel: 'rgba(255,255,255,.05)',
+    panelStrong: 'rgba(255,255,255,.1)',
+    line: 'rgba(255,255,255,.09)',
+    accent: 'var(--brand-on-dark)',
+    stripe: 'var(--brand)',
+    scoreA: { bg: 'var(--brand)', ink: 'var(--brand-ink)' },
+    scoreB: { bg: 'rgba(255,255,255,.13)', ink: '#ffffff' },
+    diag: 'rgba(255,255,255,.035)',
+    logoShadow: '0 10px 40px rgba(0,0,0,.45)',
+  },
+  brand: {
+    // tmavší odstíny barvy turnaje, aby bílý text měl kontrast i u světlé značky
+    bg: 'linear-gradient(160deg, color-mix(in srgb, var(--brand) 60%, #000) 0%, color-mix(in srgb, var(--brand) 38%, #000) 100%)',
+    ink: '#ffffff',
+    muted: 'rgba(255,255,255,.74)',
+    panel: 'rgba(0,0,0,.18)',
+    panelStrong: 'rgba(0,0,0,.3)',
+    line: 'rgba(255,255,255,.14)',
+    accent: '#ffffff',
+    stripe: 'var(--brand-2)',
+    scoreA: { bg: '#ffffff', ink: '#0b1220' },
+    scoreB: { bg: 'rgba(0,0,0,.38)', ink: '#ffffff' },
+    diag: 'rgba(255,255,255,.06)',
+    logoShadow: '0 10px 40px rgba(0,0,0,.4)',
+  },
+  light: {
+    bg: 'linear-gradient(160deg, #ffffff 0%, #eef2f7 100%)',
+    ink: '#0b1220',
+    muted: 'rgba(11,18,32,.6)',
+    panel: 'rgba(11,18,32,.04)',
+    panelStrong: 'rgba(11,18,32,.08)',
+    line: 'rgba(11,18,32,.1)',
+    accent: 'color-mix(in srgb, var(--brand) 85%, #000)',
+    stripe: 'var(--brand)',
+    scoreA: { bg: 'var(--brand)', ink: 'var(--brand-ink)' },
+    scoreB: { bg: '#0b1220', ink: '#ffffff' },
+    diag: 'rgba(11,18,32,.03)',
+    logoShadow: '0 8px 28px rgba(11,18,32,.16)',
+  },
+}
+
 const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif"
 const BODY = "'Inter', system-ui, sans-serif"
 
-function Logo({ team, size }: { team?: Team; size: number }) {
+/** Velikost písma podle délky textu — dlouhé názvy se zmenší, aby se vešly na 2 řádky. */
+function fitSize(text: string | undefined, base: number): number {
+  const n = (text ?? '').length
+  if (n <= 14) return base
+  if (n <= 22) return Math.round(base * 0.84)
+  if (n <= 32) return Math.round(base * 0.7)
+  if (n <= 42) return Math.round(base * 0.6)
+  return Math.round(base * 0.5)
+}
+
+/** Nejvýš 2 řádky, zbytek … */
+const CLAMP2: CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+
+function Logo({ team, size, pal }: { team?: Team; size: number; pal: Pal }) {
   if (!team) return <div style={{ width: size, height: size }} />
   if (team.logo_url) {
     return (
-      <div style={{ width: size, height: size, background: '#fff', borderRadius: size * 0.14, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 40px rgba(0,0,0,.45)' }}>
+      <div style={{ width: size, height: size, flexShrink: 0, background: '#fff', borderRadius: size * 0.14, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: pal.logoShadow }}>
         <img src={team.logo_url} crossOrigin="anonymous" alt="" style={{ width: '82%', height: '82%', objectFit: 'contain' }} />
       </div>
     )
@@ -34,67 +122,102 @@ function Logo({ team, size }: { team?: Team; size: number }) {
   const words = team.name.split(/\s+/).filter(Boolean)
   const ini = (words.length > 1 ? words[0][0] + words[1][0] : team.name.slice(0, 2)).toUpperCase()
   return (
-    <div style={{ width: size, height: size, background: team.color, borderRadius: size * 0.14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: DISPLAY, fontWeight: 800, fontSize: size * 0.42 }}>
+    <div style={{ width: size, height: size, flexShrink: 0, background: team.color, borderRadius: size * 0.14, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: DISPLAY, fontWeight: 800, fontSize: size * 0.42, boxShadow: pal.logoShadow }}>
       {ini}
     </div>
   )
 }
 
-/** Společný rám: záhlaví turnaje, obsah, pruh partnerů. */
-function Frame({ format, tournament, kicker, sponsors, children }: {
+/** Patička s partnery: generální partner jako „presented by“, ostatní v jedné řadě. */
+function PartnerFooter({ sponsors, story }: { sponsors: Sponsor[]; story: boolean }) {
+  const titleP = getTitlePartner(sponsors)
+  const title = titleP?.logo_url ? titleP : null
+  const others = sortByTier(sponsors).filter(s => s.logo_url && s.id !== title?.id)
+  if (!title && !others.length) return null
+  const shown = others.slice(0, story ? 5 : title ? 3 : 5)
+  const label: CSSProperties = { fontSize: 18, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', color: '#5b6678', whiteSpace: 'nowrap' }
+  const titleBlock = title && (
+    <div style={{ display: 'flex', flexDirection: story ? 'row' : 'column', alignItems: story ? 'center' : 'flex-start', gap: story ? 20 : 6, flexShrink: 0 }}>
+      <span style={{ ...label, fontSize: story ? 18 : 14 }}>Presented by</span>
+      <img src={title.logo_url} crossOrigin="anonymous" alt={title.name} style={{ height: story ? 92 : 64, maxWidth: story ? 320 : 240, objectFit: 'contain' }} />
+    </div>
+  )
+  const othersBlock = shown.length > 0 && (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: story ? 'center' : 'flex-start', gap: 34, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+      {shown.map(p => (
+        <img key={p.id} src={p.logo_url} crossOrigin="anonymous" alt={p.name} style={{ height: 54, maxWidth: 150, objectFit: 'contain', flexShrink: 0 }} />
+      ))}
+    </div>
+  )
+  if (story) {
+    return (
+      <footer style={{ position: 'relative', background: '#fff', padding: '30px 72px 34px 88px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+        {titleBlock}
+        {othersBlock}
+      </footer>
+    )
+  }
+  return (
+    <footer style={{ position: 'relative', background: '#fff', padding: '22px 72px 22px 88px', display: 'flex', alignItems: 'center', gap: 30 }}>
+      {titleBlock}
+      {title && othersBlock && <div style={{ width: 2, height: 58, background: '#e2e8f0', flexShrink: 0 }} />}
+      {othersBlock}
+    </footer>
+  )
+}
+
+/** Společný rám: kompaktní lišta turnaje, popisek, obsah, partneři. */
+function Frame({ format, style, tournament, kicker, kickerAlign = 'left', sponsors, showHeader = true, children }: {
   format: ShareFormat
+  style: ShareStyle
   tournament: Tournament | null
-  kicker: string
+  kicker?: string
+  kickerAlign?: 'left' | 'center'
   sponsors: Sponsor[]
+  /** false = šablona si název turnaje vykreslí sama (grafika turnaje) */
+  showHeader?: boolean
   children: ReactNode
 }) {
   const { w, h } = FORMAT_SIZE[format]
-  const partners = sponsors.filter(s => s.logo_url).slice(0, format === 'story' ? 8 : 5)
-  const root: CSSProperties = {
-    width: w, height: h, position: 'relative', overflow: 'hidden',
-    background: 'linear-gradient(160deg, #0b1220 0%, #111a2e 55%, #0b1220 100%)',
-    color: INK, fontFamily: BODY, display: 'flex', flexDirection: 'column',
-  }
+  const pal = PALETTES[style]
+  const story = format === 'story'
+  const meta = [tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
   return (
-    <div style={root}>
-      {/* diagonální akcent */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(115deg, transparent 0 62%, rgba(255,255,255,.035) 62% 74%, transparent 74%)' }} />
-      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 16, background: 'var(--brand)' }} />
+    <div style={{ width: w, height: h, position: 'relative', overflow: 'hidden', background: pal.bg, color: pal.ink, fontFamily: BODY, display: 'flex', flexDirection: 'column' }}>
+      {/* diagonální akcent + pruh značky */}
+      <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(115deg, transparent 0 62%, ${pal.diag} 62% 76%, transparent 76%)` }} />
+      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 16, background: pal.stripe }} />
+      <div style={{ position: 'absolute', top: story ? 66 : 56, right: 72, fontSize: 18, fontWeight: 700, letterSpacing: '.1em', color: pal.muted }}>{BRAND.name}</div>
 
-      <header style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 28, padding: '64px 72px 0 88px' }}>
-        {tournament?.logo_url && (
-          <div style={{ width: 120, height: 120, background: '#fff', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <img src={tournament.logo_url} crossOrigin="anonymous" alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} />
+      {showHeader && (
+        <header style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 22, padding: `${story ? 60 : 50}px 240px 0 88px` }}>
+          {tournament?.logo_url && (
+            <div style={{ width: 78, height: 78, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: pal.logoShadow }}>
+              <img src={tournament.logo_url} crossOrigin="anonymous" alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} />
+            </div>
+          )}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 36, lineHeight: 1.05, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tournament?.name}</div>
+            {meta && <div style={{ fontSize: 21, color: pal.muted, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta}</div>}
+          </div>
+        </header>
+      )}
+
+      <main style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 72px 0 88px' }}>
+        {kicker && (
+          <div style={{ display: 'flex', justifyContent: kickerAlign === 'center' ? 'center' : 'flex-start', marginBottom: story ? 54 : 34 }}>
+            <span style={{ fontSize: story ? 32 : 28, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: pal.accent, whiteSpace: 'nowrap' }}>{kicker}</span>
           </div>
         )}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--brand-2)' }}>{kicker}</div>
-          <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 68, lineHeight: .95, textTransform: 'uppercase', marginTop: 6 }}>{tournament?.name}</div>
-          {(tournament?.date || tournament?.venue) && (
-            <div style={{ fontSize: 26, color: MUTED, marginTop: 10 }}>{[tournament?.date, tournament?.venue].filter(Boolean).join(' · ')}</div>
-          )}
-        </div>
-      </header>
-
-      <main style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 72px 0 88px' }}>
         {children}
       </main>
 
-      <footer style={{ position: 'relative', background: '#fff', color: '#0b1220', padding: partners.length ? '26px 72px 26px 88px' : '20px 72px 20px 88px', display: 'flex', alignItems: 'center', gap: 32 }}>
-        {partners.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 36, flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
-            {partners.map(p => (
-              <img key={p.id} src={p.logo_url} crossOrigin="anonymous" alt={p.name} style={{ height: 64, maxWidth: 190, objectFit: 'contain' }} />
-            ))}
-          </div>
-        )}
-        <div style={{ marginLeft: 'auto', fontSize: 20, fontWeight: 700, letterSpacing: '.08em', color: '#5b6678', whiteSpace: 'nowrap' }}>{BRAND.name}</div>
-      </footer>
+      <PartnerFooter sponsors={sponsors} story={story} />
     </div>
   )
 }
 
-// Barvy karet a pódia (sdílecí šablony mají vlastní paletu — výjimka z pravidla tokenů)
+// Barvy karet a pódia
 const YELLOW = '#facc15'
 const RED = '#dc2626'
 const PODIUM = ['#f5b301', '#c3ccd8', '#cd7f32']
@@ -107,12 +230,12 @@ function CardShape({ kind, h = 26 }: { kind: 'yellow' | 'red' | 'yellow_red'; h?
 type EventLine = { key: string; mark: ReactNode; name: string; extra?: string }
 
 /** Události jedné strany jako řádky: góly, asistence, karty, tresty (do limitu). */
-function eventLines(side: SideEvents | undefined, tournament: Tournament | null, limit: number): EventLine[] {
+function eventLines(side: SideEvents | undefined, tournament: Tournament | null, limit: number, pal: Pal): EventLine[] {
   if (!side) return []
   const GoalIcon = getSportDef(tournament?.sport).GoalIcon
   const lines: EventLine[] = [
     ...side.goals.map(g => ({ key: `g${g.player.id}`, mark: <GoalIcon size={28} strokeWidth={2} />, name: g.player.name, extra: g.value > 1 ? `${g.value}×` : undefined })),
-    ...side.assists.map(a => ({ key: `a${a.player.id}`, mark: <span style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid var(--brand-2)', color: 'var(--brand-2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: DISPLAY, fontWeight: 800, fontSize: 20 }}>A</span>, name: a.player.name, extra: a.value > 1 ? `${a.value}×` : undefined })),
+    ...side.assists.map(a => ({ key: `a${a.player.id}`, mark: <span style={{ width: 28, height: 28, borderRadius: '50%', border: `2px solid ${pal.accent}`, color: pal.accent, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontFamily: DISPLAY, fontWeight: 800, fontSize: 20 }}>A</span>, name: a.player.name, extra: a.value > 1 ? `${a.value}×` : undefined })),
     ...side.cards.map((c, i) => ({ key: `c${c.player.id}${i}`, mark: <CardShape kind={c.type} />, name: c.player.name })),
     ...side.penalties.map(p => ({ key: `p${p.player.id}`, mark: <span style={{ background: RED, color: '#fff', borderRadius: 4, padding: '0 6px', fontFamily: DISPLAY, fontWeight: 800, fontSize: 22 }}>{p.value}′</span>, name: p.player.name })),
   ]
@@ -120,23 +243,24 @@ function eventLines(side: SideEvents | undefined, tournament: Tournament | null,
   return lines
 }
 
-function EventColumn({ lines, big }: { lines: EventLine[]; big?: boolean }) {
+function EventColumn({ lines, big, pal }: { lines: EventLine[]; big?: boolean; pal: Pal }) {
   if (!lines.length) return null
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', width: '100%' }}>
       {lines.map(l => (
-        <div key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: big ? 34 : 26, fontWeight: 600, maxWidth: '100%', color: INK }}>
+        <div key={l.key} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: big ? 30 : 26, fontWeight: 600, maxWidth: '100%', color: pal.ink }}>
           {l.mark}
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{l.name}</span>
-          {l.extra && <span style={{ color: MUTED, fontWeight: 700 }}>{l.extra}</span>}
+          {l.extra && <span style={{ color: pal.muted, fontWeight: 700 }}>{l.extra}</span>}
         </div>
       ))}
     </div>
   )
 }
 
-export function MatchGraphic({ format, tournament, sponsors, home, away, homeScore, awayScore, label, decidedIn, live, upcoming, time, events }: {
+export function MatchGraphic({ format, style = 'dark', tournament, sponsors, home, away, homeScore, awayScore, label, decidedIn, live, upcoming, time, events }: {
   format: ShareFormat
+  style?: ShareStyle
   tournament: Tournament | null
   sponsors: Sponsor[]
   home?: Team
@@ -150,39 +274,50 @@ export function MatchGraphic({ format, tournament, sponsors, home, away, homeSco
   time?: string | null
   events?: { home: SideEvents; away: SideEvents }
 }) {
+  const pal = PALETTES[style]
   const story = format === 'story'
   const hasEvents = !!events && [events.home, events.away].some(e => e.goals.length + e.assists.length + e.cards.length + e.penalties.length > 0)
-  const logo = story ? (hasEvents ? 220 : 300) : (hasEvents ? 170 : 230)
-  const limit = story ? 6 : 4
+  const logo = story ? (hasEvents ? 180 : 300) : (hasEvents ? 180 : 250)
+  const limit = 4
   const suffix = decidedIn === 'ot' ? 'po prodloužení' : decidedIn === 'so' ? 'po nájezdech' : ''
+  const scoreFont = story ? (hasEvents ? 200 : 230) : hasEvents ? 170 : 200
+  const scoreW = story ? (hasEvents ? 220 : 250) : hasEvents ? 186 : 214
+  const nameBase = story ? 66 : 50
   const team = (t: Team | undefined, won: boolean, side?: SideEvents) => (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: hasEvents ? 20 : 28, width: story ? 760 : 330 }}>
-      <Logo team={t} size={logo} />
-      <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 52, lineHeight: 1, textAlign: 'center', textTransform: 'uppercase', opacity: won ? 1 : .72 }}>{t?.name ?? '—'}</div>
-      {hasEvents && <EventColumn lines={eventLines(side, tournament, limit)} big={story} />}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: hasEvents ? 18 : 26, width: story ? 860 : 320 }}>
+      <Logo team={t} size={logo} pal={pal} />
+      <div style={{ ...CLAMP2, fontFamily: DISPLAY, fontWeight: 800, fontSize: fitSize(t?.name, nameBase), lineHeight: 1, textAlign: 'center', textTransform: 'uppercase', opacity: won || upcoming ? 1 : .7 }}>{t?.name ?? 'Určí se'}</div>
+      {hasEvents && <EventColumn lines={eventLines(side, tournament, limit, pal)} big={story} pal={pal} />}
     </div>
   )
+  const status = upcoming ? (time ? `Výkop ${time}` : 'Brzy') : live ? 'Živě' : 'Konec'
   return (
-    <Frame format={format} tournament={tournament} kicker={`${upcoming ? 'Hrajeme' : live ? 'Průběžný stav' : 'Výsledek'} · ${label}`} sponsors={sponsors}>
-      <div style={{ display: 'flex', alignItems: story || !hasEvents ? 'center' : 'flex-start', justifyContent: 'space-between', flexDirection: story ? 'column' : 'row', gap: story ? 44 : 0 }}>
+    <Frame format={format} style={style} tournament={tournament} kicker={`${upcoming ? 'Hrajeme' : live ? 'Průběžný stav' : 'Výsledek'} · ${label}`} kickerAlign="center" sponsors={sponsors}>
+      <div style={{ display: 'flex', alignItems: story || !hasEvents ? 'center' : 'flex-start', justifyContent: 'space-between', flexDirection: story ? 'column' : 'row', gap: story ? (hasEvents ? 34 : 46) : 0 }}>
         {team(home, homeScore >= awayScore, events?.home)}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, marginTop: story || !hasEvents ? 0 : logo / 2 - 100 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, flexShrink: 0, marginTop: story || !hasEvents ? 0 : logo / 2 - scoreFont / 2 - 14 }}>
           {upcoming ? (
-            <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 150, lineHeight: 1, color: 'var(--brand-2)' }}>VS</div>
+            <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: story ? 190 : 160, lineHeight: 1, color: pal.accent }}>VS</div>
           ) : (
-          <div style={{ display: 'flex', gap: 10 }}>
-            {[homeScore, awayScore].map((v, i) => (
-              <div key={i} style={{
-                fontFamily: DISPLAY, fontWeight: 800, fontSize: 170, lineHeight: 1, width: 190, textAlign: 'center', padding: '14px 0',
-                background: i === 0 ? 'var(--brand)' : '#1c2740', color: '#fff',
-                // podpisový motiv platformy — diagonální řez mezi skóre
-                clipPath: i === 0 ? 'polygon(0 0, 100% 0, calc(100% - 28px) 100%, 0 100%)' : 'polygon(28px 0, 100% 0, 100% 100%, 0 100%)',
-                margin: i === 0 ? '0 -14px 0 0' : '0 0 0 -14px',
-              }}>{v}</div>
-            ))}
-          </div>
+            <div style={{ display: 'flex' }}>
+              {[homeScore, awayScore].map((v, i) => {
+                const c = i === 0 ? pal.scoreA : pal.scoreB
+                return (
+                  <div key={i} style={{
+                    fontFamily: DISPLAY, fontWeight: 800, fontSize: scoreFont, lineHeight: 1, width: scoreW, textAlign: 'center', padding: '16px 0',
+                    background: c.bg, color: c.ink,
+                    // podpisový motiv platformy — diagonální řez mezi skóre
+                    clipPath: i === 0 ? 'polygon(0 0, 100% 0, calc(100% - 30px) 100%, 0 100%)' : 'polygon(30px 0, 100% 0, 100% 100%, 0 100%)',
+                    margin: i === 0 ? '0 -8px 0 0' : '0 0 0 -8px',
+                  }}>{v}</div>
+                )
+              })}
+            </div>
           )}
-          <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: live ? RED : MUTED }}>{upcoming ? (time ? `Výkop ${time}` : 'Brzy') : live ? 'Živě' : 'Konec'}{suffix && !live && !upcoming && ` · ${suffix}`}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: story ? 32 : 26, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', color: live ? RED : pal.muted }}>
+            {live && <span style={{ width: 16, height: 16, borderRadius: '50%', background: RED }} />}
+            {status}{suffix && !live && !upcoming && ` · ${suffix}`}
+          </div>
         </div>
         {team(away, awayScore >= homeScore, events?.away)}
       </div>
@@ -190,8 +325,9 @@ export function MatchGraphic({ format, tournament, sponsors, home, away, homeSco
   )
 }
 
-export function TableGraphic({ format, tournament, sponsors, groupName, rows, teams, allowDraws }: {
+export function TableGraphic({ format, style = 'dark', tournament, sponsors, groupName, rows, teams, allowDraws }: {
   format: ShareFormat
+  style?: ShareStyle
   tournament: Tournament | null
   sponsors: Sponsor[]
   groupName: string
@@ -199,13 +335,17 @@ export function TableGraphic({ format, tournament, sponsors, groupName, rows, te
   teams: Team[]
   allowDraws: boolean
 }) {
-  const max = format === 'story' ? 14 : 8
+  const pal = PALETTES[style]
+  const story = format === 'story'
+  const max = story ? 14 : 8
   const list = rows.slice(0, max)
-  const rowH = format === 'story' ? 96 : Math.min(82, Math.floor(620 / Math.max(list.length, 1)))
-  const cell: CSSProperties = { width: 86, textAlign: 'center', fontSize: 30, color: MUTED, fontVariantNumeric: 'tabular-nums' }
+  // málo týmů = větší řádky, ať tabulka vyplní plochu
+  const rowH = Math.min(story ? 130 : 116, Math.floor((story ? 1300 : 640) / Math.max(list.length, 1)))
+  const nameFont = rowH >= 100 ? 40 : 36
+  const cell: CSSProperties = { width: 86, textAlign: 'center', fontSize: 30, color: pal.muted, fontVariantNumeric: 'tabular-nums' }
   return (
-    <Frame format={format} tournament={tournament} kicker={`Tabulka · ${groupName}`} sponsors={sponsors}>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '0 24px 14px', fontSize: 22, fontWeight: 700, letterSpacing: '.12em', color: MUTED, textTransform: 'uppercase' }}>
+    <Frame format={format} style={style} tournament={tournament} kicker={`Tabulka · ${groupName}`} sponsors={sponsors}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '0 24px 14px', fontSize: 22, fontWeight: 700, letterSpacing: '.12em', color: pal.muted, textTransform: 'uppercase' }}>
         <div style={{ width: 60 }}>#</div>
         <div style={{ flex: 1 }}>Tým</div>
         <div style={{ ...cell, fontSize: 22 }}>Z</div>
@@ -215,19 +355,19 @@ export function TableGraphic({ format, tournament, sponsors, groupName, rows, te
       {list.map((r, i) => {
         const t = teams.find(x => x.id === r.id)
         return (
-          <div key={r.id} style={{ display: 'flex', alignItems: 'center', height: rowH, padding: '0 24px', background: i % 2 ? 'transparent' : 'rgba(255,255,255,.04)', borderLeft: i === 0 ? '8px solid var(--brand)' : '8px solid transparent' }}>
+          <div key={r.id} style={{ display: 'flex', alignItems: 'center', height: rowH, padding: '0 24px', background: i === 0 ? pal.panelStrong : i % 2 ? 'transparent' : pal.panel, borderLeft: `8px solid ${i === 0 ? pal.stripe : 'transparent'}` }}>
             <div style={{ width: 52, fontFamily: DISPLAY, fontWeight: 800, fontSize: 40 }}>{i + 1}</div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 20, minWidth: 0 }}>
-              <Logo team={t} size={rowH - 26} />
-              <div style={{ fontSize: 36, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t?.name}</div>
+              <Logo team={t} size={rowH - 26} pal={pal} />
+              <div style={{ fontSize: nameFont, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t?.name}</div>
             </div>
             <div style={cell}>{r.played}</div>
             <div style={{ ...cell, width: 120 }}>{r.gf}:{r.ga}</div>
-            <div style={{ ...cell, width: 100, fontFamily: DISPLAY, fontWeight: 800, fontSize: 48, color: INK }}>{r.pts}</div>
+            <div style={{ ...cell, width: 100, fontFamily: DISPLAY, fontWeight: 800, fontSize: 48, color: pal.ink }}>{r.pts}</div>
           </div>
         )
       })}
-      {!allowDraws && <div style={{ fontSize: 20, color: MUTED, marginTop: 14, paddingLeft: 24 }}>Bez remíz — zápasy rozhoduje prodloužení / nájezdy</div>}
+      {!allowDraws && <div style={{ fontSize: 20, color: pal.muted, marginTop: 14, paddingLeft: 24 }}>Bez remíz — zápasy rozhoduje prodloužení / nájezdy</div>}
     </Frame>
   )
 }
@@ -243,8 +383,9 @@ export interface LeaderRow {
 }
 
 /** Žebříček (střelci, asistence, body, karty, tresty): TOP 3 na pódiu, pak další řádky. */
-export function LeadersGraphic({ format, tournament, sponsors, title, unit, rows }: {
+export function LeadersGraphic({ format, style = 'dark', tournament, sponsors, title, unit, rows }: {
   format: ShareFormat
+  style?: ShareStyle
   tournament: Tournament | null
   sponsors: Sponsor[]
   title: string
@@ -252,6 +393,7 @@ export function LeadersGraphic({ format, tournament, sponsors, title, unit, rows
   unit?: string
   rows: LeaderRow[]
 }) {
+  const pal = PALETTES[style]
   const story = format === 'story'
   const top = rows.slice(0, 3)
   const rest = rows.slice(3, story ? 10 : 5)
@@ -266,25 +408,25 @@ export function LeadersGraphic({ format, tournament, sponsors, title, unit, rows
     </div>
   ) : <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: size, lineHeight: 1 }}>{r.value}</div>
   const face = (r: LeaderRow, size: number) => r.avatar
-    ? <img src={r.avatar} crossOrigin="anonymous" alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '4px solid rgba(255,255,255,.85)', flexShrink: 0 }} />
-    : <Logo team={r.team} size={size} />
+    ? <img src={r.avatar} crossOrigin="anonymous" alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '4px solid rgba(255,255,255,.85)', boxShadow: pal.logoShadow, flexShrink: 0 }} />
+    : <Logo team={r.team} size={size} pal={pal} />
   return (
-    <Frame format={format} tournament={tournament} kicker={title} sponsors={sponsors}>
+    <Frame format={format} style={style} tournament={tournament} kicker={title} sponsors={sponsors}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: story ? 22 : 14 }}>
         {top.map((r, i) => {
           const big = i === 0
           const h = story ? (big ? 190 : 160) : (big ? 150 : 124)
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 26, height: h, padding: '0 30px 0 0', background: big ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.05)', borderRadius: 14, overflow: 'hidden' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 26, height: h, padding: '0 30px 0 0', background: big ? pal.panelStrong : pal.panel, borderRadius: 14, overflow: 'hidden' }}>
               <div style={{ width: 96, alignSelf: 'stretch', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: PODIUM[i], color: '#0b1220', fontFamily: DISPLAY, fontWeight: 800, fontSize: big ? 84 : 68, clipPath: 'polygon(0 0, 100% 0, calc(100% - 18px) 100%, 0 100%)' }}>{i + 1}</div>
               {face(r, h - 44)}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: big ? 50 : 42, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-                {r.team && <div style={{ fontSize: 26, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.team.name}</div>}
+                {r.team && <div style={{ fontSize: 26, color: pal.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.team.name}</div>}
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 {value(r, big ? 104 : 84)}
-                {unit && !r.cards && <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: MUTED }}>{unit}</div>}
+                {unit && !r.cards && <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: pal.muted }}>{unit}</div>}
               </div>
             </div>
           )
@@ -292,9 +434,9 @@ export function LeadersGraphic({ format, tournament, sponsors, title, unit, rows
         {rest.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
             {rest.map((r, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 22, padding: '10px 30px 10px 0', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
-                <div style={{ width: 96, flexShrink: 0, textAlign: 'center', fontFamily: DISPLAY, fontWeight: 800, fontSize: 40, color: MUTED }}>{i + 4}</div>
-                <Logo team={r.team} size={52} />
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 22, padding: '10px 30px 10px 0', borderBottom: `1px solid ${pal.line}` }}>
+                <div style={{ width: 96, flexShrink: 0, textAlign: 'center', fontFamily: DISPLAY, fontWeight: 800, fontSize: 40, color: pal.muted }}>{i + 4}</div>
+                <Logo team={r.team} size={52} pal={pal} />
                 <div style={{ flex: 1, minWidth: 0, fontSize: 32, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
                 <div style={{ flexShrink: 0 }}>{value(r, 48)}</div>
               </div>
@@ -306,9 +448,10 @@ export function LeadersGraphic({ format, tournament, sponsors, title, unit, rows
   )
 }
 
-/** Pozvánka / přehled turnaje: čísla + QR kód na živé výsledky. */
-export function TournamentGraphic({ format, tournament, sponsors, teamCount, matchCount, goalCount, url }: {
+/** Pozvánka / přehled turnaje: název jako hlavní prvek, čísla + QR kód na živé výsledky. */
+export function TournamentGraphic({ format, style = 'dark', tournament, sponsors, teamCount, matchCount, goalCount, url }: {
   format: ShareFormat
+  style?: ShareStyle
   tournament: Tournament | null
   sponsors: Sponsor[]
   teamCount: number
@@ -316,18 +459,32 @@ export function TournamentGraphic({ format, tournament, sponsors, teamCount, mat
   goalCount: number
   url: string
 }) {
+  const pal = PALETTES[style]
   const story = format === 'story'
+  const meta = [tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
   const tile = (value: number, label: string) => (
-    <div style={{ flex: 1, padding: story ? '34px 20px' : '26px 16px', background: 'rgba(255,255,255,.06)', borderRadius: 14, textAlign: 'center', borderTop: '6px solid var(--brand)' }}>
-      <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: story ? 110 : 90, lineHeight: 1 }}>{value}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: MUTED, marginTop: 8 }}>{label}</div>
+    <div style={{ flex: 1, padding: story ? '34px 20px' : '24px 16px', background: pal.panel, borderRadius: 14, textAlign: 'center', borderTop: `6px solid ${pal.stripe}` }}>
+      <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: story ? 110 : 84, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: pal.muted, marginTop: 8 }}>{label}</div>
     </div>
   )
   return (
-    <Frame format={format} tournament={tournament} kicker="Turnaj" sponsors={sponsors}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: story ? 60 : 40 }}>
+    <Frame format={format} style={style} tournament={tournament} sponsors={sponsors} showHeader={false}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: story ? 64 : 38 }}>
+        <div style={{ display: 'flex', flexDirection: story ? 'column' : 'row', alignItems: story ? 'flex-start' : 'center', gap: story ? 40 : 34 }}>
+          {tournament?.logo_url && (
+            <div style={{ width: story ? 220 : 170, height: story ? 220 : 170, background: '#fff', borderRadius: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: pal.logoShadow }}>
+              <img src={tournament.logo_url} crossOrigin="anonymous" alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} />
+            </div>
+          )}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: story ? 32 : 26, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: pal.accent }}>Turnaj</div>
+            <div style={{ ...CLAMP2, fontFamily: DISPLAY, fontWeight: 800, fontSize: fitSize(tournament?.name, story ? 118 : 92), lineHeight: .95, textTransform: 'uppercase', marginTop: 8 }}>{tournament?.name}</div>
+            {meta && <div style={{ fontSize: story ? 32 : 26, color: pal.muted, marginTop: 14 }}>{meta}</div>}
+          </div>
+        </div>
         {tournament?.subtitle && (
-          <div style={{ fontSize: story ? 44 : 36, fontWeight: 600, color: INK, lineHeight: 1.25 }}>{tournament.subtitle}</div>
+          <div style={{ ...CLAMP2, fontSize: story ? 40 : 30, fontWeight: 600, lineHeight: 1.25 }}>{tournament.subtitle}</div>
         )}
         <div style={{ display: 'flex', gap: 20 }}>
           {tile(teamCount, 'týmů')}
@@ -335,12 +492,12 @@ export function TournamentGraphic({ format, tournament, sponsors, teamCount, mat
           {tile(goalCount, 'gólů')}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 34 }}>
-          <div style={{ background: '#fff', padding: 14, borderRadius: 14, lineHeight: 0 }}>
-            <QRCodeSVG value={url} size={story ? 240 : 190} fgColor="#0b1220" bgColor="#ffffff" />
+          <div style={{ background: '#fff', padding: 14, borderRadius: 14, lineHeight: 0, boxShadow: pal.logoShadow }}>
+            <QRCodeSVG value={url} size={story ? 240 : 170} fgColor="#0b1220" bgColor="#ffffff" />
           </div>
           <div>
-            <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: story ? 70 : 58, lineHeight: 1, textTransform: 'uppercase' }}>Sleduj živě</div>
-            <div style={{ fontSize: 26, color: MUTED, marginTop: 10 }}>výsledky, tabulky a statistiky — naskenuj kód</div>
+            <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: story ? 70 : 56, lineHeight: 1, textTransform: 'uppercase' }}>Sleduj živě</div>
+            <div style={{ fontSize: 26, color: pal.muted, marginTop: 10 }}>výsledky, tabulky a statistiky — naskenuj kód</div>
           </div>
         </div>
       </div>

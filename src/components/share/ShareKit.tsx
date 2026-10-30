@@ -6,7 +6,7 @@ import type { Tournament } from '../../hooks/useTournament'
 import type { StandingRow } from '../../lib/standings'
 import ShareModal from './ShareModal'
 import type { SideEvents } from '../../lib/details'
-import { LeadersGraphic, MatchGraphic, TableGraphic, TournamentGraphic, type LeaderRow } from './templates'
+import { LeadersGraphic, MatchGraphic, TableGraphic, TournamentGraphic, defaultShareStyle, type LeaderRow } from './templates'
 
 interface Base {
   tournament: Tournament | null
@@ -43,7 +43,8 @@ export function ShareMatch(p: Base & {
       showToast={p.showToast}
       url={p.url}
       codeUrl={p.codeUrl}
-      render={format => <MatchGraphic format={format} {...p} />}
+      defaultStyle={defaultShareStyle(p.tournament)}
+      render={(format, _c, style) => <MatchGraphic format={format} style={style} {...p} />}
     />
   )
 }
@@ -57,7 +58,8 @@ export function ShareTable(p: Base & { groupName: string; rows: StandingRow[]; t
       showToast={p.showToast}
       url={p.url}
       codeUrl={p.codeUrl}
-      render={format => <TableGraphic format={format} {...p} />}
+      defaultStyle={defaultShareStyle(p.tournament)}
+      render={(format, _c, style) => <TableGraphic format={format} style={style} {...p} />}
     />
   )
 }
@@ -71,7 +73,8 @@ export function ShareLeaders(p: Base & { title: string; unit?: string; rows: Lea
       showToast={p.showToast}
       url={p.url}
       codeUrl={p.codeUrl}
-      render={format => <LeadersGraphic format={format} {...p} />}
+      defaultStyle={defaultShareStyle(p.tournament)}
+      render={(format, _c, style) => <LeadersGraphic format={format} style={style} {...p} />}
     />
   )
 }
@@ -85,7 +88,8 @@ export function ShareTournament(p: Base & { teamCount: number; matchCount: numbe
       showToast={p.showToast}
       url={p.url}
       codeUrl={p.codeUrl}
-      render={(format, withCode) => <TournamentGraphic format={format} {...p} url={withCode && p.codeUrl ? p.codeUrl : p.url} />}
+      defaultStyle={defaultShareStyle(p.tournament)}
+      render={(format, withCode, style) => <TournamentGraphic format={format} style={style} {...p} url={withCode && p.codeUrl ? p.codeUrl : p.url} />}
     />
   )
 }
