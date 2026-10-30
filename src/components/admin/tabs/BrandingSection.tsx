@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import type { Tournament } from '../../../hooks/useTournament'
 import { BRAND_PRESETS, DEFAULT_BRAND, DEFAULT_BRAND_2, brandVars, contrastRatio, isHex, type BrandStyle } from '../../../lib/theme'
 import { isMissingColumnError } from '../../../lib/partners'
 import { getSportDef } from '../../../lib/sports'
+import { photoToJpeg, removeAssetByUrl, storagePathFromUrl, tournamentAssetPath, uploadAsset } from '../../../lib/storage'
+import { confirmDialog } from '../../ui/ConfirmDialog'
 
 interface Props {
   tournament: Tournament | null
@@ -23,6 +25,8 @@ export default function BrandingSection({ tournament, refetchTournament, showToa
   const [style, setStyle] = useState<BrandStyle>('subtle')
   const [custom, setCustom] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const photoInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!tournament) return
@@ -65,6 +69,48 @@ export default function BrandingSection({ tournament, refetchTournament, showToa
   }
 
   const pick = (p: string, s: string) => { setPrimary(p); setSecondary(s); setCustom(true) }
+
+  /** Fotka z akce jako pozadí grafik ve stylu Foto (migrace 20). */
+  async function uploadPhoto(file: File | undefined) {
+    if (!file || !tournament || photoBusy) return
+    setPhotoBusy(true)
+    try {
+      // vždy JPEG do 1920 px a pod 1 MB — původní soubor se nikdy nenahraje
+      const jpeg = await photoToJpeg(file)
+      if ('error' in jpeg) { showToast(jpeg.error); return }
+      const path = tournamentAssetPath(tournament.id, 'share', 'photo', 'jpg')
+      const up = await uploadAsset(path, jpeg.file)
+      if ('error' in up) { showToast('Chyba nahrávání: ' + up.error); return }
+      const { error } = await supabase.from('tournament').update({ share_photo_url: up.url }).eq('id', tournament.id)
+      if (error) {
+        await removeAssetByUrl(up.url)
+        showToast(isMissingColumnError(error, 'share_photo_url') ? 'Fotka vyžaduje migraci db-backup/20_share_photo.sql' : 'Chyba: ' + error.message)
+        return
+      }
+      // stará fotka s jinou příponou by zůstala ve Storage
+      const old = tournament.share_photo_url
+      if (old && storagePathFromUrl(old) !== path) await removeAssetByUrl(old)
+      refetchTournament()
+      showToast('Fotka uložena — grafiky ji použijí ve stylu Foto')
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  async function removePhoto() {
+    if (!tournament?.share_photo_url || photoBusy) return
+    if (!await confirmDialog('Odebrat fotku pro grafiky?', { danger: true, confirmLabel: 'Odebrat' })) return
+    setPhotoBusy(true)
+    try {
+      const { error } = await supabase.from('tournament').update({ share_photo_url: null }).eq('id', tournament.id)
+      if (error) { showToast('Chyba: ' + error.message); return }
+      await removeAssetByUrl(tournament.share_photo_url)
+      refetchTournament()
+      showToast('Fotka odebrána')
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
 
   return (
     <div>
@@ -153,6 +199,25 @@ export default function BrandingSection({ tournament, refetchTournament, showToa
           <button type="button" className="btn btn-s" onClick={() => save(true)} style={{ opacity: saving ? 0.6 : 1 }}>
             Výchozí vzhled
           </button>
+        )}
+      </div>
+
+      <div className="sub-title" style={{ marginTop: '1.5rem' }}>Fotka pro grafiky na sítě</div>
+      <div className="info-box">
+        Fotka z akce nebo hřiště se použije jako pozadí grafik ve stylu Foto (výsledky, tabulky, statistiky, grafika turnaje).
+        Nejlépe na šířku, bez důležitých detailů uprostřed — přes střed jde výsledek. Diváci si při sdílení mohou vybrat i vlastní fotku.
+      </div>
+      <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }}
+        onChange={e => { uploadPhoto(e.target.files?.[0]); e.target.value = '' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', flexWrap: 'wrap' }}>
+        {tournament?.share_photo_url && (
+          <img src={tournament.share_photo_url} alt="Fotka pro grafiky" style={{ width: 192, height: 108, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--line)' }} />
+        )}
+        <button type="button" className="btn btn-s btn-sm" onClick={() => { if (!photoBusy) photoInput.current?.click() }} style={{ opacity: photoBusy ? 0.6 : 1 }}>
+          {photoBusy ? 'Ukládám…' : tournament?.share_photo_url ? 'Změnit fotku' : 'Nahrát fotku'}
+        </button>
+        {tournament?.share_photo_url && (
+          <button type="button" className="btn btn-d btn-sm" onClick={removePhoto} style={{ opacity: photoBusy ? 0.6 : 1 }}>Odebrat</button>
         )}
       </div>
     </div>

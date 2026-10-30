@@ -33,7 +33,7 @@ Velikost: S ≈ do 1 sezení, M ≈ 1–2 sezení, L ≈ více sezení / vyžadu
 
 ### Vlna 1 – „Oči“: grafiky na sítě (nejvyšší priorita)
 1. ✅ *(2026-10-30: kompaktní lišta, výsledek jako hrdina, styly Tmavý / Barvy turnaje / Světlý, presented by; styl Foto = bod 2)* **Redesign šablon** (`src/components/share/templates.tsx`, `Frame`): výsledek jako hrdina (velké skóre a loga), název turnaje malý v liště, pozadí v barvě turnaje (`--brand`, Výrazná varianta), generální partner jako „presented by“ místo zalamovaného pásu, ostatní partneři max. 1 řádek. **2–3 vizuální styly** na výběr (např. Broadcast / Minimal / Foto). – M
-2. **Fotka jako pozadí** (z akce, nahraná organizátorem přes `uploadAsset`, Storage `tournaments/{id}/…`), s tmavým přechodem pro čitelnost. – M
+2. ✅ *(2026-10-30: styl Foto — výchozí fotka v Nastavení → Vzhled turnaje (migrace 20) nebo vlastní fotka v okně sdílení, jen v zařízení)* **Fotka jako pozadí** (z akce, nahraná organizátorem přes `uploadAsset`, Storage `tournaments/{id}/…`), s tmavým přechodem pro čitelnost. – M
 3. **Nové šablony**: program hracího dne / pozvánka, **hráč zápasu (MVP)**, nejlepší sestava / tým turnaje, gratulace vítězi, konečné pořadí, souhrn dne (výsledky dne v jedné grafice). MVP vyžaduje nový sloupec (`matches.mvp_player_id`, `bracket_slots.mvp_player_id`) → migrace 20 + volba v editoru zápasu. – M/L
 4. **Balíček grafik**: „Stáhnout vše za dnešek“ (ZIP grafik dne pro správce sociálních sítí). – S
 5. **Video / animace (Reels/Stories)**: animovaný výsledek 5–8 s (příjezd log, odpočet skóre, partner na konci). Technicky: vykreslení snímků na `canvas` v prohlížeči + `MediaRecorder` (WebM) / WebCodecs (MP4), bez serveru. Nejdřív prototyp na 1 šabloně a ověření, že Instagram/WhatsApp formát přijmou. – L

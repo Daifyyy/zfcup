@@ -160,8 +160,16 @@ Nasazení po přesunu: `git push` na `main` → Cloudflare sestaví a nasadí (1
 - Patička: generální partner „Presented by“, ostatní v jedné řadě bez ořezu; Story má partnery ve 2 řadách.
 - Ověřeno na validačním turnaji: 1:1 i 9:16, všechny styly, zápas s mnoha událostmi a nejdelším názvem týmu; typecheck 62 (baseline), testy 117/117, build OK.
 
+### Fotka na pozadí grafik (2026-10-30)
+- Styl **Foto** v okně sdílení: fotka přes celou plochu, ztmavená nahoře/dole, nádech barvy turnaje, stín písma; partneři v bílé patičce beze změny.
+- Výchozí fotka turnaje: admin Nastavení → Vzhled turnaje → „Fotka pro grafiky na sítě“ (nahrát/změnit/odebrat), `tournament.share_photo_url` — **migrace `db-backup/20_share_photo.sql` (uživatel spustí v SQL Editoru)**; bez ní hláška o migraci, nahraný soubor se smaže.
+- Vlastní fotka: „Vybrat vlastní fotku“ přímo v okně sdílení (kdokoli, i divák) — nikam se nenahrává (data URL).
+- Limity: `photoToJpeg()` — jen JPG/PNG/WebP, vstup max 25 MB, výstup JPEG ≤ 1920 px a < 1 MB; ověřeno i na nejhorším případu (šum 2400×1600 → 791 KB). Migrace 20 ✅ spuštěna.
+- Ověřeno v prohlížeči s vlastní fotkou: 1:1 i Story; nahrání v administraci neověřeno (čeká na migraci 20). Typecheck 62, testy 117/117, build OK.
+- Pozn.: Vite na Windows nezaznamenal změny souborů zapsané skriptem — po hromadných úpravách soubor „dotknout“ nebo restartovat dev server.
+
 ### Kde navázat
-0. **Prémiový produkt** — roadmapa `docs/ROADMAP-PREMIUM.md` (prověrka 2026-10-30: co potvrzuje kvalitu, konkurence AHL/Tournify, 4 vlny nadstandardu). Prodávat celé, bez osekaných tarifů. Bod 1 (redesign grafik) ✅. Další: Vlna 1 body 2–4 (fotka na pozadí, nové šablony, balíček grafik), pak Vlna 2 body 6–7 (gól na TV, spoty partnerů). Každý bod = vlastní plán a sezení.
+0. **Prémiový produkt** — roadmapa `docs/ROADMAP-PREMIUM.md` (prověrka 2026-10-30: co potvrzuje kvalitu, konkurence AHL/Tournify, 4 vlny nadstandardu). Prodávat celé, bez osekaných tarifů. Body 1–2 (redesign grafik, fotka na pozadí) ✅ (migrace 20 ✅). Další: Vlna 1 body 3–4 (nové šablony, balíček grafik), pak Vlna 2 body 6–7 (gól na TV, spoty partnerů). Každý bod = vlastní plán a sezení.
 1. **Přesun hostingu na Cloudflare** — viz plán výše (začít krokem 1, nové sezení, bez prohlížeče).
 2. **Uživatel:** tarify — místo Vercel Pro přesun na Cloudflare (výše); Supabase Pro zapínat kolem placených turnajů, mezi nimi Free + denní „probuzení“ a záloha (`pg_dump`, GitHub Action — zatím neuděláno); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
 3. Pak Fáze 9 — registrace organizátorů a obchodní model.

@@ -19,14 +19,16 @@ export const FORMAT_SIZE: Record<ShareFormat, { w: number; h: number }> = {
 }
 
 /** Vizuální styl grafiky (volba v okně sdílení). */
-export type ShareStyle = 'dark' | 'brand' | 'light'
+export type ShareStyle = 'dark' | 'brand' | 'light' | 'photo'
 export const SHARE_STYLES: { value: ShareStyle; label: string }[] = [
   { value: 'dark', label: 'Tmavý' },
   { value: 'brand', label: 'Barvy turnaje' },
   { value: 'light', label: 'Světlý' },
+  { value: 'photo', label: 'Foto' },
 ]
-/** Výchozí styl podle vzhledu turnaje (Výrazná → barvy turnaje). */
+/** Výchozí styl: fotka turnaje → Foto, Výrazná → barvy turnaje, jinak tmavý. */
 export function defaultShareStyle(tournament: Tournament | null): ShareStyle {
+  if (tournament?.share_photo_url) return 'photo'
   return tournament?.brand_style === 'bold' ? 'brand' : 'dark'
 }
 
@@ -48,7 +50,7 @@ interface Pal {
 }
 
 // Sdílecí šablony mají vlastní paletu (výjimka z pravidla tokenů), barvu turnaje berou z --brand*.
-const PALETTES: Record<ShareStyle, Pal> = {
+const PALETTES = {
   dark: {
     bg: 'linear-gradient(160deg, color-mix(in srgb, var(--brand) 24%, #070b14) 0%, color-mix(in srgb, var(--brand) 10%, #0b1220) 58%, #070b14 100%)',
     ink: '#f5f7fa',
@@ -92,7 +94,21 @@ const PALETTES: Record<ShareStyle, Pal> = {
     diag: 'rgba(11,18,32,.03)',
     logoShadow: '0 8px 28px rgba(11,18,32,.16)',
   },
+} as Record<ShareStyle, Pal>
+
+// Foto: tmavé jako „dark“, panely průsvitně černé, aby text na fotce zůstal čitelný
+PALETTES.photo = {
+  ...PALETTES.dark,
+  bg: 'linear-gradient(160deg, #0b1220 0%, #070b14 100%)',
+  panel: 'rgba(0,0,0,.34)',
+  panelStrong: 'rgba(0,0,0,.5)',
+  line: 'rgba(255,255,255,.14)',
+  scoreB: { bg: 'rgba(0,0,0,.55)', ink: '#ffffff' },
+  diag: 'rgba(255,255,255,.04)',
+  logoShadow: '0 10px 40px rgba(0,0,0,.55)',
 }
+/** Ztmavení fotky: nahoře (lišta) a dole (partneři) víc, uprostřed míň; jemný nádech barvy turnaje. */
+const PHOTO_SHADE = 'linear-gradient(180deg, rgba(5,8,15,.82) 0%, rgba(5,8,15,.58) 30%, rgba(5,8,15,.62) 62%, rgba(5,8,15,.9) 100%), linear-gradient(150deg, color-mix(in srgb, var(--brand) 38%, transparent) 0%, transparent 55%)'
 
 const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif"
 const BODY = "'Inter', system-ui, sans-serif"
@@ -151,14 +167,14 @@ function PartnerFooter({ sponsors, story }: { sponsors: Sponsor[]; story: boolea
   )
   if (story) {
     return (
-      <footer style={{ position: 'relative', background: '#fff', padding: '30px 72px 34px 88px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+      <footer style={{ position: 'relative', background: '#fff', textShadow: 'none', padding: '30px 72px 34px 88px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
         {titleBlock}
         {othersBlock}
       </footer>
     )
   }
   return (
-    <footer style={{ position: 'relative', background: '#fff', padding: '22px 72px 22px 88px', display: 'flex', alignItems: 'center', gap: 30 }}>
+    <footer style={{ position: 'relative', background: '#fff', textShadow: 'none', padding: '22px 72px 22px 88px', display: 'flex', alignItems: 'center', gap: 30 }}>
       {titleBlock}
       {title && othersBlock && <div style={{ width: 2, height: 58, background: '#e2e8f0', flexShrink: 0 }} />}
       {othersBlock}
@@ -167,9 +183,11 @@ function PartnerFooter({ sponsors, story }: { sponsors: Sponsor[]; story: boolea
 }
 
 /** Společný rám: kompaktní lišta turnaje, popisek, obsah, partneři. */
-function Frame({ format, style, tournament, kicker, kickerAlign = 'left', sponsors, showHeader = true, children }: {
+function Frame({ format, style, photo, tournament, kicker, kickerAlign = 'left', sponsors, showHeader = true, children }: {
   format: ShareFormat
   style: ShareStyle
+  /** Fotka na pozadí (jen styl Foto) */
+  photo?: string | null
   tournament: Tournament | null
   kicker?: string
   kickerAlign?: 'left' | 'center'
@@ -183,7 +201,13 @@ function Frame({ format, style, tournament, kicker, kickerAlign = 'left', sponso
   const story = format === 'story'
   const meta = [tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
   return (
-    <div style={{ width: w, height: h, position: 'relative', overflow: 'hidden', background: pal.bg, color: pal.ink, fontFamily: BODY, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: w, height: h, position: 'relative', overflow: 'hidden', background: pal.bg, color: pal.ink, fontFamily: BODY, display: 'flex', flexDirection: 'column', textShadow: style === 'photo' && photo ? '0 2px 14px rgba(0,0,0,.7)' : undefined }}>
+      {style === 'photo' && photo && (
+        <>
+          <img src={photo} crossOrigin="anonymous" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, background: PHOTO_SHADE }} />
+        </>
+      )}
       {/* diagonální akcent + pruh značky */}
       <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(115deg, transparent 0 62%, ${pal.diag} 62% 76%, transparent 76%)` }} />
       <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 16, background: pal.stripe }} />
@@ -258,9 +282,10 @@ function EventColumn({ lines, big, pal }: { lines: EventLine[]; big?: boolean; p
   )
 }
 
-export function MatchGraphic({ format, style = 'dark', tournament, sponsors, home, away, homeScore, awayScore, label, decidedIn, live, upcoming, time, events }: {
+export function MatchGraphic({ format, style = 'dark', photo, tournament, sponsors, home, away, homeScore, awayScore, label, decidedIn, live, upcoming, time, events }: {
   format: ShareFormat
   style?: ShareStyle
+  photo?: string | null
   tournament: Tournament | null
   sponsors: Sponsor[]
   home?: Team
@@ -292,7 +317,7 @@ export function MatchGraphic({ format, style = 'dark', tournament, sponsors, hom
   )
   const status = upcoming ? (time ? `Výkop ${time}` : 'Brzy') : live ? 'Živě' : 'Konec'
   return (
-    <Frame format={format} style={style} tournament={tournament} kicker={`${upcoming ? 'Hrajeme' : live ? 'Průběžný stav' : 'Výsledek'} · ${label}`} kickerAlign="center" sponsors={sponsors}>
+    <Frame format={format} style={style} photo={photo} tournament={tournament} kicker={`${upcoming ? 'Hrajeme' : live ? 'Průběžný stav' : 'Výsledek'} · ${label}`} kickerAlign="center" sponsors={sponsors}>
       <div style={{ display: 'flex', alignItems: story || !hasEvents ? 'center' : 'flex-start', justifyContent: 'space-between', flexDirection: story ? 'column' : 'row', gap: story ? (hasEvents ? 34 : 46) : 0 }}>
         {team(home, homeScore >= awayScore, events?.home)}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, flexShrink: 0, marginTop: story || !hasEvents ? 0 : logo / 2 - scoreFont / 2 - 14 }}>
@@ -325,9 +350,10 @@ export function MatchGraphic({ format, style = 'dark', tournament, sponsors, hom
   )
 }
 
-export function TableGraphic({ format, style = 'dark', tournament, sponsors, groupName, rows, teams, allowDraws }: {
+export function TableGraphic({ format, style = 'dark', photo, tournament, sponsors, groupName, rows, teams, allowDraws }: {
   format: ShareFormat
   style?: ShareStyle
+  photo?: string | null
   tournament: Tournament | null
   sponsors: Sponsor[]
   groupName: string
@@ -344,7 +370,7 @@ export function TableGraphic({ format, style = 'dark', tournament, sponsors, gro
   const nameFont = rowH >= 100 ? 40 : 36
   const cell: CSSProperties = { width: 86, textAlign: 'center', fontSize: 30, color: pal.muted, fontVariantNumeric: 'tabular-nums' }
   return (
-    <Frame format={format} style={style} tournament={tournament} kicker={`Tabulka · ${groupName}`} sponsors={sponsors}>
+    <Frame format={format} style={style} photo={photo} tournament={tournament} kicker={`Tabulka · ${groupName}`} sponsors={sponsors}>
       <div style={{ display: 'flex', alignItems: 'center', padding: '0 24px 14px', fontSize: 22, fontWeight: 700, letterSpacing: '.12em', color: pal.muted, textTransform: 'uppercase' }}>
         <div style={{ width: 60 }}>#</div>
         <div style={{ flex: 1 }}>Tým</div>
@@ -383,9 +409,10 @@ export interface LeaderRow {
 }
 
 /** Žebříček (střelci, asistence, body, karty, tresty): TOP 3 na pódiu, pak další řádky. */
-export function LeadersGraphic({ format, style = 'dark', tournament, sponsors, title, unit, rows }: {
+export function LeadersGraphic({ format, style = 'dark', photo, tournament, sponsors, title, unit, rows }: {
   format: ShareFormat
   style?: ShareStyle
+  photo?: string | null
   tournament: Tournament | null
   sponsors: Sponsor[]
   title: string
@@ -411,7 +438,7 @@ export function LeadersGraphic({ format, style = 'dark', tournament, sponsors, t
     ? <img src={r.avatar} crossOrigin="anonymous" alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '4px solid rgba(255,255,255,.85)', boxShadow: pal.logoShadow, flexShrink: 0 }} />
     : <Logo team={r.team} size={size} pal={pal} />
   return (
-    <Frame format={format} style={style} tournament={tournament} kicker={title} sponsors={sponsors}>
+    <Frame format={format} style={style} photo={photo} tournament={tournament} kicker={title} sponsors={sponsors}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: story ? 22 : 14 }}>
         {top.map((r, i) => {
           const big = i === 0
@@ -449,9 +476,10 @@ export function LeadersGraphic({ format, style = 'dark', tournament, sponsors, t
 }
 
 /** Pozvánka / přehled turnaje: název jako hlavní prvek, čísla + QR kód na živé výsledky. */
-export function TournamentGraphic({ format, style = 'dark', tournament, sponsors, teamCount, matchCount, goalCount, url }: {
+export function TournamentGraphic({ format, style = 'dark', photo, tournament, sponsors, teamCount, matchCount, goalCount, url }: {
   format: ShareFormat
   style?: ShareStyle
+  photo?: string | null
   tournament: Tournament | null
   sponsors: Sponsor[]
   teamCount: number
@@ -469,7 +497,7 @@ export function TournamentGraphic({ format, style = 'dark', tournament, sponsors
     </div>
   )
   return (
-    <Frame format={format} style={style} tournament={tournament} sponsors={sponsors} showHeader={false}>
+    <Frame format={format} style={style} photo={photo} tournament={tournament} sponsors={sponsors} showHeader={false}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: story ? 64 : 38 }}>
         <div style={{ display: 'flex', flexDirection: story ? 'column' : 'row', alignItems: story ? 'flex-start' : 'center', gap: story ? 40 : 34 }}>
           {tournament?.logo_url && (

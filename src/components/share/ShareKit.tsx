@@ -44,7 +44,8 @@ export function ShareMatch(p: Base & {
       url={p.url}
       codeUrl={p.codeUrl}
       defaultStyle={defaultShareStyle(p.tournament)}
-      render={(format, _c, style) => <MatchGraphic format={format} style={style} {...p} />}
+      defaultPhoto={p.tournament?.share_photo_url ?? null}
+      render={(format, _c, style, photo) => <MatchGraphic format={format} style={style} photo={photo} {...p} />}
     />
   )
 }
@@ -59,7 +60,8 @@ export function ShareTable(p: Base & { groupName: string; rows: StandingRow[]; t
       url={p.url}
       codeUrl={p.codeUrl}
       defaultStyle={defaultShareStyle(p.tournament)}
-      render={(format, _c, style) => <TableGraphic format={format} style={style} {...p} />}
+      defaultPhoto={p.tournament?.share_photo_url ?? null}
+      render={(format, _c, style, photo) => <TableGraphic format={format} style={style} photo={photo} {...p} />}
     />
   )
 }
@@ -74,7 +76,8 @@ export function ShareLeaders(p: Base & { title: string; unit?: string; rows: Lea
       url={p.url}
       codeUrl={p.codeUrl}
       defaultStyle={defaultShareStyle(p.tournament)}
-      render={(format, _c, style) => <LeadersGraphic format={format} style={style} {...p} />}
+      defaultPhoto={p.tournament?.share_photo_url ?? null}
+      render={(format, _c, style, photo) => <LeadersGraphic format={format} style={style} photo={photo} {...p} />}
     />
   )
 }
@@ -89,7 +92,8 @@ export function ShareTournament(p: Base & { teamCount: number; matchCount: numbe
       url={p.url}
       codeUrl={p.codeUrl}
       defaultStyle={defaultShareStyle(p.tournament)}
-      render={(format, withCode, style) => <TournamentGraphic format={format} style={style} {...p} url={withCode && p.codeUrl ? p.codeUrl : p.url} />}
+      defaultPhoto={p.tournament?.share_photo_url ?? null}
+      render={(format, withCode, style, photo) => <TournamentGraphic format={format} style={style} photo={photo} {...p} url={withCode && p.codeUrl ? p.codeUrl : p.url} />}
     />
   )
 }

@@ -230,6 +230,8 @@
 .shr__sub { font-size: .8rem; color: var(--ink-muted); margin-top: .2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shr__close { background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: .35rem; cursor: pointer; color: var(--ink-muted); flex-shrink: 0; }
 .shr__formats { display: flex; flex-wrap: wrap; justify-content: center; gap: .45rem; margin-bottom: .7rem; }
+.shr__photo { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .4rem; margin: -.2rem 0 .7rem; }
+.shr__photo-hint { flex-basis: 100%; text-align: center; font-size: .75rem; color: var(--ink-muted); }
 .shr__preview { display: flex; align-items: center; justify-content: center; margin: 0 auto; border-radius: var(--radius); overflow: hidden; background: var(--surface-2); box-shadow: 0 0 0 1px var(--line); }
 .shr__preview--square { width: min(100%, 300px, 42vh); aspect-ratio: 1 / 1; }
 .shr__preview--story { height: min(46vh, 380px); aspect-ratio: 9 / 16; }
