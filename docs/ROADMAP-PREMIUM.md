@@ -97,7 +97,7 @@ Prodejní příběh: **„turnaj, který se sám komentuje a šíří“**. Poř
 - **Hlasování diváků o hráče zápasu**: QR na TV, hlas přes RPC s limitem (ne anonymní INSERT), výsledek živě na TV.
 
 **5.3 AI zpravodaj + diplomy** – L + S
-- **AI zpravodaj**: po uložení zápasu článek a text na sítě, večer souhrn dne, po turnaji reportáž. Generuje server (funkce Vercel/Cloudflare s Claude API, klíč nikdy ve frontendu), vstup jen data turnaje. Pořadatel text schválí nebo upraví. Doplnit zpracovatele do `SUBPROCESSORS` (`src/lib/legal.ts`), stanovit náklady na turnaj a limit.
+- ⏸ *(odloženo 2026-10-30; odhad ~15–30 Kč za turnaj se 40 zápasy podle modelu, nutný účet a API klíč Anthropic jen na serveru)* **AI zpravodaj**: po uložení zápasu článek a text na sítě, večer souhrn dne, po turnaji reportáž. Generuje server (funkce Vercel/Cloudflare s Claude API, klíč nikdy ve frontendu), vstup jen data turnaje. Pořadatel text schválí nebo upraví. Doplnit zpracovatele do `SUBPROCESSORS` (`src/lib/legal.ts`), stanovit náklady na turnaj a limit.
 - ✅ *(2026-10-30, modul `diplomas`)* **Diplomy jedním klikem**: tisk/PDF podle vzoru `src/components/admin/MatchSheets.tsx` (pořadí, nejlepší střelec, hráč turnaje) v barvách turnaje s logy partnerů.
 
 **5.4 Měřený dosah partnera** – M
