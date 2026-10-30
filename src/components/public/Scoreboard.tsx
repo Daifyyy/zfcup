@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { calcGroupStandings } from '../../lib/standings'
 import { addMinutes } from '../../lib/constants'
 import { getSportDef } from '../../lib/sports'
@@ -25,6 +25,9 @@ import { FitBox } from '../tv/FitBox'
 import { standingsZones } from '../../lib/zones'
 import { useBackClose } from '../../lib/useBackClose'
 import { tournamentQrUrl } from '../../lib/share'
+import { useModule } from '../../lib/ModulesContext'
+import { useTvEvents } from '../../hooks/useTvEvents'
+import { GoalOverlay, type GoalShow } from '../tv/GoalOverlay'
 
 interface Props {
   tournament: Tournament | null
@@ -183,8 +186,8 @@ function GroupMatchesSubCol({ groupName, matches, teams, tournament }: { groupNa
             </div>
             {/* Skóre */}
             <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, calc(3.5 * var(--tv-vw, 1vw)), 5rem)' }}>
-              {m.played ? (
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>
+              {(m.played || m.home_score + m.away_score > 0) ? (
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: m.played ? C.text : C.live, letterSpacing: '.06em', lineHeight: 1 }}>
                   {m.home_score}:{m.away_score}
                 </span>
               ) : (
@@ -276,8 +279,8 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                       {hT && <TeamLogo team={hT} size={tvLogo(28)} />}
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, calc(4 * var(--tv-vw, 1vw)), 5.5rem)' }}>
-                      {s.played ? (
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: accentColor, letterSpacing: '.06em', lineHeight: 1 }}>
+                      {(s.played || s.home_score + s.away_score > 0) ? (
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: s.played ? accentColor : C.live, letterSpacing: '.06em', lineHeight: 1 }}>
                           {s.home_score}:{s.away_score}
                         </span>
                       ) : (
@@ -317,8 +320,8 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
         {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={tvLogo(28)} />}
       </div>
       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
-        {match.played ? (
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>
+        {(match.played || match.home_score + match.away_score > 0) ? (
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: match.played ? C.text : C.live, letterSpacing: '.06em' }}>
             {match.home_score}:{match.away_score}
           </span>
         ) : (
@@ -552,8 +555,8 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                           {hT?.name ?? 'Určí se'}
                         </span>
                       </div>
-                      {slot.played && (
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>
+                      {(slot.played || slot.home_score + slot.away_score > 0) && (
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: !slot.played ? C.live : hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>
                           {slot.home_score}
                         </span>
                       )}
@@ -576,8 +579,8 @@ function FlatBracketCol({ rounds, slots, teams }: { rounds: BracketRound[]; slot
                           {aT?.name ?? 'Určí se'}
                         </span>
                       </div>
-                      {slot.played && (
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>
+                      {(slot.played || slot.home_score + slot.away_score > 0) && (
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: !slot.played ? C.live : aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>
                           {slot.away_score}
                         </span>
                       )}
@@ -598,6 +601,23 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
   const clock = useClock()
   // Zpět (gesto / tlačítko) zavře tabuli, ne turnaj; v ukázce na úvodní stránce vypnuto
   useBackClose(historyStep, onExit, 'scoreboard')
+
+  // Animace gólu (modul goal_animation) — jen góly „od teď“
+  const goalAnimOn = useModule('goal_animation')
+  const [goalQueue, setGoalQueue] = useState<GoalShow[]>([])
+  const tvEvents = useTvEvents({ tournament, matches, groups, bracketRounds, bracketSlots, goals, bracketGoals, players }, goalAnimOn)
+  useEffect(() => {
+    const shows: GoalShow[] = []
+    for (const e of tvEvents.events) {
+      if (e.type !== 'goal') continue
+      const m = matches.find(x => x.id === e.gameId) ?? bracketSlots.find(x => x.id === e.gameId)
+      shows.push({ key: e.key, teamId: e.teamId, scorers: e.scorers, count: e.count, homeId: m?.home_id ?? null, awayId: m?.away_id ?? null, h: e.h, a: e.a })
+    }
+    if (shows.length) setGoalQueue(q => [...q, ...shows])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tvEvents.id])
+  useEffect(() => { if (!goalAnimOn) setGoalQueue([]) }, [goalAnimOn])
+  const finishGoal = useCallback(() => setGoalQueue(q => q.slice(1)), [])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onExit() }
@@ -668,6 +688,9 @@ export default function Scoreboard({ tournament, teams, players, groups, matches
         <TvPartnerBar sponsors={sponsors} />
         <div className="sb-foot__brand" style={{ fontSize: S.label }}>{BRAND.name}</div>
       </footer>
+      {goalAnimOn && goalQueue[0] && (
+        <GoalOverlay goal={goalQueue[0]} teams={teams} players={players} partner={presentedBy} onDone={finishGoal} />
+      )}
     </div>
   )
 }

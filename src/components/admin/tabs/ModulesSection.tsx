@@ -1,6 +1,6 @@
 // Admin → Nastavení → Nové funkce: moduly ze systému modulů (Vlna 5, src/lib/modules.ts).
 // Přepínač mění jen tournament.modules — data modulu se nikdy nemažou (pravidlo 1).
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MessageSquare, Star } from 'lucide-react'
 import { supabase } from '../../../lib/supabase'
 import { isMissingColumnError } from '../../../lib/partners'
@@ -19,22 +19,41 @@ interface Props {
 export default function ModulesSection({ tournament, platformModules, isPlatformAdmin, refetchTournament, showToast }: Props) {
   const [saving, setSaving] = useState<string | null>(null)
   const [feedbackFor, setFeedbackFor] = useState<string | null>(null)
-  const settings = visibleModuleSettings(tournament, platformModules, isPlatformAdmin)
+  // Poslední uložený stav: rychlé přepnutí dalšího modulu nesmí vycházet ze starých dat (před refetchem)
+  const current = useRef<unknown>(tournament?.modules)
+  // data z realtime/refetch převzít, jen když se nic neukládá (opožděná odpověď by vrátila starší stav)
+  const pending = useRef(0)
+  useEffect(() => { if (pending.current === 0) current.current = tournament?.modules }, [tournament?.modules])
+  const [, rerender] = useState(0)
+  const queue = useRef<Promise<void>>(Promise.resolve())
+  const view = tournament ? { ...tournament, modules: current.current } : null
+  const settings = visibleModuleSettings(view, platformModules, isPlatformAdmin)
   if (!tournament || settings.length === 0) return null
 
-  async function toggle(s: ModuleSetting) {
-    if (!tournament || saving) return
-    const next = !s.checked
-    if (next && !s.canEnable) { showToast('Funkce se ukončuje — znovu ji zapnout nejde'); return }
+  // Kliky se ukládají postupně za sebou (žádný se neztratí); každý vychází z posledního uloženého stavu
+  function toggle(s: ModuleSetting) {
+    if (!tournament) return
+    if (!s.checked && !s.canEnable) { showToast('Funkce se ukončuje — znovu ji zapnout nejde'); return }
+    pending.current++
+    queue.current = queue.current.then(() => save(s)).finally(() => { pending.current-- })
+  }
+
+  async function save(s: ModuleSetting) {
+    if (!tournament) return
+    const now = visibleModuleSettings({ ...tournament, modules: current.current }, platformModules, isPlatformAdmin).find(x => x.def.key === s.def.key)
+    const next = !(now?.checked ?? s.checked)
     setSaving(s.def.key)
     try {
+      const modules = withModuleChoice(current.current, s.def.key, next)
       const { error } = await supabase.from('tournament')
-        .update({ modules: withModuleChoice(tournament.modules, s.def.key, next) })
+        .update({ modules })
         .eq('id', tournament.id)
       if (error) {
         showToast(isMissingColumnError(error, 'modules') ? 'Chybí migrace 21 (db-backup/21_modules.sql)' : 'Chyba: ' + error.message)
         return
       }
+      current.current = modules
+      rerender(n => n + 1)
       showToast(next ? `${s.def.name} zapnuto ✓` : `${s.def.name} vypnuto`)
       refetchTournament()
     } finally {

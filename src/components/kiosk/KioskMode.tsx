@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { SlidersHorizontal } from 'lucide-react'
 import { calcGroupStandings } from '../../lib/standings'
 import { TeamLogo } from '../ui/TeamLogo'
 import QRCode from '../ui/QRCode'
@@ -21,6 +22,13 @@ import { TvGroupTable } from '../tv/TvGroupTable'
 import { FitBox } from '../tv/FitBox'
 import { standingsZones } from '../../lib/zones'
 import { tournamentQrUrl } from '../../lib/share'
+import { useModule } from '../../lib/ModulesContext'
+import { useTvEvents } from '../../hooks/useTvEvents'
+import { GoalOverlay, GOAL_SHOW_MS, type GoalShow } from '../tv/GoalOverlay'
+import { TvSpot, buildSpots } from '../tv/TvSpot'
+import { getTitlePartner } from '../../lib/partners'
+import { announcementText, cancelSpeech, hasCzechVoice, loadAnnouncerSettings, saveAnnouncerSettings, speak, speechAvailable, type AnnouncerSettings } from '../../lib/announcer'
+import type { TvEvent } from '../../lib/tvEvents'
 
 /* ── Palette ───────────────────────────────────────────── */
 // Tmavá broadcast paleta — shodná s TV tabulí (Scoreboard).
@@ -30,7 +38,7 @@ const C = TV
 const S = TV_SIZE
 
 /* ── Views config ──────────────────────────────────────── */
-type KioskView = 'matches' | 'table' | 'bracket'
+type KioskView = 'matches' | 'table' | 'bracket' | 'spot'
 function getViews(_sportIcon?: string): { key: KioskView; label: string }[] {
   return [
     { key: 'matches', label: 'Zápasy' },
@@ -39,6 +47,10 @@ function getViews(_sportIcon?: string): { key: KioskView; label: string }[] {
   ]
 }
 const ROTATION_MS = 15_000
+/** Spot partnera / oznámení (modul tv_spots) */
+const SPOT_MS = 8_000
+/** Jak dlouho chytrá režie drží obrazovku po události */
+const DIRECTOR_HOLD_MS = 20_000
 
 /* ── Clock hook ────────────────────────────────────────── */
 function useClock() {
@@ -77,8 +89,8 @@ function GroupMatchesSubCol({ groupName, matches, teams }: { groupName: string; 
               <TeamLogo team={tt(m.home_id)} size={tvLogo(28)} />
             </div>
             <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.2rem, calc(3.5 * var(--tv-vw, 1vw)), 5rem)' }}>
-              {m.played
-                ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em', lineHeight: 1 }}>{m.home_score}:{m.away_score}</span>
+              {(m.played || m.home_score + m.away_score > 0)
+                ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: m.played ? C.text : C.live, letterSpacing: '.06em', lineHeight: 1 }}>{m.home_score}:{m.away_score}</span>
                 : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.muted, letterSpacing: '.06em' }}>VS</span>
               }
             </div>
@@ -105,8 +117,8 @@ function MatchCell({ match, teams }: { match: Match; teams: Team[] }) {
         {tt(match.home_id) && <TeamLogo team={tt(match.home_id)!} size={tvLogo(28)} />}
       </div>
       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: '3em' }}>
-        {match.played
-          ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.text, letterSpacing: '.06em' }}>{match.home_score}:{match.away_score}</span>
+        {(match.played || match.home_score + match.away_score > 0)
+          ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: match.played ? C.text : C.live, letterSpacing: '.06em' }}>{match.home_score}:{match.away_score}</span>
           : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.small, color: C.muted }}>VS</span>
         }
       </div>
@@ -195,8 +207,8 @@ function PlayoffMatchesSubCol({ rounds, slots, teams }: { rounds: BracketRound[]
                         {hT && <TeamLogo team={hT} size={tvLogo(28)} />}
                       </div>
                       <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 'clamp(2.4rem, calc(4 * var(--tv-vw, 1vw)), 5.5rem)' }}>
-                        {s.played
-                          ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: accentColor, letterSpacing: '.06em', lineHeight: 1 }}>{s.home_score}:{s.away_score}</span>
+                        {(s.played || s.home_score + s.away_score > 0)
+                          ? <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: s.played ? accentColor : C.live, letterSpacing: '.06em', lineHeight: 1 }}>{s.home_score}:{s.away_score}</span>
                           : <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: C.muted }}>VS</span>
                         }
                       </div>
@@ -384,7 +396,7 @@ function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots:
                         {hT && <TeamLogo team={hT} size={tvLogo(28)} />}
                         <span style={{ fontSize: S.body, fontWeight: hw ? 700 : 400, color: hT ? (hw ? accentColor : C.text) : C.muted, fontStyle: hT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hT?.name ?? 'Určí se'}</span>
                       </div>
-                      {slot.played && <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.home_score}</span>}
+                      {(slot.played || slot.home_score + slot.away_score > 0) && <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: !slot.played ? C.live : hw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.home_score}</span>}
                     </div>
                     {/* Away row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.4rem .7rem', background: aw ? (isFinal ? 'rgba(245,196,81,.12)' : TV.accentSoft) : 'transparent' }}>
@@ -392,7 +404,7 @@ function KioskBracket({ rounds, slots, teams }: { rounds: BracketRound[]; slots:
                         {aT && <TeamLogo team={aT} size={tvLogo(28)} />}
                         <span style={{ fontSize: S.body, fontWeight: aw ? 700 : 400, color: aT ? (aw ? accentColor : C.text) : C.muted, fontStyle: aT ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{aT?.name ?? 'Určí se'}</span>
                       </div>
-                      {slot.played && <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.away_score}</span>}
+                      {(slot.played || slot.home_score + slot.away_score > 0) && <span style={{ fontFamily: 'var(--font-display)', fontSize: S.score, color: !slot.played ? C.live : aw ? accentColor : C.muted, marginLeft: 8, flexShrink: 0 }}>{slot.away_score}</span>}
                     </div>
                   </div>
                 )
@@ -411,8 +423,14 @@ function getSubheaders(_sportIcon?: string): Record<KioskView, { label: string }
     matches: { label: 'Zápasy — výsledky' },
     table:   { label: 'Tabulka a střelci' },
     bracket: { label: 'Play-off — pavouk' },
+    spot:    { label: 'Partneři a oznámení' },
   }
 }
+
+const VOICE_OPTIONS: [keyof AnnouncerSettings, string][] = [
+  ['goals', 'Góly'], ['starts', 'Začátek zápasu'], ['ends', 'Konec zápasu'],
+  ['milestones', 'Dohraná skupina a vítěz'], ['partner', 'Zmínka generálního partnera'],
+]
 
 /* ── Main KioskMode ─────────────────────────────────────── */
 interface Props {
@@ -426,30 +444,128 @@ interface Props {
   sponsors?: Sponsor[]
 }
 
-export default function KioskMode({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, onExit, onScoreboard, sponsors = [] }: Props) {
+export default function KioskMode({ tournament, teams, players, groups, matches, goals, bracketGoals, bracketRounds, bracketSlots, announcements, onExit, onScoreboard, sponsors = [] }: Props) {
   const sportIcon = getSportDef(tournament?.sport).icon
   const bracketActive = bracketSlots.some(s => s.home_id != null || s.away_id != null)
   const allViews = getViews(sportIcon)
-  const effectiveViews = bracketActive ? allViews : allViews.filter(v => v.key !== 'bracket')
+  // Moduly (systém modulů, Vlna 5) — změna přijde realtime, projeví se bez obnovení
+  const goalAnimOn = useModule('goal_animation')
+  const announcerOn = useModule('announcer')
+  const directorOn = useModule('smart_director')
+  const spotsOn = useModule('tv_spots')
+  const spots = spotsOn ? buildSpots(sponsors, announcements) : []
+  const baseViews = bracketActive ? allViews : allViews.filter(v => v.key !== 'bracket')
+  const effectiveViews: { key: KioskView; label: string }[] = spots.length ? [...baseViews, { key: 'spot', label: 'Partneři' }] : baseViews
 
   const [idx, setIdx] = useState(0)
+  const [spotIdx, setSpotIdx] = useState(0)
+  /** Chytrá režie: obrazovka držená déle než běžná rotace */
+  const [holdMs, setHoldMs] = useState<number | null>(null)
+  const [goalQueue, setGoalQueue] = useState<GoalShow[]>([])
+  const [voiceOn, setVoiceOn] = useState(false)
+  const [voiceMenu, setVoiceMenu] = useState(false)
+  const [voiceSettings, setVoiceSettings] = useState<AnnouncerSettings>(loadAnnouncerSettings)
   const [paused, setPaused] = useState(false)
   const [barKey, setBarKey] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
   const clock = useClock()
 
   const currentView = effectiveViews[idx % effectiveViews.length]
+  const viewMs = holdMs ?? (currentView.key === 'spot' ? SPOT_MS : ROTATION_MS)
+  const viewCount = effectiveViews.length
+  const spotPos = effectiveViews.findIndex(v => v.key === 'spot')
 
   const advance = useCallback(() => {
-    setIdx(i => (i + 1) % effectiveViews.length)
+    setHoldMs(null)
+    setIdx(i => {
+      const next = (i + 1) % viewCount
+      if (next === spotPos) setSpotIdx(n => n + 1)
+      return next
+    })
     setBarKey(k => k + 1)
-  }, [effectiveViews.length])
+  }, [viewCount, spotPos])
 
   useEffect(() => {
     if (paused) return
-    timerRef.current = setTimeout(advance, ROTATION_MS)
+    timerRef.current = setTimeout(advance, viewMs)
     return () => clearTimeout(timerRef.current)
-  }, [idx, paused, advance])
+  }, [idx, paused, advance, viewMs, barKey])
+
+  // ── Události (gól, začátek/konec zápasu, skupina, vítěz) — jen „od teď“ ──
+  const tvEvents = useTvEvents(
+    { tournament, matches, groups, bracketRounds, bracketSlots, goals, bracketGoals, players },
+    goalAnimOn || announcerOn || directorOn,
+  )
+  const titlePartner = getTitlePartner(sponsors)
+  const gameOf = (id: string) => {
+    const m = matches.find(x => x.id === id)
+    if (m) return { home_id: m.home_id, away_id: m.away_id, h: m.home_score, a: m.away_score, label: groups.find(g => g.id === m.group_id)?.name ?? m.round ?? '' }
+    const sl = bracketSlots.find(x => x.id === id)
+    return sl ? { home_id: sl.home_id, away_id: sl.away_id, h: sl.home_score, a: sl.away_score, label: bracketRounds.find(r => r.id === sl.round_id)?.name ?? 'Play-off' } : undefined
+  }
+  const latestRef = useRef({ gameOf, goalAnimOn, announcerOn, directorOn, voiceOn, voiceSettings, effectiveViews })
+  latestRef.current = { gameOf, goalAnimOn, announcerOn, directorOn, voiceOn, voiceSettings, effectiveViews }
+
+  useEffect(() => {
+    if (!tvEvents.events.length) return
+    const cur = latestRef.current
+    for (const e of tvEvents.events as TvEvent[]) {
+      if (e.type === 'goal' && cur.goalAnimOn) {
+        const g = cur.gameOf(e.gameId)
+        setGoalQueue(q => [...q, { key: e.key, teamId: e.teamId, scorers: e.scorers, count: e.count, homeId: g?.home_id ?? null, awayId: g?.away_id ?? null, h: e.h, a: e.a }])
+      }
+      if (cur.announcerOn && cur.voiceOn) {
+        const text = announcementText(e, {
+          teamName: id => teams.find(t => t.id === id)?.name ?? '',
+          playerName: id => players.find(p => p.id === id)?.name ?? '',
+          game: cur.gameOf,
+          groupName: id => groups.find(g => g.id === id)?.name ?? 'Skupina',
+          partner: cur.voiceSettings.partner ? titlePartner?.name : null,
+        }, cur.voiceSettings)
+        if (text) speak(text)
+      }
+      if (cur.directorOn) {
+        const target: KioskView | null = e.type === 'goal' || e.type === 'match_end' ? 'matches' : e.type === 'group_done' ? 'table' : e.type === 'champion' ? 'bracket' : null
+        const i = target ? cur.effectiveViews.findIndex(v => v.key === target) : -1
+        if (i >= 0) {
+          // po animaci gólu (běží přes celou obrazovku) přepnout na zápasy a chvíli držet
+          const delay = e.type === 'goal' && cur.goalAnimOn ? GOAL_SHOW_MS : 0
+          setTimeout(() => {
+            if (!latestRef.current.directorOn) return
+            clearTimeout(timerRef.current)
+            setIdx(i)
+            setHoldMs(DIRECTOR_HOLD_MS)
+            setBarKey(k => k + 1)
+          }, delay)
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tvEvents.id])
+
+  // Hlasatel: vypnutí modulu nebo hlasu = okamžité ztišení; odchod z TV také
+  useEffect(() => { if (!announcerOn || !voiceOn) cancelSpeech() }, [announcerOn, voiceOn])
+  useEffect(() => () => cancelSpeech(), [])
+  // Animace gólu: vypnutí modulu zahodí frontu
+  useEffect(() => { if (!goalAnimOn) setGoalQueue([]) }, [goalAnimOn])
+  // Chytrá režie vypnutá → zpět k běžnému střídání
+  useEffect(() => { if (!directorOn) setHoldMs(null) }, [directorOn])
+  // Vypnuté spoty: zůstat na platné obrazovce
+  useEffect(() => { if (idx >= viewCount) setIdx(0) }, [idx, viewCount])
+  const finishGoal = useCallback(() => setGoalQueue(q => q.slice(1)), [])
+
+  function toggleVoice() {
+    if (!voiceOn) {
+      // Prohlížeč pustí hlas jen po kliknutí — krátké hlášení zvuk odemkne
+      speak('Hlasatel zapnut.')
+      setVoiceOn(true)
+    } else {
+      setVoiceOn(false)
+    }
+  }
+  function changeVoiceSetting(k: keyof AnnouncerSettings) {
+    setVoiceSettings(v => { const next = { ...v, [k]: !v[k] }; saveAnnouncerSettings(next); return next })
+  }
 
   useEffect(() => {
     document.documentElement.requestFullscreen().catch(() => {})
@@ -470,6 +586,8 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
 
   const goTo = (i: number) => {
     clearTimeout(timerRef.current)
+    setHoldMs(null)
+    if (i === spotPos) setSpotIdx(n => n + 1)
     setIdx(i)
     setBarKey(k => k + 1)
     setPaused(false)
@@ -485,7 +603,7 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
       <div style={{ height: 4, background: 'rgba(255,255,255,.08)', flexShrink: 0, position: 'relative' }}>
         <div key={paused ? 'p' : `b${barKey}`} style={{
           position: 'absolute', left: 0, top: 0, height: '100%', background: 'var(--brand)',
-          animation: paused ? 'none' : `kioskBar ${ROTATION_MS}ms linear forwards`,
+          animation: paused ? 'none' : `kioskBar ${viewMs}ms linear forwards`,
           width: paused ? '0%' : undefined,
         }} />
       </div>
@@ -529,6 +647,27 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
           {paused && (
             <span style={{ fontSize: S.label, color: 'rgba(255,255,255,.7)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Pozastaveno</span>
           )}
+          {announcerOn && speechAvailable() && (
+            <div style={{ position: 'relative', display: 'flex', gap: '.35rem' }}>
+              <button type="button" onClick={e => { e.stopPropagation(); toggleVoice() }} title={hasCzechVoice() ? 'Hlasatel' : 'V zařízení chybí český hlas — hlasatel bude mluvit s cizím přízvukem'}
+                style={{ background: voiceOn ? 'color-mix(in srgb, var(--brand-on-dark) 35%, transparent)' : 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 8, color: '#fff', fontSize: S.label, fontWeight: 700, padding: '.35rem 1rem', cursor: 'pointer' }}>
+                Hlas: {voiceOn ? 'zap' : 'vyp'}
+              </button>
+              <button type="button" aria-label="Co hlásit" title="Co hlásit" onClick={e => { e.stopPropagation(); setVoiceMenu(m => !m) }}
+                style={{ background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 8, color: 'rgba(255,255,255,.8)', fontSize: S.label, fontWeight: 700, padding: '.35rem .6rem', cursor: 'pointer' }}>
+                <SlidersHorizontal size={16} />
+              </button>
+              {voiceMenu && (
+                <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 10, background: C.hdr, border: `1px solid ${C.border}`, borderRadius: 10, padding: '.6rem .8rem', minWidth: 220, display: 'flex', flexDirection: 'column', gap: '.35rem', fontSize: S.label, boxShadow: '0 12px 30px rgba(0,0,0,.5)' }}>
+                  {VOICE_OPTIONS.map(([k, l]) => (
+                    <label key={k} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', cursor: 'pointer', color: C.text }}>
+                      <input type="checkbox" checked={voiceSettings[k]} onChange={() => changeVoiceSetting(k)} />{l}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <button type="button" onClick={e => { e.stopPropagation(); onScoreboard() }} style={{ background: 'rgba(255,255,255,.1)', border: '2px solid rgba(255,255,255,.25)', borderRadius: 8, color: 'rgba(255,255,255,.7)', fontSize: S.label, fontWeight: 700, padding: '.35rem 1rem', cursor: 'pointer', transition: 'all .15s' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--brand-on-dark) 28%, transparent)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.1)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,.7)' }}>
@@ -559,6 +698,9 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
         )}
         {currentView.key === 'bracket' && (
           <KioskBracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />
+        )}
+        {currentView.key === 'spot' && spots.length > 0 && (
+          <TvSpot spot={spots[spotIdx % spots.length]} />
         )}
       </div>
 
@@ -595,6 +737,9 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
           </div>
         </div>
       </div>
+      {goalAnimOn && goalQueue[0] && (
+        <GoalOverlay goal={goalQueue[0]} teams={teams} players={players} partner={titlePartner} onDone={finishGoal} />
+      )}
     </div>
   )
 }

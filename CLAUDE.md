@@ -49,6 +49,11 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 - **Rozhodnutí jen přes** `useModule(klíč)` (`src/lib/ModulesContext.tsx`, `ModulesProvider` v `App.tsx` pro web i TV/kiosk) → `isModuleEnabled()`. Změny přijdou realtime (odběr `tournament` a `platform_settings`) — modul musí reagovat bez obnovení stránky. Povinná pravidla pro zapnutí/vypnutí uprostřed turnaje: `docs/ROADMAP-PREMIUM.md`, Vlna 5.
 - Bez migrace 21 je vše vypnuté (`platform_settings` se čte přes `select('*')`).
 
+### TV moduly (Vlna 2 body 6–7 + 5.2)
+- **Události „od teď“**: `src/lib/tvEvents.ts` (`buildSnapshot` → `diffSnapshots`: gól, začátek/konec zápasu, dohraná skupina, vítěz) + hook `useTvEvents` (výchozí stav při otevření TV a při zapnutí modulu; skrytá karta, návrat a obnova realtime = 5 s jen převzetí bez hlášení; střelec se dohledá proti stavu ≤ 6 s starému, gól čeká na střelce 3 s). Góly jen u rozehraného zápasu: výsledek zadaný najednou s „Odehráno“ = jen konec, změna odehraného = oprava, nic. DB nemá časové značky změn — nespoléhat na ně.
+- **Moduly**: `goal_animation` (`tv/GoalOverlay.tsx`, TV režim i tabule, 5 s, „Gól vám přináší“ = generální partner), `announcer` (`src/lib/announcer.ts`, `speechSynthesis` cs-CZ, na TV tlačítko „Hlas“ — prohlížeč pustí zvuk až po kliknutí; co hlásit = localStorage `turnajnik_announcer` na zařízení), `smart_director` (po gólu/konci zápasu Zápasy, po dohrání skupiny Tabulka, po finále Pavouk, drží 20 s), `tv_spots` (`tv/TvSpot.tsx`, obrazovka „Partneři“ v rotaci 8 s: generální 3×, hlavní 2×, ostatní 1×, + max. 3 oznámení). Vypnutí = okamžitě ztichne / zmizí (`cancelSpeech`).
+- TV ukazuje průběžné skóre rozehraného zápasu (barva `--live`) místo „VS“.
+
 ## Soukromé turnaje (migrace 15)
 - `tournament.visibility` (`public`|`private`) + `access_code`. RLS čtení přes `can_read_tournament(tid)`: veřejný, vlastník/správce, nebo kód v hlavičce `x-access-code` (posílá `src/lib/supabase.ts` z `src/lib/accessCodes.ts`, jen pro `/rest/v1/`). Realtime hlavičku nezná → divák s kódem má polling 30 s (`App.tsx`).
 - Nová tabulka s `tournament_id` = přidat ji do seznamu v migraci 15 (politika `public_read` s `can_read_tournament`). Výjimka: neveřejná data (`module_feedback` — čte jen správce a autor). `visibility`/`access_code` posílat jen u soukromého turnaje (bez migrace sloupce chybí).

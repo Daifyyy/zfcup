@@ -389,6 +389,12 @@ function Cookies() {
               <td>do smazání dat webu</td>
             </tr>
             <tr>
+              <td><code>turnajnik_announcer</code></td>
+              <td>místní úložiště (localStorage)</td>
+              <td>jen na zařízení s TV režimem: co má hlasatel hlásit (góly, začátky, konce zápasů…)</td>
+              <td>do smazání dat webu</td>
+            </tr>
+            <tr>
               <td><code>turnajnik_chunk_reload</code></td>
               <td>úložiště relace (sessionStorage)</td>
               <td>po nasazení nové verze aplikace zabrání opakovanému obnovování stránky</td>

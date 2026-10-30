@@ -23,7 +23,7 @@ export const FEATURES: Feature[] = [
   {
     key: 'tv', icon: MonitorPlay, title: 'TV tabule a kiosk',
     text: 'Broadcast obrazovka pro projektor v hale s hodinami, QR kódem a partnery.',
-    points: ['Tabulky, zápasy i pavouk na jedné obrazovce', 'Ostrá na Full HD i 4K, písmo se přizpůsobí počtu týmů', 'QR kód pro diváky a lišta partnerů'],
+    points: ['Tabulky, zápasy i pavouk na jedné obrazovce', 'Ostrá na Full HD i 4K, písmo se přizpůsobí počtu týmů', 'Animace gólu, hlasatel a chytrá režie podle dění', 'Spoty partnerů a oznámení přes celou obrazovku'],
   },
   {
     key: 'share', icon: Share2, title: 'Grafiky na sociální sítě',

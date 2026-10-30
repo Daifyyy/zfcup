@@ -39,8 +39,8 @@ Velikost: S ≈ do 1 sezení, M ≈ 1–2 sezení, L ≈ více sezení / vyžadu
 5. **Video / animace (Reels/Stories)**: animovaný výsledek 5–8 s (příjezd log, odpočet skóre, partner na konci). Technicky: vykreslení snímků na `canvas` v prohlížeči + `MediaRecorder` (WebM) / WebCodecs (MP4), bez serveru. Nejdřív prototyp na 1 šabloně a ověření, že Instagram/WhatsApp formát přijmou. – L
 
 ### Vlna 2 – Zážitek na místě a pro partnery
-6. **Animace gólu na TV**: „GÓL!“ + střelec + logo týmu přes celou obrazovku na 4–5 s při změně skóre (realtime už je); volitelně „gól powered by [partner]“ = **prodejné partnerovi**. – M
-7. **Reklamní spoty partnerů v TV režimu**: celoobrazovkové logo/obrázek partnera v rotaci `KioskMode` (vedle Zápasy/Tabulka/Pavouk), počet zobrazení podle úrovně. + **oznámení na TV**. – S/M
+6. ✅ *(2026-10-30, modul `goal_animation`)* **Animace gólu na TV**: „GÓL!“ + střelec + logo týmu přes celou obrazovku na 4–5 s při změně skóre (realtime už je); volitelně „gól powered by [partner]“ = **prodejné partnerovi**. – M
+7. ✅ *(2026-10-30, modul `tv_spots`; počet zobrazení podle úrovně 3/2/1)* **Reklamní spoty partnerů v TV režimu**: celoobrazovkové logo/obrázek partnera v rotaci `KioskMode` (vedle Zápasy/Tabulka/Pavouk), počet zobrazení podle úrovně. + **oznámení na TV**. – S/M
 8. **Grafika pro živý přenos (OBS/YouTube)**: stránka `/overlay` s průhledným pozadím: skóre zápasu na hřišti X, tabulka do spodní třetiny, partner. Znovu použije `src/components/tv/`. – M
 9. **Report pro partnery po akci** (PDF): počet diváků webu a TV, kolikrát byla grafika sdílena, kde se logo objevilo. Vyžaduje jednoduché počítání návštěv bez cookies (RPC čítač v DB) → doplnit do stránky Cookies/GDPR. – M
 
@@ -91,7 +91,7 @@ Prodejní příběh: **„turnaj, který se sám komentuje a šíří“**. Poř
 - **Sběratelská karta hráče** (jako ve FIFA): nová šablona v `src/components/share/templates.tsx` – fotka (`players.avatar_url`), číslo, góly, asistence, ocenění, barvy turnaje, partner, QR. Sdílí se přes `ShareModal`. Každá sdílená karta = reklama pro pořadatele, partnera i platformu.
 - **Osobní stránka hráče** (`?hrac=` přes `DetailHost`): příští zápas a hřiště. Upozornění v telefonu (Web Push) až ve druhém kroku – vyžaduje service worker a server pro odesílání.
 
-**5.2 Hlasatel + chytrá režie TV** – M
+**5.2 Hlasatel + chytrá režie TV** – M *(hlasatel a chytrá režie ✅ 2026-10-30 jako moduly `announcer`, `smart_director`; hlasování diváků zbývá — potřebuje RPC a migraci)*
 - **Hlasatel**: `speechSynthesis` prohlížeče s českým hlasem v TV režimu – začátek zápasu, gól se střelcem, zmínka partnera (prodejné partnerům). Pořadatel volí, co se hlásí; spuštění kliknutím (prohlížeče blokují zvuk bez interakce). Bez serveru a nákladů.
 - **Chytrá režie**: `KioskMode` reaguje na události (gól, konec skupiny, finále) místo pevného střídání. Dělat spolu s Vlnou 2, bod 6 (animace gólu) – sdílejí logiku „od teď“.
 - **Hlasování diváků o hráče zápasu**: QR na TV, hlas přes RPC s limitem (ne anonymní INSERT), výsledek živě na TV.

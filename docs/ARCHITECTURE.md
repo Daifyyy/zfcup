@@ -136,6 +136,7 @@ Jeden časovač na interval; skrytá karta = nic; návrat na kartu = všechny re
 
 **Demo (Fáze 7)**: `src/demo/features.ts` (dlaždice funkcí na úvodní stránce), `src/demo/mockTournament.ts` (ukázkový turnaj v paměti), `src/demo/DemoModal.tsx` (líně; skutečné komponenty nad ukázkovými daty, detail zápasu uvnitř ukázky bez změny URL, TV/grafiky zmenšené přes `--tv-vw`).
 
+**TV moduly (Vlna 2 + 5.2)**: `hooks/useTvEvents.ts`, `tv/GoalOverlay.tsx` (animace gólu), `tv/TvSpot.tsx` (spoty partnerů a oznámení, `buildSpots`); `KioskMode` = hlasatel, chytrá režie, obrazovka Partneři; `Scoreboard` = animace gólu.
 **TV (Fáze 6)**: `tv/tvTheme.ts` (`TV`, `TV_SIZE`, `fit`, `tvLogo`, `TV_ZONE`), `tv/FitBox.tsx`, `tv/TvGroupTable.tsx` — sdílí `Scoreboard` i `KioskMode`. Potvrzovací dialog `ui/ConfirmDialog.tsx` (`confirmDialog()` + `ConfirmHost` v `main.tsx`).
 
 Další veřejné: `Scoreboard` (TV tabule, paleta `C` natvrdo), `KioskMode` (TV, `kiosk/`), `PrintBulletin` (tisk), `AnnouncementCard`, `CompetitionPage` (`competition/`), `share/*` (sdílecí grafiky 1080×1080 / 1080×1920, `html-to-image`; `templatesExtra.tsx` (program/výsledky dne, vítěz, konečné pořadí, hráč zápasu, tým turnaje), `GraphicsMenu` (Sdílet na Přehledu); `OgImageSync` + `OgGraphic` = náhled odkazu 1200×630 nahraný do Storage, běží u organizátora ve vlastním turnaji, podpis v localStorage `turnajnik_og_{id}`, logika `lib/og.ts`).
@@ -195,6 +196,8 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `finalStandings.ts` | konečné pořadí (finále, zápasy o umístění, sdílená místa, liga) | standings, history | tournamentGraphics |
 | `dayDigest.ts` | hrací dny, program a souhrn dne, stránkování | fixtures, dates | ShareKit, tournamentGraphics |
 | `tournamentGraphics.ts` | data grafik nad `TournamentData` (`bestTeamScopes`, `finalStandingsOf`, `playDaysOf`) | výše | GraphicsMenu, BestTeamCard, DemoModal |
+| `tvEvents.ts` | události TV „od teď“: snímek stavu, rozdíly (gól se střelcem, začátek/konec, skupina, vítěz) | matchState, history | useTvEvents |
+| `announcer.ts` | hlasatel: texty hlášení, nastavení (localStorage `turnajnik_announcer`), `speak`/`cancelSpeech` | tvEvents | KioskMode |
 | `modules.ts` | systém modulů: registr `MODULES`, stavy platformy, `isModuleEnabled`, `visibleModuleSettings`, `isPlayingToday` | — | ModulesContext, ModulesSection, PlatformModal, usePlatformSettings, App |
 | `ModulesContext.tsx` | `ModulesProvider` (App: web i kiosk) + `useModule(klíč)` | modules | moduly Vlny 5 |
 | `og.ts` | náhled odkazu: cesta `og.jpg`, veřejná URL, podpis (sdílené s `edge/`) | — | OgImageSync, edge/core.ts |
@@ -251,6 +254,6 @@ Nové soubory pod `tournaments/{turnajId}/…` (`lib/storage.ts`); starší cest
 - **Závislosti:** react 18, vite 6, typescript 5, tailwind 3, `@supabase/supabase-js` **2.49.1 (nepovyšovat)**, lucide-react, @tiptap, dompurify, html-to-image, qrcode.react, xlsx, @fontsource (Barlow Condensed, Inter); dev: vitest 3, wrangler 4.
 
 ## 9. Testy a kontroly
-- `npm test` — Vitest, `src/lib/__tests__/` (153 testů): `grafiky` (tým turnaje, konečné pořadí, program/souhrn dne), `modules` (stavy off/internal/beta/sunset/on, viditelnost v Nastavení), `edgeHeaders` (shoda hlaviček Vercel/Cloudflare, maintenance, OG HTML), `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
+- `npm test` — Vitest, `src/lib/__tests__/` (164 testů): `tvEvents` (góly, opravy, výsledek zadaný najednou, hlasatel, spoty), `grafiky` (tým turnaje, konečné pořadí, program/souhrn dne), `modules` (stavy off/internal/beta/sunset/on, viditelnost v Nastavení), `edgeHeaders` (shoda hlaviček Vercel/Cloudflare, maintenance, OG HTML), `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
 - `npm run typecheck` — nejdřív `edge/` (`tsconfig.edge.json`, bez chyb), pak aplikace: baseline 62 starších chyb, nové nesmí přibýt.
 - Chybí: testy `tipsEval.ts`, komponent a E2E automatizace (E2E se dělá ručně v Chromu).

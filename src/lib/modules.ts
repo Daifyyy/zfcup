@@ -43,8 +43,10 @@ export interface ModuleDef {
  */
 export const MODULES: ModuleDef[] = [
   { key: 'player_card', name: 'Karta hráče', description: 'Sběratelská karta hráče ke sdílení a osobní stránka hráče s příštím zápasem.', defaultEnabled: true, ready: false },
-  { key: 'announcer', name: 'Hlasatel', description: 'TV režim hlásí začátek zápasu a góly se střelcem (hlas prohlížeče), volitelně zmínku partnera.', defaultEnabled: false, ready: false },
-  { key: 'smart_director', name: 'Chytrá režie TV', description: 'TV režim reaguje na dění (gól, konec skupiny, finále) místo pevného střídání obrazovek.', defaultEnabled: false, ready: false },
+  { key: 'goal_animation', name: 'Animace gólu na TV', description: 'Při gólu se v TV režimu i na TV tabuli na 5 s ukáže „GÓL!“ s logem týmu a střelcem; s generálním partnerem „Gól vám přináší…“.', defaultEnabled: true, ready: true },
+  { key: 'announcer', name: 'Hlasatel', description: 'TV režim nahlas hlásí góly se střelcem, začátek a konec zápasu, dohranou skupinu a vítěze (hlas prohlížeče), volitelně se zmínkou partnera. Na TV se zapíná tlačítkem Hlas.', defaultEnabled: false, ready: true },
+  { key: 'smart_director', name: 'Chytrá režie TV', description: 'TV režim reaguje na dění: po gólu ukáže zápasy, po dohrání skupiny tabulku, po finále pavouka — pak se vrátí ke střídání.', defaultEnabled: false, ready: true },
+  { key: 'tv_spots', name: 'Spoty na TV', description: 'V rotaci TV režimu se střídají partneři přes celou obrazovku (generální 3×, hlavní 2×) a oznámení pořadatele.', defaultEnabled: true, ready: true },
   { key: 'fan_vote', name: 'Hlasování diváků', description: 'Diváci hlasují o hráči zápasu přes QR kód na TV, výsledek se ukáže živě.', defaultEnabled: false, ready: false },
   { key: 'ai_reporter', name: 'AI zpravodaj', description: 'Článek a text na sítě po každém zápase, souhrn dne a reportáž po turnaji — pořadatel text schválí.', defaultEnabled: false, ready: false },
   { key: 'diplomas', name: 'Diplomy', description: 'Diplomy za umístění, nejlepšího střelce a hráče turnaje jedním klikem k tisku.', defaultEnabled: true, ready: false },
