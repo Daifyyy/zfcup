@@ -53,14 +53,78 @@ Velikost: S ≈ do 1 sezení, M ≈ 1–2 sezení, L ≈ více sezení / vyžadu
 ### Vlna 4 – Dotažení detailů
 13a. **Dorovnání AHL pro hokejové ligy** (jen pokud chceme do ligového segmentu): statistiky brankářů (zákroky, úspěšnost, čistá konta – nová data v editoru zápasu), ocenění/trofeje sezóny, anglické rozhraní (`i18n` – velká práce, až podle poptávky). Historie a rekordy napříč ročníky už máme (`src/lib/history.ts`). – M až L
 14. Drobnosti z prověrky: přetékání dlouhých názvů v `MatchRow`. – S
-15. **Prodejní materiály**: aktualizovat `docs/pitch.md`, případová studie ZF Cup, ukázky nových grafik na úvodní stránce (`src/demo/`). – S
+15. **Prodejní materiály**: aktualizovat `docs/pitch.md` (příběh „turnaj, který se sám komentuje a šíří“ – Vlna 5), případová studie ZF Cup, ukázky nových grafik na úvodní stránce (`src/demo/`). – S
+
+### Vlna 5 – Unikátnost (podpis produktu) *(zapsáno 2026-10-30)*
+Prodejní příběh: **„turnaj, který se sám komentuje a šíří“**. Pořadatel nekupuje web s tabulkou, ale turnaj, o kterém se mluví. Aplikace sama vyrábí zážitek na místě i obsah na sítě. Každý modul jde **vypnout a zapnout** a před ostrým spuštěním prochází **Betou**.
+
+**5.0 Základ: systém modulů a Beta** – S/M, dělá se jako první (podmínka pro 5.1–5.4 i 5.T)
+- **Úroveň platformy**: stav modulu `off | internal | beta | on` řídí správce platformy. `platform_settings` (migrace 11, `src/hooks/usePlatformSettings.ts`, `/moje` → Platforma) dostane JSON sloupec `modules`, např. `{"player_card":"beta","announcer":"internal"}`. Nová migrace 21; bez ní platí vše `off` (vzor `tips_globally_enabled`).
+  - `off`: modul není nikde vidět.
+  - `internal`: vidí ho jen správce platformy, na vlastních testech (validační turnaj).
+  - `beta`: **vidí ho všichni pořadatelé** se štítkem **„Beta“** a popisem „funkce ve zkušebním provozu, může se ještě měnit“. Pořadatel si ji sám zapne; u modulu je **„Poslat zpětnou vazbu“** (tabulka `module_feedback`: modul, turnaj, text, hodnocení; správce ji vidí v Platformě).
+  - `on`: hotový modul bez štítku.
+- **Úroveň turnaje**: pořadatel zapíná v Admin → Nastavení → Volitelné moduly; jeden JSON sloupec `tournament.modules` (žádná migrace na každý modul).
+- Jedna funkce `isModuleEnabled(key, tournament, platform, isPlatformAdmin)` v novém `src/lib/modules.ts`, registr modulů (název, popis, výchozí stav), štítek Beta v `src/components/ui/Badge`.
+
+**Zapnutí a vypnutí uprostřed běžícího turnaje** (povinná pravidla pro každý modul)
+1. **Přepínač nikdy nemaže ani nemění data turnaje.** Řídí jen zobrazení a chování; data modulu (hlasy, články, skeny) se po vypnutí skryjí a po zapnutí vrátí.
+2. **Moduly reagující na události začínají „od teď“.** Hlasatel, chytrá režie a animace gólu si při zapnutí a při každém načtení TV uloží výchozí stav a hlásí jen změny po něm (jinak by po zapnutí nebo výpadku sítě přečetly všechny dosavadní góly). Události starší než ~60 s se ignorují, každá se ohlásí jen jednou.
+3. **Nic se nedopočítává hromadně automaticky.** AI zpravodaj po zapnutí negeneruje články za celý den; nabídne ručně „Vytvořit i pro odehrané (N zápasů)“ s limitem.
+4. **Oprava výsledku po vygenerování obsahu**: článek, karta nebo diplom ze starých dat se označí jako zastaralý a nabídne se obnovení. Nic se nepřepisuje potichu.
+5. **Vytištěné QR kódy nesmí přestat fungovat**: přesměrování `/r/{kód}` funguje i po vypnutí modulu, jen se nepočítá. Report uvádí období měření.
+6. **Změna se projeví bez obnovení stránky**: `tournament.modules` přijde přes stávající realtime odběr `tournament`; hlasatel ztichne okamžitě (`speechSynthesis.cancel()`), režie se vrátí ke střídání obrazovek.
+7. **Vypnutí z platformy (`beta` → `off`) je nouzová brzda** jen pro případ chyby. Běžné ukončení bety nevypíná modul turnajům, které právě běží (den turnaje podle `tips_lock_from`/`match_date`), ale až po jejich skončení.
+
+| Modul | Zapnutí uprostřed | Vypnutí uprostřed |
+|---|---|---|
+| Karta hráče, stránka hráče | bez rizika, počítá z dosavadních dat | sdílené obrázky zůstanou venku, stránka zmizí |
+| Upozornění v telefonu | odběr jen od zapnutí | odesílání se zastaví, odběry se smažou |
+| Hlasatel, chytrá režie | jen nové události (pravidlo 2) | okamžité ztišení, návrat ke střídání |
+| Hlasování diváků | jen zápasy od zapnutí | hlasy se skryjí, nemažou se |
+| AI zpravodaj | jen nové zápasy, starší ručně (pravidlo 3) | články se skryjí |
+| Diplomy | kdykoli; před koncem turnaje upozornění „průběžné pořadí“ | bez dopadu |
+| Dosah partnera | měří od zapnutí | QR dál přesměrovává (pravidlo 5) |
+| Tipovačka | jen nezačaté zápasy, speciální tipy s uzávěrkou | tipy a body zůstanou, žebříček se skryje |
+
+**5.1 Karta hráče + stránka hráče** – M + L
+- **Sběratelská karta hráče** (jako ve FIFA): nová šablona v `src/components/share/templates.tsx` – fotka (`players.avatar_url`), číslo, góly, asistence, ocenění, barvy turnaje, partner, QR. Sdílí se přes `ShareModal`. Každá sdílená karta = reklama pro pořadatele, partnera i platformu.
+- **Osobní stránka hráče** (`?hrac=` přes `DetailHost`): příští zápas a hřiště. Upozornění v telefonu (Web Push) až ve druhém kroku – vyžaduje service worker a server pro odesílání.
+
+**5.2 Hlasatel + chytrá režie TV** – M
+- **Hlasatel**: `speechSynthesis` prohlížeče s českým hlasem v TV režimu – začátek zápasu, gól se střelcem, zmínka partnera (prodejné partnerům). Pořadatel volí, co se hlásí; spuštění kliknutím (prohlížeče blokují zvuk bez interakce). Bez serveru a nákladů.
+- **Chytrá režie**: `KioskMode` reaguje na události (gól, konec skupiny, finále) místo pevného střídání. Dělat spolu s Vlnou 2, bod 6 (animace gólu) – sdílejí logiku „od teď“.
+- **Hlasování diváků o hráče zápasu**: QR na TV, hlas přes RPC s limitem (ne anonymní INSERT), výsledek živě na TV.
+
+**5.3 AI zpravodaj + diplomy** – L + S
+- **AI zpravodaj**: po uložení zápasu článek a text na sítě, večer souhrn dne, po turnaji reportáž. Generuje server (funkce Vercel/Cloudflare s Claude API, klíč nikdy ve frontendu), vstup jen data turnaje. Pořadatel text schválí nebo upraví. Doplnit zpracovatele do `SUBPROCESSORS` (`src/lib/legal.ts`), stanovit náklady na turnaj a limit.
+- **Diplomy jedním klikem**: tisk/PDF podle vzoru `src/components/admin/MatchSheets.tsx` (pořadí, nejlepší střelec, hráč turnaje) v barvách turnaje s logy partnerů.
+
+**5.4 Měřený dosah partnera** – M
+- QR akce partnera na TV a v grafikách přes přesměrování `/r/{kód}` s čítačem skenů (RPC, bez cookies); po akci report pro partnera v PDF. Sloučit s Vlnou 2, bod 9.
+
+**5.T Tipovačka – vlastní fáze revize** – L, samostatný plán, celé dny práce
+Tipovačka přejde pod systém modulů (`tips_globally_enabled` → `modules.tips`, zachovat současný stav `off`). Před stupněm `beta` projde celou revizí:
+- **Audit**: `Tips.tsx`, `TipsAdminTab.tsx`, `src/lib/tipsEval.ts`, triggery `after_match_result`/`after_bracket_slot_result`, migrace 17 + 18, tabulky `tipsters`, `tips`, `bracket_tips`, `special_tips`.
+- **Bezpečnost tipérů**: místo jména a PINu v `localStorage` bezpečné přihlášení (odkaz e-mailem přes Supabase Auth, nebo PIN jen jako hash ověřovaný přes RPC s limitem pokusů). Zápis tipů jen přes RPC; tipér mění jen své tipy.
+- **Zámek tipů na serveru**: dnes jen ve frontendu (`isMatchTimePassed`); DB musí odmítnout tip po začátku zápasu / po nasazení play-off.
+- **Vyhodnocení na jednom místě (server)**: dnes část v triggerech, část ve frontendu (speciální tipy při otevření `TipsAdminTab`, vítěz v `BracketTab`/`MatchesTab`). Ověřit hokej (prodloužení, nájezdy) a opravy výsledků.
+- **Použitelnost**: registrace tipéra, „moje tipy“, žebříček na webu i TV, srozumitelná pravidla bodování, mobil.
+- **Zapnutí uprostřed turnaje**: tipovat jen nezačaté zápasy; speciální tipy s vlastní uzávěrkou; žebříček uvádí, od kdy se tipuje.
+- **GDPR a zneužití**: údaje tipérů v právních stránkách (`src/lib/legal.ts`, Cookies), mazání tipéra, ochrana proti hromadné registraci.
+- **Testy**: bodování všech typů tipů v `src/lib/__tests__/`, test RLS a RPC proti DB (cizí tipér, tip po zámku).
+- Výstup: tipovačka ve stavu `beta`. Do té doby zůstává vypnutá.
 
 ## 5. Doporučené pořadí
-1. **Vlna 1, body 1–4** (grafiky): nejrychlejší viditelný skok kvality, prodává se „očima“.
-2. **Vlna 2, body 6–7** (gól na TV, spoty partnerů): wow efekt na akci + argument pro sponzory = pořadatel to zaplatí z peněz partnerů.
-3. Přesun na Cloudflare (už naplánován v `docs/PROGRESS.md`) – před prvním placeným turnajem.
-4. **Vlna 3** (přihlášky, startovné, zápis z hřiště): nutné pro samoobsluhu a cenu nad Tournify; vyžaduje návrh bezpečnosti.
-5. Video (bod 5), overlay pro přenos (8), report pro partnery (9), galerie (13).
+1. **Vlna 1, body 1–4** (grafiky): nejrychlejší viditelný skok kvality, prodává se „očima“. *(1–2 ✅)*
+2. **Vlna 5, bod 5.0** (systém modulů a Beta): základ, aby se vše další stavělo rovnou jako vypínatelný modul. Doporučeno i před body 3–4.
+3. Přesun na Cloudflare (naplánován v `docs/PROGRESS.md`) – nejpozději před prvním placeným turnajem (Vercel Hobby zakazuje komerční použití); při placené akci do ~3 týdnů předřadit.
+4. **Vlna 2, body 6–7** (gól na TV, spoty partnerů) spolu s **5.2** (hlasatel, chytrá režie): wow efekt na akci + argument pro sponzory.
+5. **5.1** karta a stránka hráče → **5.T** tipovačka → **5.3** AI zpravodaj a diplomy → **5.4** dosah partnera (s bodem 9).
+6. **Vlna 3** (přihlášky, startovné, zápis z hřiště): nutné pro samoobsluhu a cenu nad Tournify; vyžaduje návrh bezpečnosti.
+7. Video (bod 5), overlay pro přenos (8), galerie (13).
+
+Nové moduly vždy nejdřív `internal` (validační turnaj), pak `beta` (ZF Cup a ochotní pořadatelé), `on` až po ověření na ostré akci.
 
 Každý bod = vlastní plán a sezení; nová funkce = dlaždice/ukázka v `src/demo/` (pravidlo CLAUDE.md).
 
@@ -70,6 +134,7 @@ Každý bod = vlastní plán a sezení; nová funkce = dlaždice/ukázka v `src/
 - TV: TV režim na 1920×1080 a 3840×2160, simulace změny skóre přes admin.
 - Nové DB sloupce: migrace v `db-backup/`, aplikace musí fungovat i bez ní (vzor `isMissingColumnError`), RLS přes `can_edit_tournament`, nová tabulka do migrace 15.
 - Aktualizovat `docs/ARCHITECTURE.md`, `docs/PROGRESS.md`, CLAUDE.md.
+- **Moduly (Vlna 5)**: automatický test logiky „od teď“ (čistá funkce: výchozí stav + nová data → události k ohlášení) včetně výpadku sítě, opravy výsledku a smazaného gólu. Scénář **„zapnout v půlce“** na validačním turnaji: rozehraný turnaj, otevřená TV a web v telefonu → zapnout, zadat gól, vypnout, zapnout znovu. Nic se nesmí přehrát zpětně ani zmizet z dat a změna se musí projevit bez obnovení stránky. Totéž pro přepnutí z platformy (`beta` → `off`) během dne turnaje.
 
 ## Zdroje konkurence
 - Tournify ceník: https://tournifyapp.com/en/pricing ; partneři: https://tournifyapp.com/en/features/sponsoren
