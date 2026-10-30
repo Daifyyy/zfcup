@@ -43,6 +43,10 @@ describe('maintenance režim', () => {
   it('vypnutý → pustí dál', () => {
     expect(maintenanceResponse(req(), {})).toBeUndefined()
   })
+  it('hodnota bez ohledu na velikost písmen', () => {
+    expect(maintenanceResponse(req(), { MAINTENANCE: ' True ' })?.status).toBe(503)
+    expect(maintenanceResponse(req(), { MAINTENANCE: 'FALSE' })).toBeUndefined()
+  })
   it('bez údajů → 503 (fail closed)', () => {
     expect(maintenanceResponse(req(), { MAINTENANCE: 'true' })?.status).toBe(503)
   })

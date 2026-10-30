@@ -43,7 +43,8 @@ function escapeHtml(s: string): string {
 
 /** Maintenance režim: odpověď 401/503, nebo undefined = pustit dál. */
 export function maintenanceResponse(request: Request, env: EdgeEnv): Response | undefined {
-  if (env.MAINTENANCE !== 'true') return undefined
+  // velikost písmen a mezery nehrají roli (dashboard snadno uloží „True“)
+  if (env.MAINTENANCE?.trim().toLowerCase() !== 'true') return undefined
   const user = env.MAINTENANCE_USER
   const pass = env.MAINTENANCE_PASSWORD
   // Bez nastavených údajů raději zavřít (fail closed), než web nechtěně otevřít

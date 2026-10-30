@@ -20,7 +20,8 @@ export default {
     // Na Cloudflare je údržba výchozí: chybějící MAINTENANCE = zavřeno. První nasazení po
     // importu z GitHubu proběhne dřív, než se zadají proměnné — web nesmí být ani chvíli otevřený.
     // Otevřít = výslovně MAINTENANCE=false.
-    const blocked = maintenanceResponse(request, { ...env, MAINTENANCE: env.MAINTENANCE ?? 'true' })
+    const open = env.MAINTENANCE?.trim().toLowerCase() === 'false'
+    const blocked = maintenanceResponse(request, { ...env, MAINTENANCE: open ? 'false' : 'true' })
     if (blocked) return withSecurityHeaders(blocked)
     const og = await ogResponse(request, env)
     if (og) return withSecurityHeaders(og)
