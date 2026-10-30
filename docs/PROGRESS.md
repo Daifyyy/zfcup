@@ -139,10 +139,26 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Sdílení: hotový obrázek (mobil → Instagram/FB/WhatsApp přes systémovou nabídku, počítač stáhnout/kopírovat), nová grafika turnaje s QR.
 - **Můj prostor** `/moje` pro organizátora; úvodní stránka jen pro diváky.
 
+### Plán: přesun hostingu na Cloudflare (rozhodnuto 2026-10-30, zatím neuděláno)
+**Proč:** Vercel Hobby zakazuje komerční použití (Pro = 20 USD/měs.); Cloudflare zdarma komerční použití povoluje. Supabase Pro se bude zapínat jen kolem placených turnajů (přepínání Free↔Pro jde kdykoli).
+**Rozhodnutí:** kód připravit tak, aby běžel na **obou hostinzích zároveň** z `main` (žádná vedlejší větev). Ostrý web zůstává na Vercelu, Cloudflare běží souběžně na bezplatné adrese (`*.workers.dev`) k testování. **Doménu uživatel koupí až před prvním placeným turnajem**, napojí ji na Cloudflare; projekt na Vercelu pak zůstane jen jako přesměrování `….vercel.app/*` → nová doména se zachováním cesty (staré odkazy a QR kódy fungují dál).
+Testovat **bez prohlížeče** (typecheck, testy, build, `wrangler dev` lokálně); náhledy odkazů ověří uživatel po nasazení (za maintenance heslem dostávají roboti 401).
+
+Kroky (odhad 1,5–2 dny):
+1. **Obrázek náhledu odkazu bez serverového vykreslování** (hodí se i na Vercelu): bezplatný Cloudflare má limit 10 ms CPU na požadavek, `@vercel/og` (satori + resvg) by nestačil. Místo toho aplikace vytvoří PNG 1200×630 v prohlížeči organizátora (`html-to-image`, vzor = sdílecí grafika turnaje v `src/components/share/`) a nahraje ho do Storage `tournaments/{id}/og.png` — při uložení Info / Vzhledu / Partnerů (případně při otevření adminu, pokud chybí nebo je starý). Pozor: `uploadAsset` obrázky zmenšuje — ověřit, že 1200×630 zůstane. Middleware dá do `og:image` veřejnou URL z Storage (`?v=` cache-bust), bez obrázku výchozí `public/og-default.png`. Pak smazat `api/og.ts` a závislost `@vercel/og`.
+2. **Hlavičky**: `public/_headers` se stejným obsahem jako `headers` ve `vercel.json` (CSP, HSTS, `/assets/*` immutable). Do přepnutí jsou hlavičky ve **dvou souborech** — měnit oba (poznámka do CLAUDE.md), po přepnutí `vercel.json` smazat (kromě přesměrování).
+3. **Middleware**: logiku z `middleware.ts` (maintenance Basic Auth první, pak OG HTML pro roboty) přenést do Cloudflare (Workers se statickými soubory, příp. `functions/_middleware.ts` u Pages — zvolit variantu, kterou Cloudflare aktuálně doporučuje). Proměnné přes `env` místo `process.env`. Statické soubory (`/assets/*`) přes middleware nepouštět (šetří limit 100 000 požadavků/den). SPA: všechny cesty → `index.html` (`not_found_handling: single-page-application` / výchozí chování Pages). Lokálně ověřit přes `wrangler dev`.
+4. **Návod pro uživatele** (zakládá projekt svým účtem): Cloudflare účet → nový projekt z GitHubu `Daifyyy/zfcup`, větev `main`, build `npm run build`, výstup `dist`, `NODE_VERSION`; proměnné `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, **`MAINTENANCE=true` + `MAINTENANCE_USER`/`MAINTENANCE_PASSWORD` hned od začátku** (jinak by kopie na workers.dev byla veřejně otevřená); Supabase → Authentication → URL Configuration: přidat novou adresu do Redirect URLs (reset hesla posílá `window.location.origin`).
+5. **Dokumentace**: `SUBPROCESSORS` v `src/lib/legal.ts` (Cloudflare místo/vedle Vercelu), CLAUDE.md (sekce Vercel deployment, Náhledy odkazů, hlavičky), `docs/ARCHITECTURE.md`, tento soubor.
+6. **Při koupi domény** (později): doména → Cloudflare; Supabase Site URL + Redirect URLs; `vercel.json` jen s přesměrováním na novou doménu; z `legal.ts` odebrat Vercel.
+
+Nasazení po přesunu: `git push` na `main` → Cloudflare sestaví a nasadí (1–2 min); jiná větev → náhledová adresa; vrácení verze v dashboardu jedním klikem; změna proměnných = nový deploy (jako dnes).
+
 ### Kde navázat
-1. **Uživatel:** rozhodnout tarify (doporučeno Vercel Pro + Supabase Pro); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
-2. Pak Fáze 9 — registrace organizátorů a obchodní model.
-3. P2 z auditu: menší hlavní balík, sloučení startovních dotazů do RPC, hlášení chyb, `xlsx` z cdn.sheetjs.com.
+1. **Přesun hostingu na Cloudflare** — viz plán výše (začít krokem 1, nové sezení, bez prohlížeče).
+2. **Uživatel:** tarify — místo Vercel Pro přesun na Cloudflare (výše); Supabase Pro zapínat kolem placených turnajů, mezi nimi Free + denní „probuzení“ a záloha (`pg_dump`, GitHub Action — zatím neuděláno); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) a min. délku hesla 8, znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
+3. Pak Fáze 9 — registrace organizátorů a obchodní model.
+4. P2 z auditu: menší hlavní balík, sloučení startovních dotazů do RPC, hlášení chyb, `xlsx` z cdn.sheetjs.com.
 
 ### Otevřené body / nápady
 - **TanStack Query — potenciál do budoucna** (rozhodnutí uživatele 2026-10-27): dnes malý přínos (teplé načtení 0,2 s). Hodí se, až bude víc obrazovek sdílet stejná data (detail týmu/zápasu ve Fázi 4, knihovna klubů) — cache, deduplikace, okamžitý návrat na otevřený turnaj, jedno místo pro polling. Převádět hooky po jednom se zachováním API (`data`, `loading`, `refetch`); `poller.ts` a `realtimeManager.ts` pak jen invalidují dotazy.
