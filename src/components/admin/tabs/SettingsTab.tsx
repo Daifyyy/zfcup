@@ -7,6 +7,7 @@ import { getSportDef } from '../../../lib/sports'
 import BrandingSection from './BrandingSection'
 import CompetitionSection from './CompetitionSection'
 import VisibilitySection from './VisibilitySection'
+import ModulesSection from './ModulesSection'
 import { exportTournamentData, downloadJson } from '../../../lib/dataExport'
 import { removeAssetByUrl } from '../../../lib/storage'
 import { slugify } from '../../../lib/editions'
@@ -26,9 +27,12 @@ interface Props {
   refetchPlayers?: () => void
   /** Globální vypínač tipovačky (správce platformy) */
   tipsAvailable?: boolean
+  /** Stavy modulů na platformě (migrace 21) */
+  platformModules?: Record<string, string>
+  isPlatformAdmin?: boolean
 }
 
-export default function SettingsTab({ tournament, refetchTournament, refetchGroups, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals, showToast, teams = [], refetchTeams = () => {}, refetchPlayers = () => {}, tipsAvailable = false }: Props) {
+export default function SettingsTab({ tournament, refetchTournament, refetchGroups, refetchMatches, refetchGoals, refetchBracket, refetchBracketGoals, showToast, teams = [], refetchTeams = () => {}, refetchPlayers = () => {}, tipsAvailable = false, platformModules = {}, isPlatformAdmin = false }: Props) {
   const sportDef = getSportDef(tournament?.sport)
   const [p1, setP1] = useState('')
   const [p2, setP2] = useState('')
@@ -461,6 +465,8 @@ export default function SettingsTab({ tournament, refetchTournament, refetchGrou
           </button>
         </div>
       ))}
+
+      <ModulesSection tournament={tournament} platformModules={platformModules} isPlatformAdmin={isPlatformAdmin} refetchTournament={refetchTournament} showToast={showToast} />
 
       {/* Tipovačka — jen když ji správce platformy globálně povolil */}
       {tipsAvailable && (<>

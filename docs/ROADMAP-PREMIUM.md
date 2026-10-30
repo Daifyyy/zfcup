@@ -58,7 +58,7 @@ Velikost: S ≈ do 1 sezení, M ≈ 1–2 sezení, L ≈ více sezení / vyžadu
 ### Vlna 5 – Unikátnost (podpis produktu) *(zapsáno 2026-10-30)*
 Prodejní příběh: **„turnaj, který se sám komentuje a šíří“**. Pořadatel nekupuje web s tabulkou, ale turnaj, o kterém se mluví. Aplikace sama vyrábí zážitek na místě i obsah na sítě. Každý modul jde **vypnout a zapnout** a před ostrým spuštěním prochází **Betou**.
 
-**5.0 Základ: systém modulů a Beta** – S/M, dělá se jako první (podmínka pro 5.1–5.4 i 5.T)
+**5.0 Základ: systém modulů a Beta** – S/M, dělá se jako první (podmínka pro 5.1–5.4 i 5.T) ✅ *(hotovo 2026-10-30, migrace 21 spuštěna; navíc stav `sunset` = „Doběh“ pro pravidlo 7)*
 - **Úroveň platformy**: stav modulu `off | internal | beta | on` řídí správce platformy. `platform_settings` (migrace 11, `src/hooks/usePlatformSettings.ts`, `/moje` → Platforma) dostane JSON sloupec `modules`, např. `{"player_card":"beta","announcer":"internal"}`. Nová migrace 21; bez ní platí vše `off` (vzor `tips_globally_enabled`).
   - `off`: modul není nikde vidět.
   - `internal`: vidí ho jen správce platformy, na vlastních testech (validační turnaj).
@@ -117,8 +117,8 @@ Tipovačka přejde pod systém modulů (`tips_globally_enabled` → `modules.tip
 
 ## 5. Doporučené pořadí
 1. **Vlna 1, body 1–4** (grafiky): nejrychlejší viditelný skok kvality, prodává se „očima“. *(1–2 ✅)*
-2. **Vlna 5, bod 5.0** (systém modulů a Beta): základ, aby se vše další stavělo rovnou jako vypínatelný modul. Doporučeno i před body 3–4.
-3. Přesun na Cloudflare (naplánován v `docs/PROGRESS.md`) – nejpozději před prvním placeným turnajem (Vercel Hobby zakazuje komerční použití); při placené akci do ~3 týdnů předřadit.
+2. **Vlna 5, bod 5.0** (systém modulů a Beta): základ, aby se vše další stavělo rovnou jako vypínatelný modul. Doporučeno i před body 3–4. *(✅)*
+3. Přesun na Cloudflare *(✅ 2026-10-30, zbývá doména)* (`docs/PROGRESS.md`) – nejpozději před prvním placeným turnajem (Vercel Hobby zakazuje komerční použití); při placené akci do ~3 týdnů předřadit.
 4. **Vlna 2, body 6–7** (gól na TV, spoty partnerů) spolu s **5.2** (hlasatel, chytrá režie): wow efekt na akci + argument pro sponzory.
 5. **5.1** karta a stránka hráče → **5.T** tipovačka → **5.3** AI zpravodaj a diplomy → **5.4** dosah partnera (s bodem 9).
 6. **Vlna 3** (přihlášky, startovné, zápis z hřiště): nutné pro samoobsluhu a cenu nad Tournify; vyžaduje návrh bezpečnosti.

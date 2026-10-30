@@ -53,6 +53,8 @@ export interface Tournament {
   edition?: number | null
   season_label?: string
   schedule_mode?: 'day' | 'season'
+  /** Zapnuté moduly turnaje { klíč: true|false } — migrace 21; vyhodnocuje src/lib/modules.ts */
+  modules?: Record<string, boolean>
   /** Vlastník (organizátor) — migrace 11 hlídá zápis přes RLS */
   owner_id?: string | null
 }

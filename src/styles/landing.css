@@ -121,6 +121,8 @@
 .lp-modal__panel {
   width: 100%; max-width: 420px; background: var(--surface-1); border-radius: var(--radius-lg);
   padding: 1.6rem; box-shadow: var(--shadow-panel); border-top: 4px solid var(--brand);
+  /* vyšší obsah (Platforma) se posouvá uvnitř okna, ne stránka pod ním */
+  max-height: calc(100dvh - 2rem); overflow-y: auto; overscroll-behavior: contain;
 }
 .lp-modal__title { font-size: 1.7rem; text-transform: uppercase; font-weight: 800; margin-bottom: 1rem; }
 .lp-modal__err { color: var(--loss); font-size: .84rem; margin: 0; }

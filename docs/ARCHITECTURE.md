@@ -109,7 +109,7 @@ Jeden časovač na interval; skrytá karta = nic; návrat na kartu = všechny re
 | `useCompetitionEditions(compId)` | `tournament` | `competition_id` | CompetitionSection |
 | `useCompetitionHistory(slug)` | 18 tabulek všech ročníků | `competition_id` + `in(ročníky)` | CompetitionPage |
 | `useAuthRole()` | auth + `platform_admins` | — | App, TournamentLanding, CompetitionSection |
-| `usePlatformSettings()` | `platform_settings` | bez filtru | App, TournamentLanding |
+| `usePlatformSettings()` | `platform_settings` (`tips_globally_enabled`, `modules` — migrace 21; `select('*')`) | bez filtru | App, TournamentLanding, PlatformModal |
 
 ---
 
@@ -154,12 +154,12 @@ Další veřejné: `Scoreboard` (TV tabule, paleta `C` natvrdo), `KioskMode` (TV
 | | Play-off | `BracketTab` | bracket_rounds/slots/goals/assists/cards/penalties; formats → `fns.generate/seed/autoAdvance`; tipsEval |
 | | Tipovačka | `TipsAdminTab` (+ `TipsGuideModal`) | tips, bracket_tips, special_tips, tipsters |
 | Komerce | Partneři | `SponsorsTab` | sponsors (+ Storage) |
-| Systém | Nastavení | `SettingsTab` (+ `CompetitionSection`, `BrandingSection`) | tournament, competitions, teams, tipsters; „Čistý start“ maže data turnaje |
+| Systém | Nastavení | `SettingsTab` (+ `CompetitionSection`, `BrandingSection`, `VisibilitySection`, `ModulesSection` = Nové funkce) | tournament (vč. `modules`), competitions, teams, tipsters, module_feedback; „Čistý start“ maže data turnaje |
 
 Úvodní stránka `TournamentLanding` zapisuje `tournament` (založení) a přes `lib/editions.ts` `teams`, `players`, `clubs`, `persons` (převzetí do nového ročníku).
 
 ### 5.3 UI primitiva (`src/components/ui/`)
-`Button` (`inactive` místo `disabled`), `Badge`/`MatchStatusBadge`, `Card`/`SectionHeader`/`StatTile`, `Tabs`/`Segmented`, `MatchRow`, `TeamLogo`, `PartnerStrip`, `TvPartnerBar`, `CardChip`, `Empty`, `Toast`, `QRCode`, `RichTextEditor` (TipTap), `TournamentSkeleton`, `icons/SportIcons`.
+`Button` (`inactive` místo `disabled`), `Badge`/`MatchStatusBadge`/`BetaBadge` (Beta / Interně), `Card`/`SectionHeader`/`StatTile`, `Tabs`/`Segmented`, `MatchRow`, `TeamLogo`, `PartnerStrip`, `TvPartnerBar`, `CardChip`, `Empty`, `Toast`, `QRCode`, `RichTextEditor` (TipTap), `TournamentSkeleton`, `icons/SportIcons`.
 Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav` (mobil).
 
 ---
@@ -191,6 +191,8 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `share.ts` | sdílení odkazů: `prefersNativeShare`, `nativeShare`, `shareTargets` (FB, X, WhatsApp, LinkedIn, e-mail), `copyText`, `matchUrl`/`teamUrl` | — | ShareButton, detaily, Overview |
 | `dataExport.ts` | `exportTournamentData` (JSON všech tabulek turnaje, bez PINů), `downloadJson` | supabase | SettingsTab |
 | `storage.ts` | cesty a upload do Storage (`tournaments/{id}/…`) | supabase | TeamsTab, SponsorsTab, OgImageSync |
+| `modules.ts` | systém modulů: registr `MODULES`, stavy platformy, `isModuleEnabled`, `visibleModuleSettings`, `isPlayingToday` | — | ModulesContext, ModulesSection, PlatformModal, usePlatformSettings, App |
+| `ModulesContext.tsx` | `ModulesProvider` (App: web i kiosk) + `useModule(klíč)` | modules | moduly Vlny 5 |
 | `og.ts` | náhled odkazu: cesta `og.jpg`, veřejná URL, podpis (sdílené s `edge/`) | — | OgImageSync, edge/core.ts |
 | `exportExcel.ts` / `exportPress.ts` | XLSX rozpis, kartičky rozhodčích / tiskový servis | standings, sports, `xlsx` (líně) | MatchesTab / Media |
 | `sanitize.ts` | DOMPurify pro `dangerouslySetInnerHTML` | — | Overview, Info, Rules, AnnouncementCard |
@@ -220,7 +222,7 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 - **Obsah:** `announcements`, `rule_items`, `sponsors` (`tier`)
 - **Tipovačka:** `tipsters`, `tips`, `bracket_tips`, `special_tips` (globálně vypnutá, zabezpečení odloženo)
 - **Soutěže:** `competitions` (`owner_id`, `slug`), `clubs`, `persons`
-- **Platforma:** `platform_admins`, `platform_settings`
+- **Platforma:** `platform_admins`, `platform_settings` (+ `modules`), `module_feedback` (zpětná vazba k Betě; čte správce a autor, mimo `public_read`)
 - Každá datová tabulka má `tournament_id` (FK, index z migrace 12).
 
 ### 7.2 Funkce a triggery
@@ -229,7 +231,7 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 - `recalc_all_tipster_points()` (06)
 
 ### 7.3 Migrace (`db-backup/`, spouští uživatel v SQL Editoru)
-01 tabulky · 02 RLS · 03 triggery · 04 storage · 05 upgrade sloupců · 06 FK indexy + RPC · 07 multisport · 08 partneři/branding/média · 09 soutěže a sezóny · 10 realtime publikace · 11 role a RLS podle vlastníka · **12 indexy `tournament_id`** · 13 knihovna klubů · 14 intenzita brandingu · 15 soukromé turnaje · 16 cizí politiky čtení · 17+18 anon zápisy tipovačky · 19 viditelnost soutěže · 20 fotka pro sdílecí grafiky (`tournament.share_photo_url`). Další volné číslo: **21**.
+01 tabulky · 02 RLS · 03 triggery · 04 storage · 05 upgrade sloupců · 06 FK indexy + RPC · 07 multisport · 08 partneři/branding/média · 09 soutěže a sezóny · 10 realtime publikace · 11 role a RLS podle vlastníka · **12 indexy `tournament_id`** · 13 knihovna klubů · 14 intenzita brandingu · 15 soukromé turnaje · 16 cizí politiky čtení · 17+18 anon zápisy tipovačky · 19 viditelnost soutěže · 20 fotka pro sdílecí grafiky (`tournament.share_photo_url`) · 21 systém modulů (`platform_settings.modules`, `tournament.modules`, `module_feedback`). Další volné číslo: **22**.
 
 ### 7.4 Storage (bucket `team-logos`)
 Nové soubory pod `tournaments/{turnajId}/…` (`lib/storage.ts`); starší cesty `{teamId}.png`, `sponsors/{id}.png`, `players/{id}.png`.
@@ -245,6 +247,6 @@ Nové soubory pod `tournaments/{turnajId}/…` (`lib/storage.ts`); starší cest
 - **Závislosti:** react 18, vite 6, typescript 5, tailwind 3, `@supabase/supabase-js` **2.49.1 (nepovyšovat)**, lucide-react, @tiptap, dompurify, html-to-image, qrcode.react, xlsx, @fontsource (Barlow Condensed, Inter); dev: vitest 3, wrangler 4.
 
 ## 9. Testy a kontroly
-- `npm test` — Vitest, `src/lib/__tests__/` (125 testů): `edgeHeaders` (shoda hlaviček Vercel/Cloudflare, maintenance, OG HTML), `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
+- `npm test` — Vitest, `src/lib/__tests__/` (140 testů): `modules` (stavy off/internal/beta/sunset/on, viditelnost v Nastavení), `edgeHeaders` (shoda hlaviček Vercel/Cloudflare, maintenance, OG HTML), `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
 - `npm run typecheck` — nejdřív `edge/` (`tsconfig.edge.json`, bez chyb), pak aplikace: baseline 62 starších chyb, nové nesmí přibýt.
 - Chybí: testy `tipsEval.ts`, komponent a E2E automatizace (E2E se dělá ručně v Chromu).

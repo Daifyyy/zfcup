@@ -25,3 +25,10 @@ export function MatchStatusBadge({ state, decidedIn }: {
   }
   return null
 }
+
+/** Štítek modulu ve zkušebním provozu (systém modulů, src/lib/modules.ts). */
+export function BetaBadge({ internal = false }: { internal?: boolean }) {
+  return internal
+    ? <span className="ui-badge ui-badge--internal" title="Interní test — vidí jen správce platformy">Interně</span>
+    : <span className="ui-badge ui-badge--beta" title="Funkce ve zkušebním provozu, může se ještě měnit">Beta</span>
+}

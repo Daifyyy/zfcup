@@ -28,6 +28,9 @@ import Header, { HEADER_HEIGHT_DESKTOP } from './components/layout/Header'
 import { BRAND } from './lib/brand'
 import { sortByTier, getTitlePartner } from './lib/partners'
 import { applyTournamentTheme } from './lib/theme'
+import { ModulesProvider } from './lib/ModulesContext'
+import { isPlayingToday } from './lib/modules'
+import { todayISO } from './lib/dates'
 import BottomNav from './components/layout/BottomNav'
 import Overview from './components/public/Overview'
 import Teams from './components/public/Teams'
@@ -299,6 +302,13 @@ export default function App() {
   // Partneři seřazení podle úrovně; generální partner = „presented by“
   const sortedSponsors = sortByTier(sponsors)
   const presentedBy = sponsorsEnabled ? getTitlePartner(sponsors) : null
+  // Moduly (Vlna 5): turnaj + stavy z platformy; „hraje dnes“ pro moduly v doběhu (sunset)
+  const modulesValue = {
+    tournament,
+    platformModules: platform.modules,
+    isPlatformAdmin,
+    playingToday: isPlayingToday(tournament, matches.map(m => m.match_date), todayISO()),
+  }
   const leftSponsors = sortedSponsors.filter((_, i) => i % 2 === 0)
   const rightSponsors = sortedSponsors.filter((_, i) => i % 2 !== 0)
 
@@ -417,6 +427,7 @@ export default function App() {
   if (kiosk) {
     return (
       <TournamentProvider tournamentId={tournamentId}>
+      <ModulesProvider value={modulesValue}>
         <KioskMode
           {...shared}
           bracketGoals={bracketGoals}
@@ -441,12 +452,14 @@ export default function App() {
             presentedBy={presentedBy}
           />
         )}
+      </ModulesProvider>
       </TournamentProvider>
     )
   }
 
   return (
     <TournamentProvider tournamentId={tournamentId}>
+    <ModulesProvider value={modulesValue}>
     <TournamentDataContext.Provider value={detailData}>
     <DetailHost key={tournamentId}>
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -526,6 +539,7 @@ export default function App() {
           canEdit={canEdit}
           isPlatformAdmin={isPlatformAdmin}
           tipsAvailable={platform.tipsEnabled}
+          platformModules={platform.modules}
           tournamentId={tournamentId}
           tournament={tournament}
           bracketGoals={bracketGoals}
@@ -579,6 +593,7 @@ export default function App() {
     </div>
     </DetailHost>
     </TournamentDataContext.Provider>
+    </ModulesProvider>
     </TournamentProvider>
   )
 }

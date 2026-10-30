@@ -18,6 +18,8 @@
 .ui-badge--win    { background: rgba(21,128,61,.1); color: var(--win); border-color: rgba(21,128,61,.25); }
 .ui-badge--warn   { background: rgba(180,83,9,.08); color: var(--warn); border-color: rgba(180,83,9,.25); }
 .ui-badge--outline{ background: transparent; }
+.ui-badge--beta   { background: color-mix(in srgb, var(--brand) 10%, transparent); color: var(--brand); border-color: color-mix(in srgb, var(--brand) 35%, transparent); letter-spacing: .06em; text-transform: uppercase; }
+.ui-badge--internal { background: var(--surface-2); color: var(--ink-muted); border-style: dashed; letter-spacing: .06em; text-transform: uppercase; }
 .ui-live-dot {
   width: 6px; height: 6px; border-radius: 50%; background: currentColor;
   animation: ui-pulse 1.4s ease-in-out infinite;

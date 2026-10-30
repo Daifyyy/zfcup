@@ -76,6 +76,8 @@ interface Props {
   isPlatformAdmin: boolean
   /** Globální vypínač tipovačky (správce platformy) */
   tipsAvailable: boolean
+  /** Stavy modulů na platformě (platform_settings.modules, migrace 21) */
+  platformModules: Record<string, string>
   tournamentId: string
   tournament: Tournament | null
   teams: Team[]
