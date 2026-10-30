@@ -10,6 +10,9 @@
   "compatibility_date": "2026-10-01",
   // proměnné z dashboardu při nasazení nemazat (nejsou v tomto souboru)
   "keep_vars": true,
+  // zkušební adresa turnaje-app.<účet>.workers.dev (do koupě domény) + adresy náhledových verzí
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
