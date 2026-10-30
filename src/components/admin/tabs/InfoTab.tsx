@@ -1,3 +1,4 @@
+import { formatDate } from '../../../lib/dates'
 import { useState, useEffect, useRef } from 'react'
 import { confirmDialog } from '../../ui/ConfirmDialog'
 import { supabase } from '../../../lib/supabase'
@@ -13,7 +14,8 @@ interface Props {
 }
 
 export default function InfoTab({ tournament, refetchTournament, showToast }: Props) {
-  const [form, setForm] = useState({ name: '', subtitle: '', date: '', venue: '', description: '' })
+  const [form, setForm] = useState({ name: '', subtitle: '', date: '', venue: '', description: '', tips_lock_from: '' })
+  const isSeason = tournament?.schedule_mode === 'season'
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -24,12 +26,15 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
       date: tournament.date,
       venue: tournament.venue,
       description: tournament.description,
+      tips_lock_from: tournament.tips_lock_from ?? '',
     })
   }, [tournament])
 
   const save = async () => {
     if (!tournament?.id) return
-    const { error } = await supabase.from('tournament').update(form).eq('id', tournament.id)
+    // Den hraní jen u jednodenního turnaje (sezóna má datum u každého zápasu)
+    const payload = isSeason ? { ...form, tips_lock_from: tournament.tips_lock_from ?? '' } : form
+    const { error } = await supabase.from('tournament').update(payload).eq('id', tournament.id)
     if (error) { showToast('Chyba: ' + error.message); return }
     refetchTournament()
     showToast('Uloženo')
@@ -80,6 +85,19 @@ export default function InfoTab({ tournament, refetchTournament, showToast }: Pr
           <label className="field-label">Datum</label>
           <input className="field-input" value={form.date} onChange={f('date')} placeholder="15. 6. 2025" />
         </div>
+        {!isSeason && (
+          <div className="field-group">
+            <label className="field-label">Den hraní (kalendář)</label>
+            <input className="field-input" type="date" value={form.tips_lock_from}
+              onChange={e => {
+                const iso = e.target.value
+                setForm(p => ({ ...p, tips_lock_from: iso, date: p.date || formatDate(iso) }))
+              }} />
+            <div style={{ fontSize: '.7rem', color: 'var(--ink-muted)', marginTop: '.25rem' }}>
+              Podle něj web i TV poznají, že se hraje: štítky Živě, „Právě probíhá“, hlášení na TV a hlasování diváků.
+            </div>
+          </div>
+        )}
         <div className="field-group">
           <label className="field-label">Místo</label>
           <input className="field-input" value={form.venue} onChange={f('venue')} placeholder="Sportovní hala" />

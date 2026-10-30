@@ -8,6 +8,7 @@ import { formatDateWeekday } from '../../lib/dates'
 import { getSportDef, type SportDef } from '../../lib/sports'
 import { GoalMark, AssistMark, PimMark } from '../ui/EventIcons'
 import { ShareMatchDialog, ShareMvpDialog } from '../share/lazy'
+import FanVoteSection from './FanVoteSection'
 import { matchUrl, withAccessCode } from '../../lib/share'
 import { useTournamentData, useDetail } from '../../lib/TournamentDataContext'
 import { findMatchDetail, matchEvents, type SideEvents } from '../../lib/details'
@@ -185,6 +186,8 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
             </div>
           </section>
         )}
+
+        <FanVoteSection md={md} data={data} />
 
         {hasEvents && (
           <section className="tm-drawer__sec">

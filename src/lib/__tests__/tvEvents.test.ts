@@ -107,3 +107,19 @@ describe('spoty na TV', () => {
     expect(buildSpots([], [{ id: 'a', icon: '', title: 'Oběd', body: '', position: 0 }] as any)).toHaveLength(1)
   })
 })
+
+import { voteOpen } from '../fanVote'
+
+describe('hlasování diváků — kdy je otevřené', () => {
+  const T2 = { tips_lock_from: '2026-10-30' }
+  const g = (over: any = {}) => ({ played: false, home_score: 0, away_score: 0, scheduled_time: '10:00', home_id: 'A', away_id: 'B', ...over })
+  it('jen v den zápasu, po výkopu nebo se skóre; odehraný ano', () => {
+    expect(voteOpen(g(), T2, at('09:59'))).toBe('not_started')
+    expect(voteOpen(g(), T2, at('10:00'))).toBe('open')
+    expect(voteOpen(g({ home_score: 1 }), T2, at('09:30'))).toBe('open')
+    expect(voteOpen(g({ played: true }), T2, at('18:00'))).toBe('open')
+    expect(voteOpen(g({ played: true }), { tips_lock_from: '2026-10-29' }, at('18:00'))).toBe('closed')
+    expect(voteOpen(g({ match_date: '2026-10-30' }), { tips_lock_from: '' }, at('11:00'))).toBe('open')
+    expect(voteOpen(g({ away_id: null }), T2, at('11:00'))).toBe('closed')
+  })
+})

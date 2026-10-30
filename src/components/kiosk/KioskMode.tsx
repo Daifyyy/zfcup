@@ -29,6 +29,12 @@ import { TvSpot, buildSpots } from '../tv/TvSpot'
 import { getTitlePartner } from '../../lib/partners'
 import { announcementText, cancelSpeech, hasCzechVoice, loadAnnouncerSettings, saveAnnouncerSettings, speak, speechAvailable, type AnnouncerSettings } from '../../lib/announcer'
 import type { TvEvent } from '../../lib/tvEvents'
+import { TvVote, pickVoteGame, type VoteGame } from '../tv/TvVote'
+import { useFanVotes } from '../../hooks/useFanVotes'
+import { voteOpen } from '../../lib/fanVote'
+import { buildFixtures } from '../../lib/fixtures'
+import { fixtureId } from '../../lib/details'
+import { matchUrl, withAccessCode } from '../../lib/share'
 
 /* ── Palette ───────────────────────────────────────────── */
 // Tmavá broadcast paleta — shodná s TV tabulí (Scoreboard).
@@ -38,7 +44,7 @@ const C = TV
 const S = TV_SIZE
 
 /* ── Views config ──────────────────────────────────────── */
-type KioskView = 'matches' | 'table' | 'bracket' | 'spot'
+type KioskView = 'matches' | 'table' | 'bracket' | 'spot' | 'vote'
 function getViews(_sportIcon?: string): { key: KioskView; label: string }[] {
   return [
     { key: 'matches', label: 'Zápasy' },
@@ -424,6 +430,7 @@ function getSubheaders(_sportIcon?: string): Record<KioskView, { label: string }
     table:   { label: 'Tabulka a střelci' },
     bracket: { label: 'Play-off — pavouk' },
     spot:    { label: 'Partneři a oznámení' },
+    vote:    { label: 'Hlasování diváků — hráč zápasu' },
   }
 }
 
@@ -454,8 +461,21 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
   const directorOn = useModule('smart_director')
   const spotsOn = useModule('tv_spots')
   const spots = spotsOn ? buildSpots(sponsors, announcements) : []
+  // Hlasování diváků: rozehraný zápas, jinak poslední dnes dohraný (modul fan_vote)
+  const fanVoteOn = useModule('fan_vote')
+  const voteFixture = fanVoteOn
+    ? pickVoteGame(buildFixtures(matches, groups, bracketRounds, bracketSlots).filter(f => voteOpen(f, tournament) === 'open'))
+    : null
+  const voteGame: VoteGame | null = voteFixture && voteFixture.home_id && voteFixture.away_id
+    ? { id: fixtureId(voteFixture), home_id: voteFixture.home_id, away_id: voteFixture.away_id, h: voteFixture.home_score, a: voteFixture.away_score, played: voteFixture.played, label: voteFixture.label }
+    : null
+  const { results: voteResults } = useFanVotes(tournament?.id ?? '', fanVoteOn && !!voteGame)
   const baseViews = bracketActive ? allViews : allViews.filter(v => v.key !== 'bracket')
-  const effectiveViews: { key: KioskView; label: string }[] = spots.length ? [...baseViews, { key: 'spot', label: 'Partneři' }] : baseViews
+  const effectiveViews: { key: KioskView; label: string }[] = [
+    ...baseViews,
+    ...(voteGame ? [{ key: 'vote' as const, label: 'Hlasování' }] : []),
+    ...(spots.length ? [{ key: 'spot' as const, label: 'Partneři' }] : []),
+  ]
 
   const [idx, setIdx] = useState(0)
   const [spotIdx, setSpotIdx] = useState(0)
@@ -698,6 +718,10 @@ export default function KioskMode({ tournament, teams, players, groups, matches,
         )}
         {currentView.key === 'bracket' && (
           <KioskBracket rounds={bracketRounds} slots={bracketSlots} teams={teams} />
+        )}
+        {currentView.key === 'vote' && voteGame && tournament && (
+          <TvVote game={voteGame} teams={teams} players={players} rows={voteResults.get(voteGame.id) ?? []}
+            url={withAccessCode(matchUrl(tournament.id, voteGame.id), tournament) ?? matchUrl(tournament.id, voteGame.id)} />
         )}
         {currentView.key === 'spot' && spots.length > 0 && (
           <TvSpot spot={spots[spotIdx % spots.length]} />

@@ -276,6 +276,12 @@ function Privacy() {
               <td>dokud organizátor turnaj nebo tipéra nesmaže</td>
             </tr>
             <tr>
+              <td>Hlasující diváci</td>
+              <td>náhodné označení zařízení, otisk (hash) IP adresy, zvolený hráč a čas hlasu — bez jména</td>
+              <td>hlasování o hráči zápasu, jeden hlas na zařízení a ochrana proti hromadnému hlasování — oprávněný zájem; veřejně jen součty</td>
+              <td>dokud organizátor turnaj nesmaže</td>
+            </tr>
+            <tr>
               <td>Návštěvníci</td>
               <td>technické záznamy poskytovatelů hostingu (IP adresa, čas, typ prohlížeče)</td>
               <td>bezpečnost a provoz — oprávněný zájem</td>
@@ -393,6 +399,12 @@ function Cookies() {
               <td>místní úložiště (localStorage)</td>
               <td>jen na zařízení s TV režimem: co má hlasatel hlásit (góly, začátky, konce zápasů…)</td>
               <td>do smazání dat webu</td>
+            </tr>
+            <tr>
+              <td><code>turnajnik_voter</code>, <code>turnajnik_votes</code></td>
+              <td>místní úložiště (localStorage)</td>
+              <td>jen když hlasujete o hráči zápasu: náhodné označení zařízení (jeden hlas na zařízení) a vaše hlasy pro zvýraznění</td>
+              <td>do smazání dat webu (hlasy posledních 50 zápasů)</td>
             </tr>
             <tr>
               <td><code>turnajnik_chunk_reload</code></td>

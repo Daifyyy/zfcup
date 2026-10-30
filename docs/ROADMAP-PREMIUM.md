@@ -91,7 +91,7 @@ Prodejní příběh: **„turnaj, který se sám komentuje a šíří“**. Poř
 - **Sběratelská karta hráče** (jako ve FIFA): nová šablona v `src/components/share/templates.tsx` – fotka (`players.avatar_url`), číslo, góly, asistence, ocenění, barvy turnaje, partner, QR. Sdílí se přes `ShareModal`. Každá sdílená karta = reklama pro pořadatele, partnera i platformu.
 - **Osobní stránka hráče** (`?hrac=` přes `DetailHost`): příští zápas a hřiště. Upozornění v telefonu (Web Push) až ve druhém kroku – vyžaduje service worker a server pro odesílání.
 
-**5.2 Hlasatel + chytrá režie TV** – M *(hlasatel a chytrá režie ✅ 2026-10-30 jako moduly `announcer`, `smart_director`; hlasování diváků zbývá — potřebuje RPC a migraci)*
+**5.2 Hlasatel + chytrá režie TV** – M *(hlasatel a chytrá režie ✅ 2026-10-30 jako moduly `announcer`, `smart_director`; hlasování diváků ✅ jako modul `fan_vote`, migrace 23)*
 - **Hlasatel**: `speechSynthesis` prohlížeče s českým hlasem v TV režimu – začátek zápasu, gól se střelcem, zmínka partnera (prodejné partnerům). Pořadatel volí, co se hlásí; spuštění kliknutím (prohlížeče blokují zvuk bez interakce). Bez serveru a nákladů.
 - **Chytrá režie**: `KioskMode` reaguje na události (gól, konec skupiny, finále) místo pevného střídání. Dělat spolu s Vlnou 2, bod 6 (animace gólu) – sdílejí logiku „od teď“.
 - **Hlasování diváků o hráče zápasu**: QR na TV, hlas přes RPC s limitem (ne anonymní INSERT), výsledek živě na TV.

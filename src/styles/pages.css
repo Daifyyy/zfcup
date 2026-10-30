@@ -517,3 +517,24 @@ button.md-side:focus-visible { outline: 2px solid var(--chrome-ink); outline-off
 .md-mvp__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .md-mvp__main b { font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .md-mvp__main span { font-size: .78rem; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Detail zápasu — hlasování diváků (modul fan_vote) */
+.fv-sides { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+@media (max-width: 520px) { .fv-sides { grid-template-columns: 1fr; } }
+.fv-side__team { display: flex; align-items: center; gap: .4rem; font-size: .78rem; font-weight: 700; margin-bottom: .35rem; min-width: 0; }
+.fv-chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.fv-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .55rem; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-1); color: var(--ink); font: inherit; font-size: .78rem; cursor: pointer; }
+.fv-chip b { font-family: var(--font-display); font-size: .8rem; color: var(--ink-muted); }
+.fv-chip:hover { border-color: var(--brand); }
+.fv-chip--mine { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.fv-chip--mine b { color: inherit; }
+.fv-results { margin-top: .75rem; padding: .65rem .8rem; display: flex; flex-direction: column; gap: .4rem; }
+.fv-results__head { display: flex; align-items: center; gap: .35rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); }
+.fv-row { display: grid; grid-template-columns: minmax(0, 1.4fr) 1fr auto; align-items: center; gap: .6rem; font-size: .82rem; }
+.fv-row__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fv-row__name em { color: var(--brand); font-style: normal; font-size: .72rem; }
+.fv-row__bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.fv-row__bar i { display: block; height: 100%; background: var(--ink-muted); border-radius: 4px; }
+.fv-row--lead .fv-row__bar i { background: var(--brand); }
+.fv-row--lead .fv-row__name { font-weight: 700; }
+.fv-row__pct { font-family: var(--font-display); font-weight: 800; font-size: .9rem; min-width: 3em; text-align: right; }
