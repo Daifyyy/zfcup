@@ -185,9 +185,16 @@ Nasazení po přesunu: `git push` na `main` → Cloudflare sestaví a nasadí (1
 - Typecheck 62 (baseline), testy 140/140 (+14 `modules`).
 - Další modul = řádek v registru s `ready: true` až s implementací, vždy nejdřív `internal`.
 
+### Vlna 1, bod 3 — nové grafiky (2026-10-30)
+- Migrace 22 ✅ spuštěna: `matches/bracket_slots.mvp_player_id`, `tournament.best_team`.
+- Přehled → **Sdílet** je nabídka: Pozvánka (dosavadní), Program dne, Výsledky dne (8 zápasů na stranu, volba dne/strany), Vítěz a Konečné pořadí (jen po rozhodnutí turnaje), Tým turnaje (v sezóně i tým kola).
+- **Hráč zápasu**: volba v editoru zápasu i play-off, sekce v detailu zápasu s grafikou. **Tým turnaje**: automaticky (`src/lib/bestTeam.ts`), ruční obsazení míst v Admin → Střelci, veřejně ve Statistikách; ukázka na úvodní stránce doplněna.
+- Ověřeno v prohlížeči na validačním turnaji: nabídka, Výsledky dne (4 strany), Tým turnaje, hráč zápasu uložen (skóre zachováno) → detail + grafika, ruční místo v sestavě a návrat na automatiku. Vítěz/Konečné pořadí: jen testy + vykreslení šablon (žádný dokončený turnaj v DB). Validační turnaj má nově hráče zápasu u jednoho zápasu (Daniel Beneš).
+- Typecheck 62 (baseline), testy 153/153, build OK. Bod 4 (ZIP grafik dne) odložen uživatelem.
+
 ### Kde navázat
 0. **Prémiový produkt** — roadmapa `docs/ROADMAP-PREMIUM.md` (prověrka 2026-10-30: co potvrzuje kvalitu, konkurence AHL/Tournify, 4 vlny nadstandardu). Prodávat celé, bez osekaných tarifů. Body 1–2 (redesign grafik, fotka na pozadí) ✅ (migrace 20 ✅). **Vlna 5 (unikátnost: karta hráče, hlasatel a chytrá režie TV, AI zpravodaj, diplomy, dosah partnera + vlastní fáze revize tipovačky 5.T) zapsaná 2026-10-30** — každý modul vypínatelný, stupně off/internal/beta/on, pravidla pro zapnutí uprostřed turnaje. **Další (po Cloudflare): 5.0 systém modulů a Beta** (migrace 21), pak Vlna 1 body 3–4, Vlna 2 body 6–7 + 5.2. Pořadí viz roadmapa, sekce 5. Každý bod = vlastní plán a sezení.
-1. **Přesun hostingu na Cloudflare ✅ (2026-10-30)** — běží souběžně s Vercelem (`turnaje-app.denis-honzejk.workers.dev`). Krok 6 (doména → Cloudflare, Vercel jen přesměrování) až před prvním placeným turnajem; náhledy odkazů na sítích ověřit až bez maintenance. 5.0 systém modulů ✅. **Další vývoj podle roadmapy: Vlna 1 body 3–4 (grafiky), pak Vlna 2 body 6–7 + 5.2 (hlasatel, chytrá režie)** — nové funkce jako moduly, serverové rovnou do `edge/` pro Cloudflare.
+1. **Přesun hostingu na Cloudflare ✅ (2026-10-30)** — běží souběžně s Vercelem (`turnaje-app.denis-honzejk.workers.dev`). Krok 6 (doména → Cloudflare, Vercel jen přesměrování) až před prvním placeným turnajem; náhledy odkazů na sítích ověřit až bez maintenance. 5.0 systém modulů ✅, Vlna 1 bod 3 ✅ (bod 4 ZIP odložen). **Další vývoj podle roadmapy: Vlna 2 body 6–7 (gól na TV, spoty partnerů) + 5.2 (hlasatel, chytrá režie)** — nové funkce jako moduly, serverové rovnou do `edge/` pro Cloudflare.
 2. **Uživatel:** tarify — místo Vercel Pro přesun na Cloudflare (výše); Supabase Pro zapínat kolem placených turnajů, mezi nimi Free + denní „probuzení“ a záloha (`pg_dump`, GitHub Action — zatím neuděláno); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) (min. délka hesla 8 ✅ 2026-10-30), znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
 3. Pak Fáze 9 — registrace organizátorů a obchodní model.
 4. P2 z auditu: menší hlavní balík, sloučení startovních dotazů do RPC, hlášení chyb, `xlsx` z cdn.sheetjs.com.

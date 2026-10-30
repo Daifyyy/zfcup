@@ -21,6 +21,8 @@ import Scoreboard from '../components/public/Scoreboard'
 import TeamDetailDrawer from '../components/public/TeamDetailDrawer'
 import MatchDetailDrawer from '../components/public/MatchDetailDrawer'
 import { MatchGraphic, TableGraphic, FORMAT_SIZE } from '../components/share/templates'
+import { BestTeamGraphic } from '../components/share/templatesExtra'
+import { bestTeamScopes } from '../lib/tournamentGraphics'
 import { useBackClose } from '../lib/useBackClose'
 
 interface Props {
@@ -184,6 +186,7 @@ function Preview({ k, data }: { k: DemoKey; data: ReturnType<typeof buildDemoDat
       const final = bracketSlots.find(s => s.id === 's-sf2')!
       const rows = calcGroupStandings(groups[0], matches, getSportDef(tournament.sport))
       const { w, h } = FORMAT_SIZE.square
+      const bestTeam = bestTeamScopes(data)[0]
       return (
         <div className="dm-share">
           <Scaled w={w} h={h} className="dm-share__item">
@@ -192,6 +195,11 @@ function Preview({ k, data }: { k: DemoKey; data: ReturnType<typeof buildDemoDat
           <Scaled w={w} h={h} className="dm-share__item">
             <TableGraphic format="square" tournament={tournament} sponsors={sortedSponsors} groupName={groups[0].name} rows={rows} teams={teams} allowDraws />
           </Scaled>
+          {bestTeam && (
+            <Scaled w={w} h={h} className="dm-share__item">
+              <BestTeamGraphic format="square" tournament={tournament} sponsors={sortedSponsors} title={bestTeam.label} team={bestTeam.team} hockey={false} />
+            </Scaled>
+          )}
         </div>
       )
     }

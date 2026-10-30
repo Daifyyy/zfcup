@@ -4,6 +4,7 @@ import type { Team } from '../../../hooks/useTeams'
 import type { BracketGoal } from '../../../hooks/useBracketGoals'
 import type { Tournament } from '../../../hooks/useTournament'
 import { getSportDef } from '../../../lib/sports'
+import BestTeamEditor from './BestTeamEditor'
 
 interface Props {
   goals: Goal[]
@@ -11,9 +12,11 @@ interface Props {
   players: Player[]
   teams: Team[]
   tournament: Tournament | null
+  refetchTournament: () => void
+  showToast: (msg: string) => void
 }
 
-export default function ScorersTab({ goals, bracketGoals, players, teams, tournament }: Props) {
+export default function ScorersTab({ goals, bracketGoals, players, teams, tournament, refetchTournament, showToast }: Props) {
   const sportDef = getSportDef(tournament?.sport)
   const agg: Record<string, number> = {}
   for (const g of goals) agg[g.player_id] = (agg[g.player_id] ?? 0) + g.count
@@ -59,6 +62,7 @@ export default function ScorersTab({ goals, bracketGoals, players, teams, tourna
           ))}
         </div>
       )}
+      {tournament && <BestTeamEditor refetchTournament={refetchTournament} showToast={showToast} />}
     </div>
   )
 }

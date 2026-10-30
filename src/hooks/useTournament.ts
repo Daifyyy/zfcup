@@ -55,6 +55,8 @@ export interface Tournament {
   schedule_mode?: 'day' | 'season'
   /** Zapnuté moduly turnaje { klíč: true|false } — migrace 21; vyhodnocuje src/lib/modules.ts */
   modules?: Record<string, boolean>
+  /** Ruční úpravy nejlepší sestavy { slots: { '0': playerId, … } } — migrace 22; vyhodnocuje src/lib/bestTeam.ts */
+  best_team?: { slots?: Record<string, string> } | null
   /** Vlastník (organizátor) — migrace 11 hlídá zápis přes RLS */
   owner_id?: string | null
 }

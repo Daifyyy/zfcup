@@ -9,6 +9,7 @@ import { getFormatDef, getLegacyFormatDef } from '../../../lib/formats'
 import { getSportDef, sportHasOvertime } from '../../../lib/sports'
 import { changed, diffCounts } from '../../../lib/eventDiff'
 import { withBusy } from '../../../lib/busy'
+import { MvpSelect, saveMvp } from './MvpSelect'
 import type { Team } from '../../../hooks/useTeams'
 import type { Player } from '../../../hooks/usePlayers'
 import type { Group } from '../../../hooks/useGroups'
@@ -74,6 +75,7 @@ function SlotEditor({
   const [s, setS] = useState({ ...slot, scheduled_time: slot.scheduled_time ?? '', match_date: slot.match_date ?? '' })
   const [refereeId, setRefereeId] = useState<string>(slot.referee_id ?? '')
   const [decidedIn, setDecidedIn] = useState<'regulation' | 'ot' | 'so'>(slot.decided_in ?? 'regulation')
+  const [mvpId, setMvpId] = useState<string>(slot.mvp_player_id ?? '')
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
   const hasOvertime = sportHasOvertime(sportDef)
@@ -237,6 +239,11 @@ function SlotEditor({
           decided_in: hasOvertime ? decidedIn : null,
           ...(isSeason ? { match_date: s.match_date || null } : {}),
         })
+        // Hráč zápasu až po skóre — bez migrace 22 nesmí zablokovat uložení výsledku a postup
+        if ((slot.mvp_player_id ?? '') !== mvpId) {
+          const r = await saveMvp('bracket_slots', slot.id, mvpId)
+          if (r.error) return [{ label: 'hráč zápasu', error: r.error }]
+        }
         return []
       })
       if (failed.length) {
@@ -383,6 +390,8 @@ function SlotEditor({
           </select>
         </div>
       )}
+
+      <MvpSelect value={mvpId} onChange={setMvpId} home={teams.find(t => t.id === s.home_id)} away={teams.find(t => t.id === s.away_id)} homePlayers={homePlayers} awayPlayers={awayPlayers} />
 
       {/* Rozhodnuto v (prodloužení/nájezdy) */}
       {hasOvertime && (

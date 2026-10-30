@@ -27,8 +27,8 @@ export const FEATURES: Feature[] = [
   },
   {
     key: 'share', icon: Share2, title: 'Grafiky na sociální sítě',
-    text: 'Jedním klikem výsledek, tabulka nebo střelci jako hotový obrázek pro Instagram a Facebook.',
-    points: ['Čtverec pro příspěvek i výška pro story', 'Logo turnaje a partnerů na každé grafice', 'Stáhnout nebo rovnou sdílet z mobilu'],
+    text: 'Jedním klikem výsledek, tabulka, program a výsledky dne, hráč zápasu, tým turnaje nebo vítěz jako hotový obrázek pro Instagram a Facebook.',
+    points: ['Čtverec pro příspěvek i výška pro story', 'Tým turnaje se skládá sám podle výkonů', 'Logo turnaje a partnerů na každé grafice', 'Stáhnout nebo rovnou sdílet z mobilu'],
   },
   {
     key: 'formats', icon: GitBranch, title: 'Skupiny, liga i play-off',

@@ -509,3 +509,11 @@ button.md-side:focus-visible { outline: 2px solid var(--chrome-ink); outline-off
 .ov-history__kicker { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-muted); }
 .ov-history__name { font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; text-transform: uppercase; line-height: 1.1; overflow-wrap: anywhere; }
 .ov-history__text { margin: .15rem 0 0; font-size: .82rem; color: var(--ink-muted); }
+
+/* Detail zápasu — hráč zápasu */
+.md-mvp { display: flex; align-items: center; gap: .75rem; padding: .7rem .85rem; }
+.md-mvp__face { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.md-mvp__icon { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); }
+.md-mvp__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.md-mvp__main b { font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-mvp__main span { font-size: .78rem; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

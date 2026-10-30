@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, Download, ImageDown, ImagePlus, Link2, Share2, X } from 'lucide-react'
 import { toBlob } from 'html-to-image'
@@ -23,6 +23,10 @@ interface Props {
   url?: string
   /** Soukromý turnaj: odkaz s přístupovým kódem (nabídne se jako volba, výchozí vypnuto) */
   codeUrl?: string | null
+  /** Další volba grafiky (den, strana, kolo…) — vykreslí se pod formáty */
+  controls?: ReactNode
+  /** Klíč aktuální volby z `controls` (pro mezipaměť náhledů) */
+  variantKey?: string
 }
 
 /** Umí prohlížeč sdílet soubor (mobil → Instagram, Facebook, WhatsApp…)? */
@@ -40,7 +44,7 @@ function canShareFiles(): boolean {
  * náhled ukazuje přesně výsledný obrázek. Mobil: „Sdílet obrázek“ → systémová nabídka;
  * počítač: Stáhnout / Kopírovat obrázek (vložit do FB, WhatsApp Web…) / Kopírovat odkaz.
  */
-export default function ShareModal({ title, fileName, render, onClose, showToast, url, codeUrl, defaultStyle = 'dark', defaultPhoto = null }: Props) {
+export default function ShareModal({ title, fileName, render, onClose, showToast, url, codeUrl, defaultStyle = 'dark', defaultPhoto = null, controls, variantKey = '' }: Props) {
   useBackClose(true, onClose, 'share')
   const [format, setFormat] = useState<ShareFormat>('square')
   const [withCode, setWithCode] = useState(false)
@@ -51,7 +55,7 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
   const photo = customPhoto ?? defaultPhoto ?? null
   // klíč mezipaměti náhledů: u fotky stačí délka + konec (celá data URL by byla zbytečně dlouhá)
   const photoKey = photo ? `${photo.length}:${photo.slice(-24)}` : '-'
-  const key = `${format}|${style}|${withCode ? 1 : 0}|${style === 'photo' ? photoKey : ''}`
+  const key = `${format}|${style}|${withCode ? 1 : 0}|${style === 'photo' ? photoKey : ''}|${variantKey}`
   const [blobs, setBlobs] = useState<Record<string, Blob>>({})
   const [previews, setPreviews] = useState<Record<string, string>>({})
   const [error, setError] = useState(false)
@@ -181,6 +185,7 @@ export default function ShareModal({ title, fileName, render, onClose, showToast
             { value: 'story', label: 'Story 9:16' },
           ]} />
           <Segmented value={style} onChange={setStyle} items={SHARE_STYLES} />
+          {controls}
         </div>
 
         {style === 'photo' && (

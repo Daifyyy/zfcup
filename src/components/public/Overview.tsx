@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, ChevronRight, Hourglass, Landmark, MapPin, Radio, Share2 } from 'lucide-react'
+import { CalendarDays, ChevronRight, Hourglass, Landmark, MapPin, Radio } from 'lucide-react'
 import type { Tab } from '../../App'
 import type { Tournament } from '../../hooks/useTournament'
 import type { Announcement } from '../../hooks/useAnnouncements'
@@ -13,6 +13,7 @@ import type { BracketRound, BracketSlot } from '../../hooks/useBracket'
 import type { Sponsor } from '../../hooks/useSponsors'
 import QRCode from '../ui/QRCode'
 import { ShareTournamentDialog } from '../share/lazy'
+import GraphicsMenu from '../share/GraphicsMenu'
 import { sanitizeHtml } from '../../lib/sanitize'
 import { getSportDef } from '../../lib/sports'
 import { calcGroupStandings } from '../../lib/standings'
@@ -148,11 +149,7 @@ export default function Overview({
               <img src={presentedBy.logo_url} alt={presentedBy.name} />
             </div>
           )}
-          {tournament && tournamentUrl && (
-            <button type="button" className="ui-btn ui-btn--chrome ui-btn--sm" onClick={() => setShareOpen(true)} title="Sdílet turnaj (obrázek)">
-              <Share2 size={16} />Sdílet
-            </button>
-          )}
+          {tournament && tournamentUrl && <GraphicsMenu onTournament={() => setShareOpen(true)} />}
           <div className="ov-hero__qr desktop-only">
             <QRCode size={72} url={tournamentQrUrl(tournament)} />
             <span>Naskenuj a sleduj živě</span>

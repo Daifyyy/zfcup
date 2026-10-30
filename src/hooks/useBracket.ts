@@ -25,6 +25,8 @@ export interface BracketSlot {
   decided_in?: 'regulation' | 'ot' | 'so' | null
   /** Datum zápasu (YYYY-MM-DD) — jen sezónní režim, migrace 09 */
   match_date?: string | null
+  /** Hráč zápasu (MVP) — migrace 22; bez ní undefined */
+  mvp_player_id?: string | null
 }
 
 export function useBracket(tournamentId: string) {

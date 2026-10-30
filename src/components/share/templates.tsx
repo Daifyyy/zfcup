@@ -32,7 +32,7 @@ export function defaultShareStyle(tournament: Tournament | null): ShareStyle {
   return tournament?.brand_style === 'bold' ? 'brand' : 'dark'
 }
 
-interface Pal {
+export interface Pal {
   bg: string
   ink: string
   muted: string
@@ -50,7 +50,7 @@ interface Pal {
 }
 
 // Sdílecí šablony mají vlastní paletu (výjimka z pravidla tokenů), barvu turnaje berou z --brand*.
-const PALETTES = {
+export const PALETTES = {
   dark: {
     bg: 'linear-gradient(160deg, color-mix(in srgb, var(--brand) 24%, #070b14) 0%, color-mix(in srgb, var(--brand) 10%, #0b1220) 58%, #070b14 100%)',
     ink: '#f5f7fa',
@@ -110,11 +110,11 @@ PALETTES.photo = {
 /** Ztmavení fotky: nahoře (lišta) a dole (partneři) víc, uprostřed míň; jemný nádech barvy turnaje. */
 const PHOTO_SHADE = 'linear-gradient(180deg, rgba(5,8,15,.82) 0%, rgba(5,8,15,.58) 30%, rgba(5,8,15,.62) 62%, rgba(5,8,15,.9) 100%), linear-gradient(150deg, color-mix(in srgb, var(--brand) 38%, transparent) 0%, transparent 55%)'
 
-const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif"
-const BODY = "'Inter', system-ui, sans-serif"
+export const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif"
+export const BODY = "'Inter', system-ui, sans-serif"
 
 /** Velikost písma podle délky textu — dlouhé názvy se zmenší, aby se vešly na 2 řádky. */
-function fitSize(text: string | undefined, base: number): number {
+export function fitSize(text: string | undefined, base: number): number {
   const n = (text ?? '').length
   if (n <= 14) return base
   if (n <= 22) return Math.round(base * 0.84)
@@ -124,9 +124,9 @@ function fitSize(text: string | undefined, base: number): number {
 }
 
 /** Nejvýš 2 řádky, zbytek … */
-const CLAMP2: CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+export const CLAMP2: CSSProperties = { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
 
-function Logo({ team, size, pal }: { team?: Team; size: number; pal: Pal }) {
+export function Logo({ team, size, pal }: { team?: Team; size: number; pal: Pal }) {
   if (!team) return <div style={{ width: size, height: size }} />
   if (team.logo_url) {
     return (
@@ -183,7 +183,7 @@ function PartnerFooter({ sponsors, story }: { sponsors: Sponsor[]; story: boolea
 }
 
 /** Společný rám: kompaktní lišta turnaje, popisek, obsah, partneři. */
-function Frame({ format, style, photo, tournament, kicker, kickerAlign = 'left', sponsors, showHeader = true, children }: {
+export function Frame({ format, style, photo, tournament, kicker, kickerAlign = 'left', sponsors, showHeader = true, children }: {
   format: ShareFormat
   style: ShareStyle
   /** Fotka na pozadí (jen styl Foto) */
@@ -243,8 +243,8 @@ function Frame({ format, style, photo, tournament, kicker, kickerAlign = 'left',
 
 // Barvy karet a pódia
 const YELLOW = '#facc15'
-const RED = '#dc2626'
-const PODIUM = ['#f5b301', '#c3ccd8', '#cd7f32']
+export const RED = '#dc2626'
+export const PODIUM = ['#f5b301', '#c3ccd8', '#cd7f32']
 
 function CardShape({ kind, h = 26 }: { kind: 'yellow' | 'red' | 'yellow_red'; h?: number }) {
   const card = (c: string, ml = 0) => <span style={{ display: 'inline-block', width: h * 0.72, height: h, background: c, borderRadius: 3, marginLeft: ml, boxShadow: '0 2px 6px rgba(0,0,0,.35)' }} />

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, Clock, Gavel, MapPin, Share2, X } from 'lucide-react'
+import { Award, CalendarDays, Clock, Gavel, MapPin, Share2, X } from 'lucide-react'
 import { TeamLogo } from '../ui/TeamLogo'
 import { CardChip } from '../ui/CardChip'
 import { MatchStatusBadge } from '../ui/Badge'
@@ -7,7 +7,7 @@ import { getMatchState } from '../../lib/matchState'
 import { formatDateWeekday } from '../../lib/dates'
 import { getSportDef, type SportDef } from '../../lib/sports'
 import { GoalMark, AssistMark, PimMark } from '../ui/EventIcons'
-import { ShareMatchDialog } from '../share/lazy'
+import { ShareMatchDialog, ShareMvpDialog } from '../share/lazy'
 import { matchUrl, withAccessCode } from '../../lib/share'
 import { useTournamentData, useDetail } from '../../lib/TournamentDataContext'
 import { findMatchDetail, matchEvents, type SideEvents } from '../../lib/details'
@@ -86,6 +86,7 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
   const data = useTournamentData()
   const { openTeam } = useDetail()
   const [graphic, setGraphic] = useState(false)
+  const [mvpGraphic, setMvpGraphic] = useState(false)
   const { tournament, teams } = data
   const sport = getSportDef(tournament.sport)
   const md = useMemo(() => findMatchDetail(data, matchId), [data, matchId])
@@ -121,6 +122,10 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
     md.referee && { key: 'ref', icon: <Gavel size={15} />, text: md.referee },
   ].filter(Boolean) as { key: string; icon: JSX.Element; text: string }[]
   const title = `${home?.name ?? 'Určí se'} – ${away?.name ?? 'Určí se'}`
+  const mvp = md.mvp_player_id ? data.players.find(p => p.id === md.mvp_player_id) : undefined
+  const mvpTeam = mvp ? teams.find(t => t.id === mvp.team_id) : undefined
+  const mvpLine = (list: SideEvents['goals']) => (mvp ? list.find(x => x.player.id === mvp.id)?.value ?? 0 : 0)
+  const mvpSide = mvp?.team_id === md.home_id ? events.home : events.away
 
   return (
     <div className="tm-drawer" onClick={onClose}>
@@ -159,6 +164,26 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
           <ul className="md-facts">
             {facts.map(f => <li key={f.key}>{f.icon}{f.text}</li>)}
           </ul>
+        )}
+
+        {mvp && (
+          <section className="tm-drawer__sec">
+            <h3>Hráč zápasu</h3>
+            <div className="md-mvp ui-card">
+              {mvp.avatar_url
+                ? <img className="md-mvp__face" src={mvp.avatar_url} alt="" />
+                : <span className="md-mvp__icon"><Award size={22} /></span>}
+              <div className="md-mvp__main">
+                <b>{mvp.name}</b>
+                <span>{mvpTeam?.name}</span>
+              </div>
+              {allowLink && (
+                <button type="button" className="ui-btn ui-btn--secondary ui-btn--sm" onClick={() => setMvpGraphic(true)}>
+                  <Share2 size={15} />Grafika
+                </button>
+              )}
+            </div>
+          </section>
         )}
 
         {hasEvents && (
@@ -202,6 +227,29 @@ export default function MatchDetailDrawer({ matchId, onClose, allowLink = true }
             url={matchUrl(tournament.id, md.id)}
             codeUrl={withAccessCode(matchUrl(tournament.id, md.id), tournament)}
             onClose={() => setGraphic(false)}
+          />
+        </div>
+      )}
+      {mvpGraphic && mvp && (
+        <div onClick={e => e.stopPropagation()}>
+          <ShareMvpDialog
+            tournament={tournament}
+            sponsors={data.sponsors ?? []}
+            name={mvp.name}
+            number={mvp.number}
+            avatar={mvp.avatar_url}
+            team={mvpTeam}
+            goals={mvpLine(mvpSide.goals)}
+            assists={mvpLine(mvpSide.assists)}
+            label={md.label || (md.kind === 'playoff' ? 'Play-off' : 'Zápas')}
+            home={home}
+            away={away}
+            homeScore={md.home_score}
+            awayScore={md.away_score}
+            decidedIn={md.decided_in}
+            url={matchUrl(tournament.id, md.id)}
+            codeUrl={withAccessCode(matchUrl(tournament.id, md.id), tournament)}
+            onClose={() => setMvpGraphic(false)}
           />
         </div>
       )}

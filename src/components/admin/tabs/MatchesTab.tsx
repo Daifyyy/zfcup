@@ -24,6 +24,7 @@ import { checkGroupSpecialTips, checkLeagueTournamentWinner } from '../../../lib
 import { getSportDef, sportHasOvertime } from '../../../lib/sports'
 import { changed, diffCounts } from '../../../lib/eventDiff'
 import { withBusy } from '../../../lib/busy'
+import { MvpSelect, saveMvp } from './MvpSelect'
 
 interface Props {
   teams: Team[]
@@ -92,6 +93,7 @@ function InlineMatchEditor({
   const [matchDate, setMatchDate] = useState(match.match_date || '')
   const [refereeId, setRefereeId] = useState<string>(match.referee_id ?? '')
   const [decidedIn, setDecidedIn] = useState<'regulation' | 'ot' | 'so'>(match.decided_in ?? 'regulation')
+  const [mvpId, setMvpId] = useState<string>(match.mvp_player_id ?? '')
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
 
@@ -212,6 +214,9 @@ function InlineMatchEditor({
       // match_date jen v sezónním režimu (sloupec z migrace 09)
       ...(isSeason ? { match_date: matchDate || null } : {}),
     }).eq('id', match.id) })
+
+    // Hráč zápasu zvlášť — bez migrace 22 nesmí zablokovat uložení skóre
+    if ((match.mvp_player_id ?? '') !== mvpId) tasks.push({ label: 'hráč zápasu', run: () => saveMvp('matches', match.id, mvpId) })
 
     const countTasks = (table: 'goals' | 'assists', label: string, before: Record<string, number>, after: Record<string, number>) => {
       const d = diffCounts(before, after)
@@ -379,6 +384,8 @@ function InlineMatchEditor({
           </select>
         </div>
       )}
+
+      <MvpSelect value={mvpId} onChange={setMvpId} home={teams.find(t => t.id === match.home_id)} away={teams.find(t => t.id === match.away_id)} homePlayers={homePlayers} awayPlayers={awayPlayers} />
 
       {/* Rozhodnuto v (prodloužení/nájezdy) */}
       {hasOvertime && (

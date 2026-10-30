@@ -96,6 +96,8 @@ export interface MatchDetail {
   label: string
   pitch: string | null
   referee: string | null
+  /** Hráč zápasu (migrace 22) */
+  mvp_player_id: string | null
 }
 
 /** Najde zápas nebo play-off slot podle id. */
@@ -122,7 +124,7 @@ export function findMatchDetail(d: TournamentData, id: string): MatchDetail | nu
       id: m.id, kind: 'group',
       home_id: m.home_id, away_id: m.away_id, home_score: m.home_score, away_score: m.away_score,
       played: m.played, scheduled_time: m.scheduled_time || null, match_date: m.match_date ?? null,
-      decided_in: m.decided_in ?? null, label, pitch, referee: refName(m.referee_id),
+      decided_in: m.decided_in ?? null, label, pitch, referee: refName(m.referee_id), mvp_player_id: m.mvp_player_id ?? null,
     }
   }
   const s = d.bracketSlots.find(x => x.id === id)
@@ -132,7 +134,7 @@ export function findMatchDetail(d: TournamentData, id: string): MatchDetail | nu
       id: s.id, kind: 'playoff',
       home_id: s.home_id, away_id: s.away_id, home_score: s.home_score, away_score: s.away_score,
       played: s.played, scheduled_time: s.scheduled_time ?? null, match_date: s.match_date ?? null,
-      decided_in: s.decided_in ?? null, label: round?.name ?? 'Play-off', pitch: null, referee: refName(s.referee_id),
+      decided_in: s.decided_in ?? null, label: round?.name ?? 'Play-off', pitch: null, referee: refName(s.referee_id), mvp_player_id: s.mvp_player_id ?? null,
     }
   }
   return null

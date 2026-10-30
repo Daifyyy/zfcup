@@ -23,3 +23,26 @@ export function ShareLeadersDialog(p: LeadersProps) {
 export function ShareTournamentDialog(p: TournamentProps) {
   return <Suspense fallback={null}><ShareTournamentLazy {...p} /></Suspense>
 }
+
+// Vlna 1, bod 3
+const ShareDayLazy = lazy(withReloadOnChunkError(() => import('./ShareKit').then(m => ({ default: m.ShareDay }))))
+const ShareChampionLazy = lazy(withReloadOnChunkError(() => import('./ShareKit').then(m => ({ default: m.ShareChampion }))))
+const ShareFinalStandingsLazy = lazy(withReloadOnChunkError(() => import('./ShareKit').then(m => ({ default: m.ShareFinalStandings }))))
+const ShareMvpLazy = lazy(withReloadOnChunkError(() => import('./ShareKit').then(m => ({ default: m.ShareMvp }))))
+const ShareBestTeamLazy = lazy(withReloadOnChunkError(() => import('./ShareKit').then(m => ({ default: m.ShareBestTeam }))))
+
+export function ShareDayDialog(p: ComponentProps<typeof import('./ShareKit').ShareDay>) {
+  return <Suspense fallback={null}><ShareDayLazy {...p} /></Suspense>
+}
+export function ShareChampionDialog(p: ComponentProps<typeof import('./ShareKit').ShareChampion>) {
+  return <Suspense fallback={null}><ShareChampionLazy {...p} /></Suspense>
+}
+export function ShareFinalStandingsDialog(p: ComponentProps<typeof import('./ShareKit').ShareFinalStandings>) {
+  return <Suspense fallback={null}><ShareFinalStandingsLazy {...p} /></Suspense>
+}
+export function ShareMvpDialog(p: ComponentProps<typeof import('./ShareKit').ShareMvp>) {
+  return <Suspense fallback={null}><ShareMvpLazy {...p} /></Suspense>
+}
+export function ShareBestTeamDialog(p: ComponentProps<typeof import('./ShareKit').ShareBestTeam>) {
+  return <Suspense fallback={null}><ShareBestTeamLazy {...p} /></Suspense>
+}

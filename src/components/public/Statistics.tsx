@@ -20,6 +20,7 @@ import { Card, SectionHeader } from '../ui/Card'
 import { CardChip } from '../ui/CardChip'
 import { getSportDef } from '../../lib/sports'
 import { tournamentUrl, withAccessCode } from '../../lib/share'
+import BestTeamCard from './BestTeamCard'
 
 interface Props {
   goals: Goal[]
@@ -234,6 +235,7 @@ export default function Statistics({ goals, bracketGoals, assists, bracketAssist
             onShare={sharePim}
           />
         )}
+        <BestTeamCard showToast={showToast} />
       </div>
 
       {share && (
