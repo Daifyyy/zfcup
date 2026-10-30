@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { fetchTable } from '../lib/bundle'
 import { subscribeTable } from '../lib/realtimeManager'
 import { onPoll } from '../lib/poller'
 import type { SportId } from '../lib/sports'
@@ -67,7 +68,7 @@ export function useTournament(tournamentId?: string) {
   // Pro které ID turnaj prokazatelně neexistuje (žádný řádek / neplatné UUID).
   // Vázané na ID, aby při přepnutí neproblikla hláška „nenalezen“ dřív, než se začne načítat.
   const [notFoundId, setNotFoundId] = useState<string | null>(null)
-  const fetchRef = useRef<() => void>(() => {})
+  const fetchRef = useRef<(viaBundle?: boolean) => void>(() => {})
 
   useEffect(() => {
     // Přepnutí turnaje: hned zahodit starý turnaj a ignorovat opožděné odpovědi
@@ -81,11 +82,11 @@ export function useTournament(tournamentId?: string) {
     }
     setLoading(true)
 
-    async function fetch() {
-      const query = tournamentId
+    async function fetch(viaBundle = false) {
+      const direct = () => (tournamentId
         ? supabase.from('tournament').select('*').eq('id', tournamentId).single()
-        : supabase.from('tournament').select('*').single()
-      const { data, error } = await query
+        : supabase.from('tournament').select('*').single())
+      const { data, error } = await fetchTable(tournamentId ?? '', 'tournament', direct, viaBundle && !!tournamentId)
       if (cancelled) return
       if (!error) setTournament(data)
       // PGRST116 = žádný řádek, 22P02 = neplatné UUID; jiné chyby (síť) zkusí znovu polling
@@ -93,10 +94,11 @@ export function useTournament(tournamentId?: string) {
       setLoading(false)
     }
     fetchRef.current = fetch
-    fetch()
+    // otevření turnaje: sdílený dotaz se všemi tabulkami (migrace 25)
+    fetch(true)
 
     const unsub = subscribeTable('tournament', () => fetchRef.current(), tournamentId ? `id=eq.${tournamentId}` : undefined)
-    const unpoll = onPoll(() => fetchRef.current())
+    const unpoll = onPoll(() => fetchRef.current(true))
 
     return () => {
       cancelled = true

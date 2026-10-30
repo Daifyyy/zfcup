@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { fetchTable } from '../lib/bundle'
 import { subscribeTable, byTournament } from '../lib/realtimeManager'
 import { onPoll } from '../lib/poller'
 
@@ -24,29 +25,30 @@ export interface Match {
 export function useMatches(tournamentId: string) {
   const [matches, setMatches] = useState<Match[]>([])
   const [loading, setLoading] = useState(true)
-  const fetchRef = useRef<() => void>(() => {})
+  const fetchRef = useRef<(viaBundle?: boolean) => void>(() => {})
 
   useEffect(() => {
     // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
     let cancelled = false
     setMatches([])
     setLoading(true)
-    async function fetch() {
+    async function fetch(viaBundle = false) {
       if (!tournamentId) { setLoading(false); return }
-      const { data, error } = await supabase.from('matches').select('*')
+      const { data, error } = await fetchTable(tournamentId, 'matches', () => supabase.from('matches').select('*')
         .eq('tournament_id', tournamentId)
         .order('scheduled_time', { nullsFirst: false })
-        .order('id')
+        .order('id'), viaBundle)
       if (cancelled) return
       if (!error) setMatches(data ?? [])
       setLoading(false)
     }
     fetchRef.current = fetch
-    fetch()
+    // otevření turnaje: sdílený dotaz se všemi tabulkami (migrace 25)
+    fetch(true)
 
     const unsub = subscribeTable('matches', () => fetchRef.current(), byTournament(tournamentId))
 
-    const unpoll = onPoll(() => fetchRef.current())
+    const unpoll = onPoll(() => fetchRef.current(true))
 
     return () => {
       cancelled = true

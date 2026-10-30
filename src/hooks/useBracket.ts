@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { fetchTable } from '../lib/bundle'
 import { subscribeTable, byTournament } from '../lib/realtimeManager'
 import { onPoll } from '../lib/poller'
 
@@ -33,7 +34,7 @@ export function useBracket(tournamentId: string) {
   const [rounds, setRounds] = useState<BracketRound[]>([])
   const [slots, setSlots] = useState<BracketSlot[]>([])
   const [loading, setLoading] = useState(true)
-  const fetchRef = useRef<() => void>(() => {})
+  const fetchRef = useRef<(viaBundle?: boolean) => void>(() => {})
 
   useEffect(() => {
     // Přepnutí turnaje: hned zahodit stará data a ignorovat opožděné odpovědi
@@ -41,11 +42,11 @@ export function useBracket(tournamentId: string) {
     setRounds([])
     setSlots([])
     setLoading(true)
-    async function fetch() {
+    async function fetch(viaBundle = false) {
       if (!tournamentId) { setLoading(false); return }
       const [{ data: r, error: rErr }, { data: s, error: sErr }] = await Promise.all([
-        supabase.from('bracket_rounds').select('*').eq('tournament_id', tournamentId).order('position'),
-        supabase.from('bracket_slots').select('*').eq('tournament_id', tournamentId).order('position'),
+        fetchTable(tournamentId, 'bracket_rounds', () => supabase.from('bracket_rounds').select('*').eq('tournament_id', tournamentId).order('position'), viaBundle),
+        fetchTable(tournamentId, 'bracket_slots', () => supabase.from('bracket_slots').select('*').eq('tournament_id', tournamentId).order('position'), viaBundle),
       ])
       if (cancelled) return
       if (!rErr) setRounds(r ?? [])
@@ -53,12 +54,13 @@ export function useBracket(tournamentId: string) {
       setLoading(false)
     }
     fetchRef.current = fetch
-    fetch()
+    // otevření turnaje: sdílený dotaz se všemi tabulkami (migrace 25)
+    fetch(true)
 
     const unsubR = subscribeTable('bracket_rounds', () => fetchRef.current(), byTournament(tournamentId))
     const unsubS = subscribeTable('bracket_slots', () => fetchRef.current(), byTournament(tournamentId))
 
-    const unpoll = onPoll(() => fetchRef.current())
+    const unpoll = onPoll(() => fetchRef.current(true))
 
     return () => {
       cancelled = true
