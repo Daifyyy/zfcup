@@ -20,10 +20,12 @@ import { exportSchedule } from '../../../lib/exportExcel'
 import { lazyComponent } from '../../../lib/lazyComponent'
 
 const MatchSheets = lazyComponent(() => import('../MatchSheets'))
+const Diplomas = lazyComponent(() => import('../Diplomas'))
 import { checkGroupSpecialTips, checkLeagueTournamentWinner } from '../../../lib/tipsEval'
 import { getSportDef, sportHasOvertime } from '../../../lib/sports'
 import { changed, diffCounts } from '../../../lib/eventDiff'
 import { withBusy } from '../../../lib/busy'
+import { useModule } from '../../../lib/ModulesContext'
 import { MvpSelect, saveMvp } from './MvpSelect'
 
 interface Props {
@@ -580,6 +582,8 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
   const [inlineEditId, setInlineEditId] = useState<string | null>(null)
   const formRef = useRef<HTMLDivElement>(null)
   const [sheetsOpen, setSheetsOpen] = useState(false)
+  const [diplomasOpen, setDiplomasOpen] = useState(false)
+  const diplomasOn = useModule('diplomas')
   const sportDef = getSportDef(tournament?.sport)
 
   const isLeague = tournament?.format === 'league'
@@ -664,6 +668,7 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
       )}
 
       {sheetsOpen && <MatchSheets onClose={() => setSheetsOpen(false)} />}
+      {diplomasOpen && <Diplomas onClose={() => setDiplomasOpen(false)} />}
 
       {/* Export tlačítka */}
       {matches.length > 0 && (
@@ -682,6 +687,11 @@ export default function MatchesTab({ teams, players, matches, goals, assists, ca
           >
             Zápisy o utkání (tisk / PDF)
           </button>
+          {diplomasOn && (
+            <button type="button" className="btn btn-d btn-sm" onClick={() => setDiplomasOpen(true)}>
+              Diplomy (tisk / PDF)
+            </button>
+          )}
         </div>
       )}
 

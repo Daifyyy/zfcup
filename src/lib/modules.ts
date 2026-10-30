@@ -49,7 +49,7 @@ export const MODULES: ModuleDef[] = [
   { key: 'tv_spots', name: 'Spoty na TV', description: 'V rotaci TV režimu se střídají partneři přes celou obrazovku (generální 3×, hlavní 2×) a oznámení pořadatele.', defaultEnabled: true, ready: true },
   { key: 'fan_vote', name: 'Hlasování diváků', description: 'Diváci hlasují o hráči zápasu přes QR kód na TV, výsledek se ukáže živě.', defaultEnabled: false, ready: false },
   { key: 'ai_reporter', name: 'AI zpravodaj', description: 'Článek a text na sítě po každém zápase, souhrn dne a reportáž po turnaji — pořadatel text schválí.', defaultEnabled: false, ready: false },
-  { key: 'diplomas', name: 'Diplomy', description: 'Diplomy za umístění, nejlepšího střelce a hráče turnaje jedním klikem k tisku.', defaultEnabled: true, ready: false },
+  { key: 'diplomas', name: 'Diplomy', description: 'Diplomy za umístění, nejlepšího střelce, hráče a brankáře turnaje jedním klikem k tisku nebo do PDF (Admin → Zápasy).', defaultEnabled: true, ready: true },
   { key: 'partner_reach', name: 'Dosah partnera', description: 'QR akce partnera na TV a v grafikách s počítáním skenů a reportem pro partnera.', defaultEnabled: false, ready: false },
 ]
 

@@ -98,7 +98,7 @@ Prodejní příběh: **„turnaj, který se sám komentuje a šíří“**. Poř
 
 **5.3 AI zpravodaj + diplomy** – L + S
 - **AI zpravodaj**: po uložení zápasu článek a text na sítě, večer souhrn dne, po turnaji reportáž. Generuje server (funkce Vercel/Cloudflare s Claude API, klíč nikdy ve frontendu), vstup jen data turnaje. Pořadatel text schválí nebo upraví. Doplnit zpracovatele do `SUBPROCESSORS` (`src/lib/legal.ts`), stanovit náklady na turnaj a limit.
-- **Diplomy jedním klikem**: tisk/PDF podle vzoru `src/components/admin/MatchSheets.tsx` (pořadí, nejlepší střelec, hráč turnaje) v barvách turnaje s logy partnerů.
+- ✅ *(2026-10-30, modul `diplomas`)* **Diplomy jedním klikem**: tisk/PDF podle vzoru `src/components/admin/MatchSheets.tsx` (pořadí, nejlepší střelec, hráč turnaje) v barvách turnaje s logy partnerů.
 
 **5.4 Měřený dosah partnera** – M
 - QR akce partnera na TV a v grafikách přes přesměrování `/r/{kód}` s čítačem skenů (RPC, bez cookies); po akci report pro partnera v PDF. Sloučit s Vlnou 2, bod 9.

@@ -196,6 +196,7 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `finalStandings.ts` | konečné pořadí (finále, zápasy o umístění, sdílená místa, liga) | standings, history | tournamentGraphics |
 | `dayDigest.ts` | hrací dny, program a souhrn dne, stránkování | fixtures, dates | ShareKit, tournamentGraphics |
 | `tournamentGraphics.ts` | data grafik nad `TournamentData` (`bestTeamScopes`, `finalStandingsOf`, `playDaysOf`) | výše | GraphicsMenu, BestTeamCard, DemoModal |
+| `diplomas.ts` | diplomy: kdo je dostane (umístění, střelec, hráč, brankář) | tournamentGraphics, finalStandings, bestTeam | Diplomas |
 | `tvEvents.ts` | události TV „od teď“: snímek stavu, rozdíly (gól se střelcem, začátek/konec, skupina, vítěz) | matchState, history | useTvEvents |
 | `announcer.ts` | hlasatel: texty hlášení, nastavení (localStorage `turnajnik_announcer`), `speak`/`cancelSpeech` | tvEvents | KioskMode |
 | `modules.ts` | systém modulů: registr `MODULES`, stavy platformy, `isModuleEnabled`, `visibleModuleSettings`, `isPlayingToday` | — | ModulesContext, ModulesSection, PlatformModal, usePlatformSettings, App |
@@ -254,6 +255,6 @@ Nové soubory pod `tournaments/{turnajId}/…` (`lib/storage.ts`); starší cest
 - **Závislosti:** react 18, vite 6, typescript 5, tailwind 3, `@supabase/supabase-js` **2.49.1 (nepovyšovat)**, lucide-react, @tiptap, dompurify, html-to-image, qrcode.react, xlsx, @fontsource (Barlow Condensed, Inter); dev: vitest 3, wrangler 4.
 
 ## 9. Testy a kontroly
-- `npm test` — Vitest, `src/lib/__tests__/` (164 testů): `tvEvents` (góly, opravy, výsledek zadaný najednou, hlasatel, spoty), `grafiky` (tým turnaje, konečné pořadí, program/souhrn dne), `modules` (stavy off/internal/beta/sunset/on, viditelnost v Nastavení), `edgeHeaders` (shoda hlaviček Vercel/Cloudflare, maintenance, OG HTML), `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
+- `npm test` — Vitest, `src/lib/__tests__/` (167 testů): `diplomas`, `tvEvents` (góly, opravy, výsledek zadaný najednou, hlasatel, spoty), `grafiky` (tým turnaje, konečné pořadí, program/souhrn dne), `modules` (stavy off/internal/beta/sunset/on, viditelnost v Nastavení), `edgeHeaders` (shoda hlaviček Vercel/Cloudflare, maintenance, OG HTML), `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
 - `npm run typecheck` — nejdřív `edge/` (`tsconfig.edge.json`, bez chyb), pak aplikace: baseline 62 starších chyb, nové nesmí přibýt.
 - Chybí: testy `tipsEval.ts`, komponent a E2E automatizace (E2E se dělá ručně v Chromu).
