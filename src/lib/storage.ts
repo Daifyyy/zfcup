@@ -93,11 +93,15 @@ export async function photoToJpeg(file: File, maxSide = 1920): Promise<{ file: F
   }
 }
 
-/** Nahraje soubor a vrátí veřejnou URL s cache-bustem, nebo chybovou zprávu. */
-export async function uploadAsset(path: string, file: File): Promise<{ url: string } | { error: string }> {
+/**
+ * Nahraje soubor a vrátí veřejnou URL s cache-bustem, nebo chybovou zprávu.
+ * `cacheSeconds`: výchozí rok (adresa nese ?v=…); kratší jen pro soubory, na které
+ * se odkazuje bez ?v= (náhled odkazu og.jpg).
+ */
+export async function uploadAsset(path: string, file: File, cacheSeconds = 31536000): Promise<{ url: string } | { error: string }> {
   const optimized = await optimizeImage(file, maxSideFor(path))
   // URL nese ?v=… → soubor se smí cachovat dlouho (nová verze = nová adresa)
-  const { error } = await supabase.storage.from(ASSETS_BUCKET).upload(path, optimized, { upsert: true, contentType: optimized.type, cacheControl: '31536000' })
+  const { error } = await supabase.storage.from(ASSETS_BUCKET).upload(path, optimized, { upsert: true, contentType: optimized.type, cacheControl: String(cacheSeconds) })
   if (error) return { error: error.message }
   const { data } = supabase.storage.from(ASSETS_BUCKET).getPublicUrl(path)
   return { url: `${data.publicUrl}?v=${Date.now()}` }

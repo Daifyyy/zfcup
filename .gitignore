@@ -25,3 +25,7 @@ dist-ssr
 # Local env — NEVER commit
 .env.local
 .env.*.local
+
+# Cloudflare wrangler (lokální stav, tajné proměnné)
+.wrangler
+.dev.vars

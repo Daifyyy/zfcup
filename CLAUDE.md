@@ -9,7 +9,7 @@ Referenční implementace: `turnaj_final.html` — zachovej veškerou existujíc
 ## Technický stack
 - **Frontend:** React 18 + Vite 6, TypeScript (`npm run typecheck`); **Styling:** CSS tokeny + Tailwind 3 — viz „Design systém“
 - **Testy:** Vitest (`npm test`) — `src/lib/__tests__/` (tabulky, rozpisy, stav zápasu, historie, polling a integrační test všech 12 formátů play-off s paměťovou „DB“). Změna výpočtů = spustit testy.
-- **Backend:** Supabase (PostgreSQL + RLS + Realtime + Auth); **Hosting:** Vercel
+- **Backend:** Supabase (PostgreSQL + RLS + Realtime + Auth); **Hosting:** Vercel + Cloudflare souběžně (přesun na Cloudflare, viz Nasazení)
 - **Fonty:** Barlow Condensed (nadpisy, skóre — `var(--font-display)`), Inter (text — `var(--font-body)`) — hostované s aplikací (`@fontsource`, `src/fonts.ts`, jen latin + latin-ext), **ne Google Fonts** (GDPR, CSP je bez Google domén)
 - **Ikony:** `lucide-react` + vlastní sportovní ikony `SportDef.Icon` (`src/components/ui/icons/SportIcons.tsx`). **Žádná emoji v UI.**
 - **`@supabase/supabase-js` přesně `2.49.1`** — nepovyšovat! Verze 2.99+ neodesílá `apikey` header pro mutace → 400 Bad Request
@@ -92,7 +92,7 @@ Kompletní SQL (tabulky, RLS, triggery, storage, migrace) je v `db-backup/01–2
 - **Frontend**: `useAuthRole()` (`session`, `isPlatformAdmin`, `canEditTournament(ownerId)`); `App.tsx` `canEdit` řídí admin panel (cizí turnaj → „Bez oprávnění“). Výběr soutěže pro nový ročník jen z vlastních.
 - **Tipovačka**: globální vypínač `platform_settings.tips_globally_enabled` (`usePlatformSettings()`, úvodní stránka → Platforma, jen správce); bez migrace = vypnuto. Zabezpečení tipovačky (PINy, anon zápisy) je **odloženo** — nezapínat ji globálně, dokud se nevyřeší.
 - **Realtime (migrace 10)**: tabulky musí být v publikaci `supabase_realtime`, jinak DB neposílá události.
-- **Hlavičky**: `vercel.json` — CSP, HSTS, X-Frame-Options… Nový externí zdroj (font, iframe, API) = doplnit do CSP.
+- **Hlavičky** (CSP, HSTS, X-Frame-Options…) jsou do přepnutí hostingu na **třech místech**: `vercel.json`, `public/_headers` (Cloudflare) a `SECURITY_HEADERS` v `edge/core.ts` (odpovědi Workeru) — měnit všechny tři, shodu hlídá test `edgeHeaders`. Nový externí zdroj (font, iframe, API) = doplnit do CSP.
 
 ## DB Schema — kritické detaily
 - `matches.scheduled_time TEXT NOT NULL`, `matches.round TEXT NOT NULL` — při UPDATE posílat `''`, **ne `null`** → jinak 400
@@ -228,7 +228,7 @@ Všechny togglované v Admin → Nastavení → Volitelné moduly; řídí `tour
 - **Sdílení = hotový obrázek**: `ShareModal` (kompaktní, náhled = výsledný PNG; mobil „Sdílet obrázek“ → systémová nabídka, počítač Stáhnout / Kopírovat obrázek / Kopírovat odkaz). Detail zápasu (i před zápasem), Přehled (`TournamentGraphic` s QR), tabulka, statistiky. **Styly grafik** `ShareStyle` = Tmavý / Barvy turnaje / Světlý / Foto (`PALETTES` v `share/templates.tsx`, výchozí `defaultShareStyle`: fotka turnaje → Foto, Výrazná → Barvy turnaje). **Foto**: výchozí fotka `tournament.share_photo_url` (migrace 20; admin Nastavení → Vzhled turnaje, Storage `tournaments/{id}/share/photo.jpg`) nebo vlastní fotka vybraná v okně sdílení — zůstává jen v zařízení jako **data URL** (ne `blob:` — html-to-image s `cacheBust` blob adresy rozbije). Obě cesty jdou přes `photoToJpeg()` (`src/lib/storage.ts`): vstup max 25 MB, výstup vždy JPEG ≤ 1920 px a < 1 MB (snižuje kvalitu), původní soubor se nikdy nenahraje; kompaktní lišta turnaje nahoře, obsah (výsledek) jako hlavní prvek, generální partner „presented by“ v patičce, ostatní partneři v jedné řadě (počet omezen, aby se nic neořízlo). TV tabule v odstínech barvy turnaje (`--tv-bg/--tv-col/--tv-panel` v index.css).
 - **Sdílení odkazů**: `ShareButton` (jen detail týmu) (`src/components/share/`, logika `src/lib/share.ts`) — na mobilu systémová nabídka, na počítači nabídka sítí; doplňky (např. Grafika výsledku) přes `extras`. V detailech, které jsou uvnitř `tm-drawer`, obalit portálové dialogy `onClick={e => e.stopPropagation()}`.
 - **Sdílecí grafiky**: `src/components/share/` (šablony 1080×1080 / 1080×1920, `html-to-image`, líně přes `share/lazy.tsx`); tlačítka Sdílet v Zápasech, Tabulce, Statistikách. Obrázky v šablonách musí mít `crossOrigin="anonymous"`.
-- **Náhledy odkazů (OG)**: `api/og.ts` (Vercel Edge, `@vercel/og`, 1200×630) + `middleware.ts` vrací robotům sociálních sítí na `/{uuid}` HTML s OG meta. `vercel.json` rewrite vynechává `/api/`. Lokálně na Windows `@vercel/og` nejde spustit (chyba cest) — ověřovat po deployi.
+- **Náhledy odkazů (OG)**: server nic nevykresluje (Cloudflare Free = 10 ms CPU). Obrázek 1200×630 vytváří prohlížeč organizátora: `OgImageSync` (`src/components/share/`, v `App.tsx` jen pro přihlášeného s `canEdit`) vykreslí `OgGraphic` (`share/templates.tsx`) a nahraje JPEG do Storage `tournaments/{id}/share/og.jpg`, když se změní podpis `ogSignature()` (`src/lib/og.ts`: název, podtitul, datum, místo, logo, sport, barvy, generální partner; uloženo v localStorage `turnajnik_og_{id}`). Změna šablony = zvýšit `OG_TEMPLATE_VERSION`. Soukromý turnaj náhled nemá (dřívější se smaže). `edge/core.ts` `ogResponse` vrací robotům na `/{uuid}` HTML s OG meta; obrázek ověří HEAD dotazem (`?v=` z ETagu), jinak `public/og-default.png`.
   - Kapacita bez scrollování: ~6–9 log na stranu (závisí na výšce monitoru)
 - **Import CSV/Excel**: `src/components/admin/ImportTeamsModal.tsx`; balíček `xlsx`; tlačítko „Stáhnout vzorový soubor“ (list Soupisky + Návod; list Návod se při importu přeskočí, list se sloupcem Tým = varianta A)
 - **Zápis o utkání** (dřív Excel karty rozhodčích): `src/components/admin/MatchSheets.tsx` — tisk/PDF, A4 → 2× A5 na šířku → přeložit na kapesní A6 (domácí | hosté), 15–22 řádků, výběr skupina/play-off/jen neodehrané; tlačítko v Admin → Zápasy
@@ -270,16 +270,17 @@ Aktivní záložky (Zápasy, Play-off, Tipovačka) = zelené zvýraznění (`ACT
 | Scoreboard — střelci | 26px |
 | Kiosk — všechna loga | 28px |
 
-## Vercel deployment
-`VITE_SUPABASE_URL` a `VITE_SUPABASE_ANON_KEY` jsou baked při buildu — změna env vars v dashboardu vyžaduje redeploy.
+## Nasazení (Vercel + Cloudflare souběžně)
+Do koupě domény běží aplikace z `main` na **dvou hostinzích**: Vercel (ostrý web) a Cloudflare Worker se statickými soubory (`*.workers.dev`, test; postup v `docs/CLOUDFLARE.md`). Serverová logika je jen v `edge/core.ts` — `middleware.ts` (Vercel) i `edge/worker.ts` (Cloudflare, `wrangler.jsonc`) ji jen volají; nic serverového nepsat zvlášť pro jeden hosting. Nové serverové funkce psát rovnou pro Cloudflare (limit 10 ms CPU na požadavek, žádné vykreslování obrázků). Lokálně: `npm run cf:dev` (build + `wrangler dev`, proměnné přes `--var` nebo `.dev.vars`).
+`VITE_SUPABASE_URL` a `VITE_SUPABASE_ANON_KEY` jsou baked při buildu — změna env vars v dashboardu vyžaduje redeploy (na Cloudflare je nastavit jako Build variables i jako proměnné Workeru — Worker je čte pro OG).
 
 ### Maintenance režim (Basic Auth)
-Soubor `middleware.ts` v kořeni projektu chrání aplikaci heslem.
-- **Aktivace**: Vercel env var `MAINTENANCE = true` + Redeploy
-- **Deaktivace**: `MAINTENANCE = false` nebo smazat proměnnou + Redeploy (bez commitu)
-- Přihlašovací údaje: env proměnné Vercelu `MAINTENANCE_USER` + `MAINTENANCE_PASSWORD` (nikdy v kódu ani zde). Bez nich vrací middleware při `MAINTENANCE=true` 503 (fail closed)
-- Middleware dále obsluhuje OG náhledy pro roboty (viz Volitelné moduly → Náhledy odkazů); maintenance kontrola musí zůstat první
-- Proměnná `MAINTENANCE` je server-side (ne `VITE_` prefix) — čte ji edge middleware, ne frontend bundle
+`maintenanceResponse()` v `edge/core.ts` chrání aplikaci heslem (na obou hostinzích; na Cloudflare kromě `/assets/*`, které nejsou tajné).
+- **Aktivace**: proměnná `MAINTENANCE = true` + Redeploy (Vercel) / uložení proměnné (Cloudflare)
+- **Deaktivace**: `MAINTENANCE = false` + Redeploy (bez commitu); na Vercelu stačí proměnnou smazat, na Cloudflare chybějící proměnná = údržba zapnutá (fail closed, `edge/worker.ts`)
+- Přihlašovací údaje: proměnné hostingu `MAINTENANCE_USER` + `MAINTENANCE_PASSWORD` (nikdy v kódu ani zde; na Cloudflare heslo jako Secret). Bez nich vrací při `MAINTENANCE=true` 503 (fail closed)
+- Dále se obsluhují OG náhledy pro roboty (viz Volitelné moduly → Náhledy odkazů); maintenance kontrola musí zůstat první
+- Proměnná `MAINTENANCE` je server-side (ne `VITE_` prefix) — čte ji middleware/Worker, ne frontend bundle
 
 **Checklist "No API key" / kód 21000:**
 - `package.json`: `"@supabase/supabase-js": "2.49.1"` (bez `^`)

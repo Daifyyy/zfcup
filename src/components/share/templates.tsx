@@ -532,3 +532,48 @@ export function TournamentGraphic({ format, style = 'dark', photo, tournament, s
     </Frame>
   )
 }
+
+/** Rozměr náhledu odkazu (Open Graph — WhatsApp, Facebook, Teams, LinkedIn…). */
+export const OG_SIZE = { w: 1200, h: 630 }
+
+/**
+ * Náhled odkazu na turnaj 1200×630. Vytváří se v prohlížeči organizátora a nahrává
+ * do Storage (OgImageSync) — server ho jen odkáže v og:image, nic nevykresluje.
+ */
+export function OgGraphic({ tournament, sponsors }: { tournament: Tournament | null; sponsors: Sponsor[] }) {
+  const pal = PALETTES.dark
+  const { w, h } = OG_SIZE
+  const meta = [tournament?.date, tournament?.venue].filter(Boolean).join(' · ')
+  const titleP = getTitlePartner(sponsors)
+  const sport = getSportDef(tournament?.sport).label
+  return (
+    <div style={{ width: w, height: h, position: 'relative', overflow: 'hidden', background: pal.bg, color: pal.ink, fontFamily: BODY, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(115deg, transparent 0 62%, ${pal.diag} 62% 76%, transparent 76%)` }} />
+      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 18, background: pal.stripe }} />
+      <div style={{ position: 'absolute', top: 40, right: 60, fontSize: 20, fontWeight: 700, letterSpacing: '.1em', color: pal.muted }}>{BRAND.name}</div>
+
+      <main style={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', gap: 48, padding: '0 70px 0 96px' }}>
+        {tournament?.logo_url && (
+          <div style={{ width: 230, height: 230, background: '#fff', borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: pal.logoShadow }}>
+            <img src={tournament.logo_url} crossOrigin="anonymous" alt="" style={{ width: '86%', height: '86%', objectFit: 'contain' }} />
+          </div>
+        )}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: pal.accent, whiteSpace: 'nowrap' }}>{sport} · Živé výsledky</div>
+          <div style={{ ...CLAMP2, fontFamily: DISPLAY, fontWeight: 800, fontSize: fitSize(tournament?.name, tournament?.logo_url ? 92 : 104), lineHeight: .95, textTransform: 'uppercase', marginTop: 12 }}>{tournament?.name}</div>
+          {tournament?.subtitle && <div style={{ fontSize: 30, fontWeight: 600, marginTop: 16, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tournament.subtitle}</div>}
+          {meta && <div style={{ fontSize: 28, color: pal.muted, marginTop: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta}</div>}
+        </div>
+      </main>
+
+      {titleP?.logo_url ? (
+        <footer style={{ position: 'relative', background: '#fff', padding: '18px 70px 18px 96px', display: 'flex', alignItems: 'center', gap: 24 }}>
+          <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase', color: '#5b6678', whiteSpace: 'nowrap' }}>Presented by</span>
+          <img src={titleP.logo_url} crossOrigin="anonymous" alt={titleP.name} style={{ height: 60, maxWidth: 300, objectFit: 'contain' }} />
+        </footer>
+      ) : (
+        <div style={{ position: 'relative', height: 12, background: pal.stripe }} />
+      )}
+    </div>
+  )
+}

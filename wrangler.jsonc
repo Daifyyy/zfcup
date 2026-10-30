@@ -1,0 +1,21 @@
+// Cloudflare Worker se statickými soubory — souběžný hosting vedle Vercelu (viz docs/PROGRESS.md).
+// Build: `npm run build` (Vite → dist/). Lokálně: `npm run cf:dev`.
+// Proměnné (dashboard → Worker → Settings → Variables and Secrets):
+//   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY (i jako Build variables — Vite je zapéká při buildu),
+//   MAINTENANCE, MAINTENANCE_USER, MAINTENANCE_PASSWORD (heslo jako Secret)
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "turnaje-app",
+  "main": "edge/worker.ts",
+  "compatibility_date": "2026-10-01",
+  // proměnné z dashboardu při nasazení nemazat (nejsou v tomto souboru)
+  "keep_vars": true,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Worker běží pro vše kromě souborů buildu (/assets/* mají v názvu otisk, nic tajného)
+    "run_worker_first": ["/*", "!/assets/*"]
+  },
+  "observability": { "enabled": true }
+}

@@ -59,6 +59,7 @@ const AdminPanel = lazyComponent(() => import('./components/admin/AdminPanel'))
 const KioskMode = lazyComponent(() => import('./components/kiosk/KioskMode'))
 const LegalPage = lazyComponent(() => import('./components/legal/LegalPage'))
 const OrganizerHome = lazyComponent(() => import('./components/organizer/OrganizerHome'))
+const OgImageSync = lazyComponent(() => import('./components/share/OgImageSync'))
 const Scoreboard = lazyComponent(() => import('./components/public/Scoreboard'))
 const CompetitionPage = lazyComponent(() => import('./components/competition/CompetitionPage'))
 const ClubPage = lazyComponent(() => import('./components/club/ClubPage'))
@@ -556,6 +557,10 @@ export default function App() {
           refetchSponsors={refetchSponsors}
           onClose={closeAdmin}
         />
+      )}
+      {/* Náhled odkazu (og:image) — vytváří prohlížeč organizátora, server jen odkazuje */}
+      {session && canEdit && tournament?.id === tournamentId && (
+        <OgImageSync tournament={tournament} sponsors={sponsorsEnabled ? sponsors : []} />
       )}
       <BottomNav tab={tab} onTab={navigateTab} tipsEnabled={tipsOn} showBracket={showBracket} cardsEnabled={tournament?.cards_enabled ?? false} sponsorsEnabled={sponsorsEnabled} mediaEnabled={mediaEnabled} />
       <Toast message={toast} show={toastShow} />

@@ -383,6 +383,12 @@ function Cookies() {
               <td>do smazání dat webu (nejvýše 20 kódů)</td>
             </tr>
             <tr>
+              <td><code>turnajnik_og_…</code></td>
+              <td>místní úložiště (localStorage)</td>
+              <td>jen u organizátora: pamatuje si, pro jakou podobu turnaje už byl vytvořen náhled odkazu, aby se zbytečně nevytvářel znovu</td>
+              <td>do smazání dat webu</td>
+            </tr>
+            <tr>
               <td><code>turnajnik_chunk_reload</code></td>
               <td>úložiště relace (sessionStorage)</td>
               <td>po nasazení nové verze aplikace zabrání opakovanému obnovování stránky</td>

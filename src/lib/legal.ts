@@ -34,6 +34,7 @@ export function missingOperatorFields(): string[] {
 export const SUBPROCESSORS = [
   { name: 'Supabase, Inc.', role: 'databáze, přihlašování, úložiště souborů, odesílání systémových e-mailů', country: 'USA (data uložena v datovém centru dle nastavení projektu)' },
   { name: 'Vercel, Inc.', role: 'hosting webové aplikace a doručování obsahu', country: 'USA' },
+  { name: 'Cloudflare, Inc.', role: 'hosting webové aplikace a doručování obsahu (souběžně s Vercelem, po přechodu jediný hosting)', country: 'USA (síť datových center včetně EU)' },
   { name: 'Google Ireland Ltd. (YouTube)', role: 'přehrání videa vloženého organizátorem do oznámení (režim bez cookies youtube-nocookie.com)', country: 'Irsko / USA' },
 ] as const
 

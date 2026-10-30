@@ -139,7 +139,7 @@ Fáze: 0 dokončit soutěže → 1 bezpečnost a role → 2 rychlé opravy (bull
 - Sdílení: hotový obrázek (mobil → Instagram/FB/WhatsApp přes systémovou nabídku, počítač stáhnout/kopírovat), nová grafika turnaje s QR.
 - **Můj prostor** `/moje` pro organizátora; úvodní stránka jen pro diváky.
 
-### Plán: přesun hostingu na Cloudflare (rozhodnuto 2026-10-30, zatím neuděláno)
+### Plán: přesun hostingu na Cloudflare (rozhodnuto 2026-10-30; kód kroky 1–5 hotový 2026-10-30, čeká na založení projektu uživatelem)
 **Proč:** Vercel Hobby zakazuje komerční použití (Pro = 20 USD/měs.); Cloudflare zdarma komerční použití povoluje. Supabase Pro se bude zapínat jen kolem placených turnajů (přepínání Free↔Pro jde kdykoli).
 **Rozhodnutí:** kód připravit tak, aby běžel na **obou hostinzích zároveň** z `main` (žádná vedlejší větev). Ostrý web zůstává na Vercelu, Cloudflare běží souběžně na bezplatné adrese (`*.workers.dev`) k testování. **Doménu uživatel koupí až před prvním placeným turnajem**, napojí ji na Cloudflare; projekt na Vercelu pak zůstane jen jako přesměrování `….vercel.app/*` → nová doména se zachováním cesty (staré odkazy a QR kódy fungují dál).
 Testovat **bez prohlížeče** (typecheck, testy, build, `wrangler dev` lokálně); náhledy odkazů ověří uživatel po nasazení (za maintenance heslem dostávají roboti 401).
@@ -151,6 +151,14 @@ Kroky (odhad 1,5–2 dny):
 4. **Návod pro uživatele** (zakládá projekt svým účtem): Cloudflare účet → nový projekt z GitHubu `Daifyyy/zfcup`, větev `main`, build `npm run build`, výstup `dist`, `NODE_VERSION`; proměnné `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, **`MAINTENANCE=true` + `MAINTENANCE_USER`/`MAINTENANCE_PASSWORD` hned od začátku** (jinak by kopie na workers.dev byla veřejně otevřená); Supabase → Authentication → URL Configuration: přidat novou adresu do Redirect URLs (reset hesla posílá `window.location.origin`).
 5. **Dokumentace**: `SUBPROCESSORS` v `src/lib/legal.ts` (Cloudflare místo/vedle Vercelu), CLAUDE.md (sekce Vercel deployment, Náhledy odkazů, hlavičky), `docs/ARCHITECTURE.md`, tento soubor.
 6. **Při koupi domény** (později): doména → Cloudflare; Supabase Site URL + Redirect URLs; `vercel.json` jen s přesměrováním na novou doménu; z `legal.ts` odebrat Vercel.
+
+**Stav 2026-10-30 — kód hotový (kroky 1–5):**
+- Krok 1 ✅ Náhled odkazu vytváří prohlížeč organizátora: `OgImageSync` + `OgGraphic` → Storage `tournaments/{id}/share/og.jpg` (JPEG ~70 KB, `uploadAsset` ho nezmenšuje — limit `/share/` 1920 px; cache 1 h). Spouští se sám po změně podpisu (`src/lib/og.ts`), ne v jednotlivých ukládáních → pokrývá Info, Vzhled i Partnery. Soukromý turnaj: náhled se nevytváří a dřívější se smaže. Ověřeno naostro na validačním turnaji (náhled vznikl, robot dostal `og:image` s `?v=`). `api/og.ts` a `@vercel/og` smazány; výchozí obrázek `public/og-default.png`.
+- Krok 2 ✅ `public/_headers`; Worker přidává stejné hlavičky sám (`_headers` na odpovědi Workeru neplatí); shodu 3 míst hlídá test `edgeHeaders`.
+- Krok 3 ✅ Společná logika `edge/core.ts`; Vercel `middleware.ts` a Cloudflare `edge/worker.ts` + `wrangler.jsonc` (Workers se statickými soubory, SPA, `run_worker_first: ["/*", "!/assets/*"]`, `keep_vars`). Na Cloudflare je údržba výchozí (chybějící `MAINTENANCE` = zavřeno). Ověřeno lokálně `wrangler dev`: `/`, `/moje`, `/{uuid}` → aplikace s CSP; `/assets/*` immutable; robot → OG HTML; neexistující turnaj → aplikace.
+- Krok 4 ✅ Návod `docs/CLOUDFLARE.md` — **čeká na uživatele** (účet, import z GitHubu, proměnné, Supabase Redirect URLs).
+- Krok 5 ✅ Dokumentace (CLAUDE.md, ARCHITECTURE.md, `SUBPROCESSORS`, Cookies: `turnajnik_og_…`).
+- Typecheck: `edge/` bez chyb, aplikace 62 (baseline); testy 125/125; build OK. Náhledy na sítích ověří uživatel až bez maintenance (roboti dostanou 401).
 
 Nasazení po přesunu: `git push` na `main` → Cloudflare sestaví a nasadí (1–2 min); jiná větev → náhledová adresa; vrácení verze v dashboardu jedním klikem; změna proměnných = nový deploy (jako dnes).
 
@@ -170,7 +178,7 @@ Nasazení po přesunu: `git push` na `main` → Cloudflare sestaví a nasadí (1
 
 ### Kde navázat
 0. **Prémiový produkt** — roadmapa `docs/ROADMAP-PREMIUM.md` (prověrka 2026-10-30: co potvrzuje kvalitu, konkurence AHL/Tournify, 4 vlny nadstandardu). Prodávat celé, bez osekaných tarifů. Body 1–2 (redesign grafik, fotka na pozadí) ✅ (migrace 20 ✅). **Vlna 5 (unikátnost: karta hráče, hlasatel a chytrá režie TV, AI zpravodaj, diplomy, dosah partnera + vlastní fáze revize tipovačky 5.T) zapsaná 2026-10-30** — každý modul vypínatelný, stupně off/internal/beta/on, pravidla pro zapnutí uprostřed turnaje. **Další (po Cloudflare): 5.0 systém modulů a Beta** (migrace 21), pak Vlna 1 body 3–4, Vlna 2 body 6–7 + 5.2. Pořadí viz roadmapa, sekce 5. Každý bod = vlastní plán a sezení.
-1. **Přesun hostingu na Cloudflare — DALŠÍ KROK** (rozhodnuto 2026-10-30: před funkcemi Vlny 5, protože AI zpravodaj, `/r/` a push potřebují server a mají se psát rovnou pro Cloudflare; web je za maintenance, přesun nikoho neohrozí). Viz plán výše — začít krokem 1, nové sezení, bez prohlížeče. Pak 5.0 systém modulů.
+1. **Přesun hostingu na Cloudflare — kód hotový 2026-10-30, na tahu uživatel:** založit projekt podle `docs/CLOUDFLARE.md` a otestovat `*.workers.dev`. Krok 6 (doména) až před prvním placeným turnajem. **Další vývoj: 5.0 systém modulů** (nové serverové funkce psát rovnou do `edge/` pro Cloudflare).
 2. **Uživatel:** tarify — místo Vercel Pro přesun na Cloudflare (výše); Supabase Pro zapínat kolem placených turnajů, mezi nimi Free + denní „probuzení“ a záloha (`pg_dump`, GitHub Action — zatím neuděláno); migrace 17 + 18 ✅ spuštěny (anon zápisy tipovačky vypnuté); v Supabase nastavit limit bucketu (1 MB, png/jpeg/webp) (min. délka hesla 8 ✅ 2026-10-30), znovu nahrát loga Cupu 2026, doplnit `OPERATOR` v `src/lib/legal.ts`.
 3. Pak Fáze 9 — registrace organizátorů a obchodní model.
 4. P2 z auditu: menší hlavní balík, sloučení startovních dotazů do RPC, hlášení chyb, `xlsx` z cdn.sheetjs.com.

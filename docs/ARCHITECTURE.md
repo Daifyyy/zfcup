@@ -3,15 +3,17 @@
 > Referenční mapa pro práci na projektu: kde co je, kdo na čem závisí, kudy tečou data.
 > Pravidla kódování jsou v `CLAUDE.md`, stav práce v `docs/PROGRESS.md`, plán v
 > `C:\Users\denis\.claude\plans\expressive-leaping-pnueli.md`.
-> Aktualizovat při přidání souboru, hooku, tabulky nebo migrace. Stav k 2026-10-27 (commit 80dfef6).
+> Aktualizovat při přidání souboru, hooku, tabulky nebo migrace. Stav k 2026-10-30 (Cloudflare kroky 1–5).
 
 ---
 
 ## 1. Vrstvy v kostce
 
 ```
- Prohlížeč ──► middleware.ts (Vercel Edge: maintenance heslo, OG HTML pro roboty)
-               api/og.ts (OG obrázek 1200×630)
+ Prohlížeč ──► edge/core.ts (maintenance heslo, OG HTML pro roboty, bezpečnostní hlavičky)
+               ├─ Vercel: middleware.ts            ├─ Cloudflare: edge/worker.ts (wrangler.jsonc)
+               OG obrázek = Storage tournaments/{id}/share/og.jpg (vytváří prohlížeč organizátora,
+               share/OgImageSync.tsx), bez něj public/og-default.png
      │
      ▼
  index.html → src/main.tsx (fonty, CSS, ErrorBoundary) → src/App.tsx (routing + načtení dat turnaje)
@@ -136,7 +138,7 @@ Jeden časovač na interval; skrytá karta = nic; návrat na kartu = všechny re
 
 **TV (Fáze 6)**: `tv/tvTheme.ts` (`TV`, `TV_SIZE`, `fit`, `tvLogo`, `TV_ZONE`), `tv/FitBox.tsx`, `tv/TvGroupTable.tsx` — sdílí `Scoreboard` i `KioskMode`. Potvrzovací dialog `ui/ConfirmDialog.tsx` (`confirmDialog()` + `ConfirmHost` v `main.tsx`).
 
-Další veřejné: `Scoreboard` (TV tabule, paleta `C` natvrdo), `KioskMode` (TV, `kiosk/`), `PrintBulletin` (tisk), `AnnouncementCard`, `CompetitionPage` (`competition/`), `share/*` (sdílecí grafiky 1080×1080 / 1080×1920, `html-to-image`).
+Další veřejné: `Scoreboard` (TV tabule, paleta `C` natvrdo), `KioskMode` (TV, `kiosk/`), `PrintBulletin` (tisk), `AnnouncementCard`, `CompetitionPage` (`competition/`), `share/*` (sdílecí grafiky 1080×1080 / 1080×1920, `html-to-image`; `OgImageSync` + `OgGraphic` = náhled odkazu 1200×630 nahraný do Storage, běží u organizátora ve vlastním turnaji, podpis v localStorage `turnajnik_og_{id}`, logika `lib/og.ts`).
 
 ### 5.2 Administrace (`src/components/admin/AdminPanel.tsx`, `ADMIN_NAV`)
 | Blok | Záložka | Komponenta | Zapisuje do tabulek |
@@ -188,7 +190,8 @@ Layout: `layout/Header` (záložky, `HEADER_HEIGHT_DESKTOP`), `layout/BottomNav`
 | `useBackClose.ts` | hook: vrstva přes obrazovku jako krok v historii (Zpět ji zavře) | — | Scoreboard, PrintBulletin, ShareModal, DemoModal, BottomNav, ConfirmDialog |
 | `share.ts` | sdílení odkazů: `prefersNativeShare`, `nativeShare`, `shareTargets` (FB, X, WhatsApp, LinkedIn, e-mail), `copyText`, `matchUrl`/`teamUrl` | — | ShareButton, detaily, Overview |
 | `dataExport.ts` | `exportTournamentData` (JSON všech tabulek turnaje, bez PINů), `downloadJson` | supabase | SettingsTab |
-| `storage.ts` | cesty a upload do Storage (`tournaments/{id}/…`) | supabase | TeamsTab, SponsorsTab |
+| `storage.ts` | cesty a upload do Storage (`tournaments/{id}/…`) | supabase | TeamsTab, SponsorsTab, OgImageSync |
+| `og.ts` | náhled odkazu: cesta `og.jpg`, veřejná URL, podpis (sdílené s `edge/`) | — | OgImageSync, edge/core.ts |
 | `exportExcel.ts` / `exportPress.ts` | XLSX rozpis, kartičky rozhodčích / tiskový servis | standings, sports, `xlsx` (líně) | MatchesTab / Media |
 | `sanitize.ts` | DOMPurify pro `dangerouslySetInnerHTML` | — | Overview, Info, Rules, AnnouncementCard |
 | `brand.ts` | `BRAND.name` (název platformy — nepsat natvrdo) | — | 8 modulů |
@@ -234,12 +237,14 @@ Nové soubory pod `tournaments/{turnajId}/…` (`lib/storage.ts`); starší cest
 ---
 
 ## 8. Nasazení a prostředí
-- **Vercel:** build `vite build`; env `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (zapečené při buildu), `MAINTENANCE`, `MAINTENANCE_USER`, `MAINTENANCE_PASSWORD` (edge middleware).
-- **`vercel.json`:** rewrite na `index.html` (mimo `/api/`), hlavičky — CSP (`'self'` + `*.supabase.co` + YouTube iframe), HSTS, X-Frame-Options, cache `/assets/`.
+- **Dva hostingy souběžně z `main`** (do koupě domény): Vercel (ostrý web) a Cloudflare Worker se statickými soubory (`*.workers.dev`, test). Serverová logika je společná v `edge/core.ts`.
+- **Vercel:** build `vite build`; env `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (zapečené při buildu), `MAINTENANCE`, `MAINTENANCE_USER`, `MAINTENANCE_PASSWORD` (`middleware.ts`).
+- **Cloudflare:** `wrangler.jsonc` (assets `dist/`, SPA, Worker běží pro vše kromě `/assets/*`); stejné proměnné (VITE_* i jako Build variables); lokálně `npm run cf:dev`.
+- **Hlavičky na 3 místech** — `vercel.json`, `public/_headers` (Cloudflare, soubory bez Workeru), `SECURITY_HEADERS` v `edge/core.ts` (odpovědi Workeru); shodu hlídá test `edgeHeaders`. CSP: `'self'` + `*.supabase.co` + YouTube iframe.
 - **Push na `main` = nasazení.** Web je za maintenance heslem (`MAINTENANCE=true`).
-- **Závislosti:** react 18, vite 6, typescript 5, tailwind 3, `@supabase/supabase-js` **2.49.1 (nepovyšovat)**, lucide-react, @tiptap, dompurify, html-to-image, qrcode.react, xlsx, @vercel/og, @fontsource (Barlow Condensed, Inter); dev: vitest 3.
+- **Závislosti:** react 18, vite 6, typescript 5, tailwind 3, `@supabase/supabase-js` **2.49.1 (nepovyšovat)**, lucide-react, @tiptap, dompurify, html-to-image, qrcode.react, xlsx, @fontsource (Barlow Condensed, Inter); dev: vitest 3, wrangler 4.
 
 ## 9. Testy a kontroly
-- `npm test` — Vitest, `src/lib/__tests__/` (99 testů): `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
-- `npm run typecheck` — baseline 63 starších chyb, nové nesmí přibýt.
+- `npm test` — Vitest, `src/lib/__tests__/` (125 testů): `edgeHeaders` (shoda hlaviček Vercel/Cloudflare, maintenance, OG HTML), `zones` (+ barvy značky), `clubHistory`, `details`, `standings`, `leagueSchedule`, `matchState`, `history`, `poller`, `bracketFormats` (integrační: všech 12 formátů od struktury po vítěze; Supabase nahrazen paměťovou „DB“ přes `vi.mock`).
+- `npm run typecheck` — nejdřív `edge/` (`tsconfig.edge.json`, bez chyb), pak aplikace: baseline 62 starších chyb, nové nesmí přibýt.
 - Chybí: testy `tipsEval.ts`, komponent a E2E automatizace (E2E se dělá ručně v Chromu).
